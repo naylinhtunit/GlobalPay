@@ -1,0 +1,291 @@
+
+"use client";
+
+import React, { useState, useEffect, useRef } from "react";
+import { Navbar } from "@/components/layout/Navbar";
+import { db } from "@/lib/firebase";
+import { collection, addDoc, getDocs, query, where, doc, getDoc } from "firebase/firestore";
+import { useCountry } from "@/context/CountryContext";
+import { Button } from "@/components/ui/button";
+import { FileText, Printer, Download, Eye, Calculator } from "lucide-react";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger,
+  DialogFooter
+} from "@/components/ui/dialog";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { JapanPayrollForm } from "@/components/payroll/JapanPayrollForm";
+import { MyanmarPayrollForm } from "@/components/payroll/MyanmarPayrollForm";
+import { PayslipDocument } from "@/components/payroll/PayslipDocument";
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
+
+export default function PayrollPage() {
+  const { country } = useCountry();
+  const { toast } = useToast();
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [payrollRecords, setPayrollRecords] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedEmpId, setSelectedEmpId] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState("2024-01");
+  
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewData, setPreviewData] = useState<any>(null);
+
+  const [japanData, setJapanData] = useState({
+    ot125Hours: 0,
+    nightShiftHours: 0,
+    lateNightOTHours: 0,
+    healthInsurance: 0,
+    pension: 0,
+    incomeTax: 0,
+    hostelFee: 0
+  });
+
+  const [myanmarData, setMyanmarData] = useState({
+    otHours: 0,
+    attendanceBonus: 0,
+    mealAllowance: 0,
+    ssbAmount: 0,
+    incomeTax: 0
+  });
+
+  const printRef = useRef<HTMLDivElement>(null);
+
+  const fetchRecords = async () => {
+    setLoading(true);
+    try {
+      const q = query(collection(db, "payroll_records"), where("country", "==", country));
+      const querySnapshot = await getDocs(q);
+      const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setPayrollRecords(data);
+
+      const eq = query(collection(db, "employees"), where("country", "==", country));
+      const empSnapshot = await getDocs(eq);
+      setEmployees(empSnapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRecords();
+  }, [country]);
+
+  const handleGenerate = async () => {
+    if (!selectedEmpId) return;
+    try {
+      const emp = employees.find(e => e.id === selectedEmpId);
+      const payload = {
+        employeeId: selectedEmpId,
+        employeeName: emp.name,
+        month: selectedMonth,
+        country,
+        data: country === "Japan" ? japanData : myanmarData,
+        createdAt: new Date()
+      };
+      await addDoc(collection(db, "payroll_records"), payload);
+      toast({ title: "Success", description: "Payroll record generated." });
+      setIsModalOpen(false);
+      fetchRecords();
+    } catch (e) {
+      toast({ variant: "destructive", title: "Error", description: "Failed to generate record." });
+    }
+  };
+
+  const handlePreview = (record: any) => {
+    const emp = employees.find(e => e.id === record.employeeId);
+    setPreviewData({ ...record, employee: emp });
+    setIsPreviewOpen(true);
+  };
+
+  const handlePrint = () => {
+    if (!printRef.current) return;
+    const content = printRef.current.innerHTML;
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Payslip - ${previewData.employee.name}</title>
+            <script src="https://cdn.tailwindcss.com"></script>
+          </head>
+          <body>${content}</body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+      }, 500);
+    }
+  };
+
+  return (
+    <div className="pl-64 min-h-screen">
+      <Navbar />
+      <main className="p-8">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h2 className="text-3xl font-bold text-primary">Monthly Payroll</h2>
+            <p className="text-muted-foreground">Process payments for {country} employees</p>
+          </div>
+          <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2 bg-primary shadow-lg">
+                <Calculator size={18} /> New Payroll Entry
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Process Payroll - {country}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-6 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Select Employee</Label>
+                    <Select onValueChange={setSelectedEmpId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose employee" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {employees.map(emp => (
+                          <SelectItem key={emp.id} value={emp.id}>{emp.name} ({emp.employeeCode})</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Payroll Month</Label>
+                    <Select onValueChange={setSelectedMonth} defaultValue="2024-01">
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose month" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="2024-01">January 2024</SelectItem>
+                        <SelectItem value="2024-02">February 2024</SelectItem>
+                        <SelectItem value="2024-03">March 2024</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {selectedEmpId && (
+                  <div className="mt-4 p-4 border rounded-lg bg-primary/5">
+                    <p className="text-sm font-bold text-primary">Employee: {employees.find(e => e.id === selectedEmpId)?.name}</p>
+                    <p className="text-xs text-muted-foreground">Base Salary: {employees.find(e => e.id === selectedEmpId)?.baseSalary.toLocaleString()} {country === "Japan" ? "JPY" : "MMK"}</p>
+                  </div>
+                )}
+
+                {country === "Japan" ? (
+                  <JapanPayrollForm 
+                    data={japanData} 
+                    onChange={setJapanData} 
+                    baseSalary={employees.find(e => e.id === selectedEmpId)?.baseSalary || 0}
+                  />
+                ) : (
+                  <MyanmarPayrollForm 
+                    data={myanmarData} 
+                    onChange={setMyanmarData} 
+                    baseSalary={employees.find(e => e.id === selectedEmpId)?.baseSalary || 0}
+                  />
+                )}
+                
+                <DialogFooter>
+                  <Button onClick={handleGenerate} className="w-full" disabled={!selectedEmpId}>Generate Payslip</Button>
+                </DialogFooter>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/30">
+                <TableHead>Month</TableHead>
+                <TableHead>Employee</TableHead>
+                <TableHead>Country</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow><TableCell colSpan={5} className="text-center py-8">Loading records...</TableCell></TableRow>
+              ) : payrollRecords.length === 0 ? (
+                <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No payroll records found.</TableCell></TableRow>
+              ) : (
+                payrollRecords.map((rec) => (
+                  <TableRow key={rec.id} className="hover:bg-muted/20">
+                    <TableCell className="font-medium">{rec.month}</TableCell>
+                    <TableCell>{rec.employeeName}</TableCell>
+                    <TableCell>{rec.country}</TableCell>
+                    <TableCell>
+                      <span className="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">Processed</span>
+                    </TableCell>
+                    <TableCell className="text-right space-x-2">
+                      <Button variant="ghost" size="sm" onClick={() => handlePreview(rec)} className="gap-2">
+                        <Eye size={14} /> View Payslip
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* Payslip Preview Dialog */}
+        <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+          <DialogContent className="max-w-[900px] h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <div className="flex justify-between items-center pr-12">
+                <DialogTitle>Payslip Preview</DialogTitle>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={handlePrint} className="gap-2">
+                    <Printer size={16} /> Print
+                  </Button>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <Download size={16} /> Download PDF
+                  </Button>
+                </div>
+              </div>
+            </DialogHeader>
+            <div className="bg-gray-100 p-8 rounded-lg">
+              {previewData && (
+                <PayslipDocument 
+                  ref={printRef}
+                  country={previewData.country} 
+                  employee={previewData.employee} 
+                  month={previewData.month} 
+                  data={previewData.data} 
+                />
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      </main>
+    </div>
+  );
+}

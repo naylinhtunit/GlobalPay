@@ -1,0 +1,11 @@
+
+{
+  "placeholderImages": [
+    {
+      "id": "hero-payroll",
+      "description": "Professional payroll management illustration",
+      "imageUrl": "https://picsum.photos/seed/payroll/1200/600",
+      "imageHint": "finance payroll"
+    }
+  ]
+}
