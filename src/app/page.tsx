@@ -37,15 +37,15 @@ export default function Dashboard() {
   }, [country]);
 
   return (
-    <div className="pl-64 min-h-screen">
+    <div className="md:pl-64 pt-16 md:pt-0 min-h-screen">
       <Navbar />
-      <main className="p-8">
+      <main className="p-4 md:p-8">
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-primary">Welcome Back</h2>
+          <h2 className="text-2xl md:text-3xl font-bold text-primary">Welcome Back</h2>
           <p className="text-muted-foreground">GlobalPay Overview for {country}</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
               <CardTitle className="text-sm font-medium">Active Employees</CardTitle>
@@ -90,7 +90,7 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
           <Card>
             <CardHeader>
               <CardTitle>Recent Activity</CardTitle>

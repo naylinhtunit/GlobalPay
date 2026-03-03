@@ -23,6 +23,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { JapanPayrollForm } from "@/components/payroll/JapanPayrollForm";
 import { MyanmarPayrollForm } from "@/components/payroll/MyanmarPayrollForm";
@@ -142,17 +143,17 @@ export default function PayrollPage() {
   };
 
   return (
-    <div className="pl-64 min-h-screen">
+    <div className="md:pl-64 pt-16 md:pt-0 min-h-screen">
       <Navbar />
-      <main className="p-8">
-        <div className="flex items-center justify-between mb-8">
+      <main className="p-4 md:p-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
-            <h2 className="text-3xl font-bold text-primary">Monthly Payroll</h2>
+            <h2 className="text-2xl md:text-3xl font-bold text-primary">Monthly Payroll</h2>
             <p className="text-muted-foreground">Process payments for {country} employees</p>
           </div>
           <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
             <DialogTrigger asChild>
-              <Button className="gap-2 bg-primary shadow-lg">
+              <Button className="gap-2 bg-primary shadow-lg w-full md:w-auto">
                 <Calculator size={18} /> New Payroll Entry
               </Button>
             </DialogTrigger>
@@ -161,7 +162,7 @@ export default function PayrollPage() {
                 <DialogTitle>Process Payroll - {country}</DialogTitle>
               </DialogHeader>
               <div className="space-y-6 py-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Select Employee</Label>
                     <Select onValueChange={setSelectedEmpId}>
@@ -220,67 +221,71 @@ export default function PayrollPage() {
         </div>
 
         <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/30">
-                <TableHead>Month</TableHead>
-                <TableHead>Employee</TableHead>
-                <TableHead>Country</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow><TableCell colSpan={5} className="text-center py-8">Loading records...</TableCell></TableRow>
-              ) : payrollRecords.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No payroll records found.</TableCell></TableRow>
-              ) : (
-                payrollRecords.map((rec) => (
-                  <TableRow key={rec.id} className="hover:bg-muted/20">
-                    <TableCell className="font-medium">{rec.month}</TableCell>
-                    <TableCell>{rec.employeeName}</TableCell>
-                    <TableCell>{rec.country}</TableCell>
-                    <TableCell>
-                      <span className="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">Processed</span>
-                    </TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Button variant="ghost" size="sm" onClick={() => handlePreview(rec)} className="gap-2">
-                        <Eye size={14} /> View Payslip
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/30">
+                  <TableHead>Month</TableHead>
+                  <TableHead>Employee</TableHead>
+                  <TableHead className="hidden sm:table-cell">Country</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow><TableCell colSpan={5} className="text-center py-8">Loading records...</TableCell></TableRow>
+                ) : payrollRecords.length === 0 ? (
+                  <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No payroll records found.</TableCell></TableRow>
+                ) : (
+                  payrollRecords.map((rec) => (
+                    <TableRow key={rec.id} className="hover:bg-muted/20">
+                      <TableCell className="font-medium">{rec.month}</TableCell>
+                      <TableCell>{rec.employeeName}</TableCell>
+                      <TableCell className="hidden sm:table-cell">{rec.country}</TableCell>
+                      <TableCell>
+                        <span className="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">Processed</span>
+                      </TableCell>
+                      <TableCell className="text-right space-x-2">
+                        <Button variant="ghost" size="sm" onClick={() => handlePreview(rec)} className="gap-2">
+                          <Eye size={14} /> <span className="hidden sm:inline">View Payslip</span>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </div>
 
         {/* Payslip Preview Dialog */}
         <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-          <DialogContent className="max-w-[900px] h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-[900px] w-[95vw] h-[90vh] overflow-y-auto p-4 md:p-6">
             <DialogHeader>
-              <div className="flex justify-between items-center pr-12">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pr-12 gap-4">
                 <DialogTitle>Payslip Preview</DialogTitle>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={handlePrint} className="gap-2">
                     <Printer size={16} /> Print
                   </Button>
                   <Button variant="outline" size="sm" className="gap-2">
-                    <Download size={16} /> Download PDF
+                    <Download size={16} /> <span className="hidden sm:inline">PDF</span>
                   </Button>
                 </div>
               </div>
             </DialogHeader>
-            <div className="bg-gray-100 p-8 rounded-lg">
+            <div className="bg-gray-100 p-2 md:p-8 rounded-lg mt-4">
               {previewData && (
-                <PayslipDocument 
-                  ref={printRef}
-                  country={previewData.country} 
-                  employee={previewData.employee} 
-                  month={previewData.month} 
-                  data={previewData.data} 
-                />
+                <div className="overflow-x-auto">
+                  <PayslipDocument 
+                    ref={printRef}
+                    country={previewData.country} 
+                    employee={previewData.employee} 
+                    month={previewData.month} 
+                    data={previewData.data} 
+                  />
+                </div>
               )}
             </div>
           </DialogContent>
