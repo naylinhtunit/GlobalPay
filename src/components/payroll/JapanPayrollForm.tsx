@@ -23,8 +23,15 @@ interface Props {
 }
 
 export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
-  const updateField = (field: keyof JapanData, value: number) => {
-    onChange({ ...data, [field]: value });
+  const updateField = (field: keyof JapanData, value: string) => {
+    const numValue = value === "" ? 0 : Number(value);
+    onChange({ ...data, [field]: numValue });
+  };
+
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    if (e.target.value === "0") {
+      e.target.select();
+    }
   };
 
   // Simple calculation logic for Japanese slips
@@ -42,15 +49,30 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>普通残業 1.25x (Hours)</Label>
-          <Input type="number" value={data.ot125Hours} onChange={e => updateField("ot125Hours", Number(e.target.value))} />
+          <Input 
+            type="number" 
+            value={data.ot125Hours} 
+            onFocus={handleFocus}
+            onChange={e => updateField("ot125Hours", e.target.value)} 
+          />
         </div>
         <div className="space-y-2">
           <Label>深夜手当 0.25x (Hours)</Label>
-          <Input type="number" value={data.nightShiftHours} onChange={e => updateField("nightShiftHours", Number(e.target.value))} />
+          <Input 
+            type="number" 
+            value={data.nightShiftHours} 
+            onFocus={handleFocus}
+            onChange={e => updateField("nightShiftHours", e.target.value)} 
+          />
         </div>
         <div className="space-y-2">
           <Label>深夜残業 1.5x (Hours)</Label>
-          <Input type="number" value={data.lateNightOTHours} onChange={e => updateField("lateNightOTHours", Number(e.target.value))} />
+          <Input 
+            type="number" 
+            value={data.lateNightOTHours} 
+            onFocus={handleFocus}
+            onChange={e => updateField("lateNightOTHours", e.target.value)} 
+          />
         </div>
       </div>
 
@@ -59,19 +81,39 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Health Insurance (健康保険)</Label>
-          <Input type="number" value={data.healthInsurance} onChange={e => updateField("healthInsurance", Number(e.target.value))} />
+          <Input 
+            type="number" 
+            value={data.healthInsurance} 
+            onFocus={handleFocus}
+            onChange={e => updateField("healthInsurance", e.target.value)} 
+          />
         </div>
         <div className="space-y-2">
           <Label>Pension (厚生年金)</Label>
-          <Input type="number" value={data.pension} onChange={e => updateField("pension", Number(e.target.value))} />
+          <Input 
+            type="number" 
+            value={data.pension} 
+            onFocus={handleFocus}
+            onChange={e => updateField("pension", e.target.value)} 
+          />
         </div>
         <div className="space-y-2">
           <Label>Income Tax (所得税)</Label>
-          <Input type="number" value={data.incomeTax} onChange={e => updateField("incomeTax", Number(e.target.value))} />
+          <Input 
+            type="number" 
+            value={data.incomeTax} 
+            onFocus={handleFocus}
+            onChange={e => updateField("incomeTax", e.target.value)} 
+          />
         </div>
         <div className="space-y-2">
           <Label>Hostel Fee (寮費)</Label>
-          <Input type="number" value={data.hostelFee} onChange={e => updateField("hostelFee", Number(e.target.value))} />
+          <Input 
+            type="number" 
+            value={data.hostelFee} 
+            onFocus={handleFocus}
+            onChange={e => updateField("hostelFee", e.target.value)} 
+          />
         </div>
       </div>
 

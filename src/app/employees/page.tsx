@@ -44,6 +44,7 @@ export default function EmployeesPage() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
   
   const [formData, setFormData] = useState({
     name: "",
@@ -111,6 +112,18 @@ export default function EmployeesPage() {
     setIsModalOpen(true);
   };
 
+  const handleSalaryFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    if (e.target.value === "0") {
+      e.target.select();
+    }
+  };
+
+  const filteredEmployees = employees.filter(emp => 
+    emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    emp.employeeCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    emp.department.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="md:pl-64 pt-16 md:pt-0 min-h-screen">
       <Navbar />
@@ -148,7 +161,14 @@ export default function EmployeesPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="salary">Base Salary ({country === "Japan" ? "JPY" : "MMK"})</Label>
-                  <Input id="salary" type="number" required value={formData.baseSalary} onChange={e => setFormData({...formData, baseSalary: Number(e.target.value)})} />
+                  <Input 
+                    id="salary" 
+                    type="number" 
+                    required 
+                    value={formData.baseSalary} 
+                    onFocus={handleSalaryFocus}
+                    onChange={e => setFormData({...formData, baseSalary: e.target.value === "" ? 0 : Number(e.target.value)})} 
+                  />
                 </div>
                 <DialogFooter>
                   <Button type="submit" className="w-full">{editingId ? "Update" : "Save"}</Button>
@@ -162,7 +182,12 @@ export default function EmployeesPage() {
           <div className="p-4 border-b flex items-center gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-              <Input placeholder="Search employees..." className="pl-10" />
+              <Input 
+                placeholder="Search employees..." 
+                className="pl-10" 
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+              />
             </div>
           </div>
           <div className="overflow-x-auto">
@@ -179,10 +204,10 @@ export default function EmployeesPage() {
               <TableBody>
                 {loading ? (
                   <TableRow><TableCell colSpan={5} className="text-center py-8">Loading employees...</TableCell></TableRow>
-                ) : employees.length === 0 ? (
-                  <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No employees found for this region.</TableCell></TableRow>
+                ) : filteredEmployees.length === 0 ? (
+                  <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No employees found.</TableCell></TableRow>
                 ) : (
-                  employees.map((emp) => (
+                  filteredEmployees.map((emp) => (
                     <TableRow key={emp.id} className="hover:bg-muted/20">
                       <TableCell className="font-mono text-xs font-semibold">{emp.employeeCode}</TableCell>
                       <TableCell>

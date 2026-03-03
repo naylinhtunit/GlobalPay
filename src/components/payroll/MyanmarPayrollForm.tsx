@@ -10,7 +10,7 @@ interface MyanmarData {
   otHours: number;
   attendanceBonus: number;
   mealAllowance: number;
-  ssbAmount: number; // calculated 2% or manual override
+  ssbAmount: number;
   incomeTax: number;
 }
 
@@ -21,22 +21,29 @@ interface Props {
 }
 
 export function MyanmarPayrollForm({ data, onChange, baseSalary }: Props) {
-  const updateField = (field: keyof MyanmarData, value: number) => {
-    onChange({ ...data, [field]: value });
+  const updateField = (field: keyof MyanmarData, value: string) => {
+    const numValue = value === "" ? 0 : Number(value);
+    onChange({ ...data, [field]: numValue });
+  };
+
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    if (e.target.value === "0") {
+      e.target.select();
+    }
   };
 
   // Myanmar OT Logic: usually (Salary / 30 / 8) * 2 * OT Hours
   const hourlyRate = (baseSalary / 30 / 8);
   const otPay = data.otHours * hourlyRate * 2;
   
-  // SSB is fixed at 2% capped at some point, but we'll use a simple 2% calculation
-  const calculatedSSB = Math.min(baseSalary * 0.02, 6000); // 6000 MMK is often max cap
+  // SSB is fixed at 2% capped at 6000 MMK
+  const calculatedSSB = Math.min(baseSalary * 0.02, 6000);
 
   const grossPay = baseSalary + otPay + data.attendanceBonus + data.mealAllowance;
   const netPay = grossPay - data.ssbAmount - data.incomeTax;
 
   const handleApplySSB = () => {
-    updateField("ssbAmount", calculatedSSB);
+    onChange({ ...data, ssbAmount: calculatedSSB });
   };
 
   return (
@@ -44,15 +51,30 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary }: Props) {
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>OT Hours (2x Rate)</Label>
-          <Input type="number" value={data.otHours} onChange={e => updateField("otHours", Number(e.target.value))} />
+          <Input 
+            type="number" 
+            value={data.otHours} 
+            onFocus={handleFocus}
+            onChange={e => updateField("otHours", e.target.value)} 
+          />
         </div>
         <div className="space-y-2">
           <Label>Attendance Bonus</Label>
-          <Input type="number" value={data.attendanceBonus} onChange={e => updateField("attendanceBonus", Number(e.target.value))} />
+          <Input 
+            type="number" 
+            value={data.attendanceBonus} 
+            onFocus={handleFocus}
+            onChange={e => updateField("attendanceBonus", e.target.value)} 
+          />
         </div>
         <div className="space-y-2">
           <Label>Meal Allowance</Label>
-          <Input type="number" value={data.mealAllowance} onChange={e => updateField("mealAllowance", Number(e.target.value))} />
+          <Input 
+            type="number" 
+            value={data.mealAllowance} 
+            onFocus={handleFocus}
+            onChange={e => updateField("mealAllowance", e.target.value)} 
+          />
         </div>
       </div>
 
@@ -64,11 +86,21 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary }: Props) {
             <Label>SSB (2%)</Label>
             <button type="button" onClick={handleApplySSB} className="text-[10px] text-accent hover:underline">Auto Calc</button>
           </div>
-          <Input type="number" value={data.ssbAmount} onChange={e => updateField("ssbAmount", Number(e.target.value))} />
+          <Input 
+            type="number" 
+            value={data.ssbAmount} 
+            onFocus={handleFocus}
+            onChange={e => updateField("ssbAmount", e.target.value)} 
+          />
         </div>
         <div className="space-y-2">
           <Label>Income Tax</Label>
-          <Input type="number" value={data.incomeTax} onChange={e => updateField("incomeTax", Number(e.target.value))} />
+          <Input 
+            type="number" 
+            value={data.incomeTax} 
+            onFocus={handleFocus}
+            onChange={e => updateField("incomeTax", e.target.value)} 
+          />
         </div>
       </div>
 
