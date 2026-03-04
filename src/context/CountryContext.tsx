@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
@@ -41,6 +42,6 @@ export function CountryProvider({ children }: { children: React.ReactNode }) {
 
 export function useCountry() {
   const context = useContext(CountryContext);
-  if (!context) throw new Error("useCountry must be used within a CountryProvider");
+  if (context === undefined) throw new Error("useCountry must be used within a CountryProvider");
   return context;
 }
