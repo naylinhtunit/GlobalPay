@@ -19,7 +19,7 @@ import {
 } from "firebase/firestore";
 import { useCountry } from "@/context/CountryContext";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, Search, UserCircle } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, UserCircle, Briefcase, Mail, Calendar, Hash, Banknote } from "lucide-react";
 import { 
   Dialog, 
   DialogContent, 
@@ -43,17 +43,16 @@ import { useToast } from "@/hooks/use-toast";
 interface Employee {
   id: string;
   employeeNumber: string;
-  firstName: string;
-  lastName: string;
+  fullName: string;
   department: string;
-  jobTitle: string;
   email: string;
+  baseSalary: number;
   country: string;
   hireDate: string;
 }
 
 export default function EmployeesPage() {
-  const { country } = useCountry();
+  const { country, currency } = useCountry();
   const { firestore } = useFirestore();
   const { toast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -61,11 +60,10 @@ export default function EmployeesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
+    fullName: "",
     employeeNumber: "",
     department: "",
-    jobTitle: "",
+    baseSalary: 0,
     email: "",
     hireDate: new Date().toISOString().split('T')[0]
   });
@@ -79,11 +77,10 @@ export default function EmployeesPage() {
 
   const resetForm = () => {
     setFormData({ 
-      firstName: "", 
-      lastName: "", 
+      fullName: "", 
       employeeNumber: "", 
       department: "", 
-      jobTitle: "", 
+      baseSalary: 0, 
       email: "",
       hireDate: new Date().toISOString().split('T')[0]
     });
@@ -96,6 +93,7 @@ export default function EmployeesPage() {
 
     const dataToSave = {
       ...formData,
+      baseSalary: Number(formData.baseSalary),
       country,
       updatedAt: serverTimestamp()
     };
@@ -103,7 +101,7 @@ export default function EmployeesPage() {
     if (editingId) {
       const docRef = doc(firestore, "employees", editingId);
       updateDocumentNonBlocking(docRef, dataToSave);
-      toast({ title: "Employee updated", description: `${formData.firstName} ${formData.lastName} has been updated.` });
+      toast({ title: "Employee updated", description: `${formData.fullName} has been updated.` });
     } else {
       const colRef = collection(firestore, "employees");
       const id = crypto.randomUUID();
@@ -112,7 +110,7 @@ export default function EmployeesPage() {
         id, 
         createdAt: serverTimestamp() 
       });
-      toast({ title: "Employee added", description: `${formData.firstName} ${formData.lastName} has been added successfully.` });
+      toast({ title: "Employee added", description: `${formData.fullName} has been added successfully.` });
     }
 
     setIsModalOpen(false);
@@ -129,11 +127,10 @@ export default function EmployeesPage() {
   const openEdit = (emp: Employee) => {
     setEditingId(emp.id);
     setFormData({
-      firstName: emp.firstName,
-      lastName: emp.lastName,
+      fullName: emp.fullName,
       employeeNumber: emp.employeeNumber,
       department: emp.department,
-      jobTitle: emp.jobTitle || "",
+      baseSalary: emp.baseSalary,
       email: emp.email || "",
       hireDate: emp.hireDate ? emp.hireDate.split('T')[0] : new Date().toISOString().split('T')[0]
     });
@@ -141,10 +138,16 @@ export default function EmployeesPage() {
   };
 
   const filteredEmployees = (employees || []).filter(emp => 
-    `${emp.firstName} ${emp.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    emp.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     emp.employeeNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
     emp.department.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    if (e.target.value === "0") {
+      e.target.select();
+    }
+  };
 
   return (
     <div className="md:pl-64 pt-16 md:pt-0 min-h-screen">
@@ -169,67 +172,77 @@ export default function EmployeesPage() {
                 <DialogTitle>{editingId ? "Edit Employee" : "Add New Employee"}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name</Label>
-                    <Input 
-                      id="firstName" 
-                      required 
-                      value={formData.firstName} 
-                      onChange={e => setFormData({...formData, firstName: e.target.value})} 
-                      onFocus={(e) => e.target.value === "" && e.target.select()}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name</Label>
-                    <Input 
-                      id="lastName" 
-                      required 
-                      value={formData.lastName} 
-                      onChange={e => setFormData({...formData, lastName: e.target.value})} 
-                      onFocus={(e) => e.target.value === "" && e.target.select()}
-                    />
-                  </div>
-                </div>
                 <div className="space-y-2">
-                  <Label htmlFor="code">Employee Number</Label>
+                  <Label htmlFor="fullName" className="flex items-center gap-2">
+                    <UserCircle size={14} className="text-muted-foreground" /> Full Name
+                  </Label>
                   <Input 
-                    id="code" 
+                    id="fullName" 
                     required 
-                    value={formData.employeeNumber} 
-                    onChange={e => setFormData({...formData, employeeNumber: e.target.value})} 
+                    placeholder="Enter full name"
+                    value={formData.fullName} 
+                    onChange={e => setFormData({...formData, fullName: e.target.value})} 
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input 
-                    id="email" 
-                    type="email" 
-                    value={formData.email} 
-                    onChange={e => setFormData({...formData, email: e.target.value})} 
-                  />
-                </div>
+                
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="dept">Department</Label>
+                    <Label htmlFor="code" className="flex items-center gap-2">
+                      <Hash size={14} className="text-muted-foreground" /> Employee Code
+                    </Label>
+                    <Input 
+                      id="code" 
+                      required 
+                      placeholder="EMP-XXXX"
+                      value={formData.employeeNumber} 
+                      onChange={e => setFormData({...formData, employeeNumber: e.target.value})} 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="dept" className="flex items-center gap-2">
+                      <Briefcase size={14} className="text-muted-foreground" /> Department
+                    </Label>
                     <Input 
                       id="dept" 
                       required 
+                      placeholder="e.g. Sales"
                       value={formData.department} 
                       onChange={e => setFormData({...formData, department: e.target.value})} 
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="job">Job Title</Label>
-                    <Input 
-                      id="job" 
-                      value={formData.jobTitle} 
-                      onChange={e => setFormData({...formData, jobTitle: e.target.value})} 
-                    />
-                  </div>
                 </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="hireDate">Hire Date</Label>
+                  <Label htmlFor="salary" className="flex items-center gap-2">
+                    <Banknote size={14} className="text-muted-foreground" /> Base Salary ({currency})
+                  </Label>
+                  <Input 
+                    id="salary" 
+                    type="number"
+                    required 
+                    onFocus={handleFocus}
+                    value={formData.baseSalary} 
+                    onChange={e => setFormData({...formData, baseSalary: e.target.value === "" ? 0 : Number(e.target.value)})} 
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="flex items-center gap-2">
+                    <Mail size={14} className="text-muted-foreground" /> Email
+                  </Label>
+                  <Input 
+                    id="email" 
+                    type="email" 
+                    placeholder="email@company.com"
+                    value={formData.email} 
+                    onChange={e => setFormData({...formData, email: e.target.value})} 
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="hireDate" className="flex items-center gap-2">
+                    <Calendar size={14} className="text-muted-foreground" /> Hire Date
+                  </Label>
                   <Input 
                     id="hireDate" 
                     type="date" 
@@ -238,7 +251,8 @@ export default function EmployeesPage() {
                     onChange={e => setFormData({...formData, hireDate: e.target.value})} 
                   />
                 </div>
-                <DialogFooter>
+
+                <DialogFooter className="pt-4">
                   <Button type="submit" className="w-full">{editingId ? "Update Employee" : "Save Employee"}</Button>
                 </DialogFooter>
               </form>
@@ -262,10 +276,10 @@ export default function EmployeesPage() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/30">
-                  <TableHead>Number</TableHead>
+                  <TableHead>Code</TableHead>
                   <TableHead>Employee</TableHead>
                   <TableHead className="hidden sm:table-cell">Department</TableHead>
-                  <TableHead className="hidden md:table-cell">Job Title</TableHead>
+                  <TableHead className="hidden md:table-cell">Base Salary</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -283,11 +297,16 @@ export default function EmployeesPage() {
                           <div className="h-8 w-8 rounded-full bg-accent/10 flex items-center justify-center text-accent hidden sm:flex">
                             <UserCircle size={20} />
                           </div>
-                          <span className="font-medium">{emp.firstName} {emp.lastName}</span>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{emp.fullName}</span>
+                            <span className="text-xs text-muted-foreground sm:hidden">{emp.department}</span>
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell className="hidden sm:table-cell">{emp.department}</TableCell>
-                      <TableCell className="hidden md:table-cell">{emp.jobTitle}</TableCell>
+                      <TableCell className="hidden md:table-cell font-mono">
+                        {emp.baseSalary?.toLocaleString()} {currency}
+                      </TableCell>
                       <TableCell className="text-right space-x-1 md:space-x-2">
                         <Button variant="ghost" size="icon" onClick={() => openEdit(emp)} className="h-8 w-8">
                           <Pencil size={14} className="text-blue-600" />

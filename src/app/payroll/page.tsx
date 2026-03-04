@@ -48,7 +48,7 @@ import {
 } from "@/components/ui/table";
 
 export default function PayrollPage() {
-  const { country } = useCountry();
+  const { country, currency } = useCountry();
   const { firestore } = useFirestore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedEmpId, setSelectedEmpId] = useState("");
@@ -100,13 +100,15 @@ export default function PayrollPage() {
     let grossPay = 0;
     let deductions = 0;
 
+    const baseSalary = emp.baseSalary || (country === "Japan" ? 200000 : 400000);
+
     if (country === "Japan") {
-      const hourlyRate = (emp.baseSalary || 200000) / 160;
-      grossPay = (emp.baseSalary || 200000) + (japanData.ot125Hours * hourlyRate * 1.25) + (japanData.nightShiftHours * hourlyRate * 0.25) + (japanData.lateNightOTHours * hourlyRate * 1.5);
+      const hourlyRate = baseSalary / 160;
+      grossPay = baseSalary + (japanData.ot125Hours * hourlyRate * 1.25) + (japanData.nightShiftHours * hourlyRate * 0.25) + (japanData.lateNightOTHours * hourlyRate * 1.5);
       deductions = japanData.healthInsurance + japanData.pension + japanData.incomeTax + japanData.hostelFee;
     } else {
-      const hourlyRate = ((emp.baseSalary || 400000) / 30 / 8);
-      grossPay = (emp.baseSalary || 400000) + (myanmarData.otHours * hourlyRate * 2) + myanmarData.attendanceBonus + myanmarData.mealAllowance;
+      const hourlyRate = (baseSalary / 30 / 8);
+      grossPay = baseSalary + (myanmarData.otHours * hourlyRate * 2) + myanmarData.attendanceBonus + myanmarData.mealAllowance;
       deductions = myanmarData.ssbAmount + myanmarData.incomeTax;
     }
 
@@ -116,7 +118,7 @@ export default function PayrollPage() {
       payPeriodEndDate: `${selectedMonth}-30`,
       payoutDate: new Date().toISOString(),
       country,
-      basicSalary: emp.baseSalary || 0,
+      basicSalary: baseSalary,
       status: "Calculated",
       totalGrossPay: grossPay,
       totalDeductions: deductions,
@@ -127,7 +129,6 @@ export default function PayrollPage() {
       updatedAt: serverTimestamp()
     };
 
-    // Optimistic: Close and reset
     setIsModalOpen(false);
 
     const colRef = collection(firestore, "payrollRecords");
@@ -155,7 +156,7 @@ export default function PayrollPage() {
       printWindow.document.write(`
         <html>
           <head>
-            <title>Payslip - ${previewData.employee?.firstName || 'Employee'}</title>
+            <title>Payslip - ${previewData.employee?.fullName || 'Employee'}</title>
             <script src="https://cdn.tailwindcss.com"></script>
           </head>
           <body>${content}</body>
@@ -199,7 +200,7 @@ export default function PayrollPage() {
                       </SelectTrigger>
                       <SelectContent>
                         {(employees || []).map(emp => (
-                          <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName} ({emp.employeeNumber})</SelectItem>
+                          <SelectItem key={emp.id} value={emp.id}>{emp.fullName} ({emp.employeeNumber})</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -221,8 +222,8 @@ export default function PayrollPage() {
 
                 {selectedEmpId && (
                   <div className="mt-4 p-4 border rounded-lg bg-primary/5">
-                    <p className="text-sm font-bold text-primary">Employee: {(employees || []).find(e => e.id === selectedEmpId)?.firstName} {(employees || []).find(e => e.id === selectedEmpId)?.lastName}</p>
-                    <p className="text-xs text-muted-foreground">Base Salary: {(employees || []).find(e => e.id === selectedEmpId)?.baseSalary?.toLocaleString()} {country === "Japan" ? "JPY" : "MMK"}</p>
+                    <p className="text-sm font-bold text-primary">Employee: {(employees || []).find(e => e.id === selectedEmpId)?.fullName}</p>
+                    <p className="text-xs text-muted-foreground">Base Salary: {(employees || []).find(e => e.id === selectedEmpId)?.baseSalary?.toLocaleString()} {currency}</p>
                   </div>
                 )}
 
@@ -230,13 +231,13 @@ export default function PayrollPage() {
                   <JapanPayrollForm 
                     data={japanData} 
                     onChange={setJapanData} 
-                    baseSalary={(employees || []).find(e => e.id === selectedEmpId)?.baseSalary || 0}
+                    baseSalary={(employees || []).find(e => e.id === selectedEmpId)?.baseSalary || 200000}
                   />
                 ) : (
                   <MyanmarPayrollForm 
                     data={myanmarData} 
                     onChange={setMyanmarData} 
-                    baseSalary={(employees || []).find(e => e.id === selectedEmpId)?.baseSalary || 0}
+                    baseSalary={(employees || []).find(e => e.id === selectedEmpId)?.baseSalary || 400000}
                   />
                 )}
                 
@@ -269,7 +270,7 @@ export default function PayrollPage() {
                   (payrollRecords || []).map((rec: any) => (
                     <TableRow key={rec.id} className="hover:bg-muted/20">
                       <TableCell className="font-medium">{rec.payPeriodStartDate.substring(0, 7)}</TableCell>
-                      <TableCell>{(employees || []).find(e => e.id === rec.employeeId)?.firstName || 'Unknown'} {(employees || []).find(e => e.id === rec.employeeId)?.lastName || ''}</TableCell>
+                      <TableCell>{(employees || []).find(e => e.id === rec.employeeId)?.fullName || 'Unknown'}</TableCell>
                       <TableCell className="hidden sm:table-cell font-mono">{rec.netPay.toLocaleString()}</TableCell>
                       <TableCell>
                         <span className="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">{rec.status}</span>

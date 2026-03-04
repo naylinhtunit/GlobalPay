@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from "react";
@@ -13,11 +12,11 @@ interface Props {
 
 export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ country, employee, month, data }, ref) => {
   if (country === "Japan") {
-    const hourlyRate = employee.baseSalary / 160;
+    const hourlyRate = (employee.baseSalary || 200000) / 160;
     const otPay = data.ot125Hours * hourlyRate * 1.25;
     const nightPay = data.nightShiftHours * hourlyRate * 0.25;
     const lateNightOTPay = data.lateNightOTHours * hourlyRate * 1.5;
-    const grossPay = employee.baseSalary + otPay + nightPay + lateNightOTPay;
+    const grossPay = (employee.baseSalary || 200000) + otPay + nightPay + lateNightOTPay;
     const deductions = data.healthInsurance + data.pension + data.incomeTax + data.hostelFee;
 
     return (
@@ -32,7 +31,7 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
         <div className="grid grid-cols-2 gap-8 mb-8">
           <div className="border border-black p-4">
             <p className="text-xs text-gray-500 mb-1">社員番号 / 氏名</p>
-            <p className="font-bold text-lg">{employee.employeeCode} - {employee.name} 様</p>
+            <p className="font-bold text-lg">{employee.employeeNumber} - {employee.fullName} 様</p>
           </div>
           <div className="border border-black p-4 text-right">
             <p className="text-xs text-gray-500 mb-1">支払日</p>
@@ -52,7 +51,7 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
           <div className="border border-black">
             <div className="bg-gray-100 p-2 border-b border-black font-bold">支給 (Payments)</div>
             <div className="p-4 space-y-2 text-sm">
-              <div className="flex justify-between"><span>基本給</span> <span>{employee.baseSalary.toLocaleString()}</span></div>
+              <div className="flex justify-between"><span>基本給</span> <span>{(employee.baseSalary || 200000).toLocaleString()}</span></div>
               <div className="flex justify-between"><span>普通残業手当</span> <span>{Math.round(otPay).toLocaleString()}</span></div>
               <div className="flex justify-between"><span>深夜手当金</span> <span>{Math.round(nightPay).toLocaleString()}</span></div>
               <div className="flex justify-between"><span>深夜残業手当</span> <span>{Math.round(lateNightOTPay).toLocaleString()}</span></div>
@@ -84,9 +83,9 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
     );
   } else {
     // Myanmar Payslip
-    const hourlyRate = (employee.baseSalary / 30 / 8);
+    const hourlyRate = ((employee.baseSalary || 400000) / 30 / 8);
     const otPay = data.otHours * hourlyRate * 2;
-    const grossPay = employee.baseSalary + otPay + data.attendanceBonus + data.mealAllowance;
+    const grossPay = (employee.baseSalary || 400000) + otPay + data.attendanceBonus + data.mealAllowance;
     const totalDeductions = data.ssbAmount + data.incomeTax;
 
     return (
@@ -99,8 +98,8 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
         <div className="grid grid-cols-2 gap-8 mb-8">
           <div className="space-y-1">
             <p className="text-sm font-bold">Employee Information</p>
-            <p>ID: {employee.employeeCode}</p>
-            <p>Name: {employee.name}</p>
+            <p>ID: {employee.employeeNumber}</p>
+            <p>Name: {employee.fullName}</p>
             <p>Department: {employee.department}</p>
           </div>
           <div className="text-right space-y-1">
@@ -118,7 +117,7 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
             </tr>
           </thead>
           <tbody>
-            <tr><td className="border border-black p-2">Basic Salary</td><td className="border border-black p-2 text-right">{employee.baseSalary.toLocaleString()}</td></tr>
+            <tr><td className="border border-black p-2">Basic Salary</td><td className="border border-black p-2 text-right">{(employee.baseSalary || 400000).toLocaleString()}</td></tr>
             <tr><td className="border border-black p-2">OT Hours ({data.otHours} hrs)</td><td className="border border-black p-2 text-right">{Math.round(otPay).toLocaleString()}</td></tr>
             <tr><td className="border border-black p-2">Attendance Bonus</td><td className="border border-black p-2 text-right">{data.attendanceBonus.toLocaleString()}</td></tr>
             <tr><td className="border border-black p-2">Meal Allowance</td><td className="border border-black p-2 text-right">{data.mealAllowance.toLocaleString()}</td></tr>
