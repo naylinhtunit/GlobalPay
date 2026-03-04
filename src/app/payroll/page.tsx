@@ -8,17 +8,20 @@ import {
   useCollection, 
   useMemoFirebase,
   useUser,
-  addDocumentNonBlocking
+  addDocumentNonBlocking,
+  updateDocumentNonBlocking,
+  deleteDocumentNonBlocking
 } from "@/firebase";
 import { 
   collection, 
   query, 
   where, 
+  doc,
   serverTimestamp 
 } from "firebase/firestore";
 import { useCountry } from "@/context/CountryContext";
 import { Button } from "@/components/ui/button";
-import { Eye, Calculator, Printer } from "lucide-react";
+import { Eye, Calculator, Printer, Pencil, Trash2 } from "lucide-react";
 import { 
   Dialog, 
   DialogContent, 
@@ -68,6 +71,7 @@ export default function PayrollPage() {
   }, []);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
   const [selectedEmpId, setSelectedEmpId] = useState("");
   const [selectedMonth, setSelectedMonth] = useState(monthOptions[0].value);
   
@@ -115,6 +119,28 @@ export default function PayrollPage() {
   const { data: payrollRecords, isLoading: payrollLoading } = useCollection(payrollQuery);
   const { data: employees } = useCollection(employeesQuery);
 
+  const resetForm = () => {
+    setEditingRecordId(null);
+    setSelectedEmpId("");
+    setSelectedMonth(monthOptions[0].value);
+    setJapanData({
+      ot125Hours: 0,
+      nightShiftHours: 0,
+      lateNightOTHours: 0,
+      healthInsurance: 0,
+      pension: 0,
+      incomeTax: 0,
+      hostelFee: 0
+    });
+    setMyanmarData({
+      otHours: 0,
+      attendanceBonus: 0,
+      mealAllowance: 0,
+      ssbAmount: 0,
+      incomeTax: 0
+    });
+  };
+
   const handleGenerate = () => {
     if (!selectedEmpId || !firestore || !user) return;
     
@@ -149,19 +175,40 @@ export default function PayrollPage() {
       netPay: grossPay - deductions,
       japanData: country === "Japan" ? japanData : null,
       myanmarData: country === "Myanmar" ? myanmarData : null,
-      createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     };
 
-    const colRef = collection(firestore, "payrollRecords");
-    addDocumentNonBlocking(colRef, payload);
-    
-    toast({
-      title: "Payroll generated",
-      description: `Payslip for month ${selectedMonth} has been created.`
-    });
+    if (editingRecordId) {
+      const docRef = doc(firestore, "payrollRecords", editingRecordId);
+      updateDocumentNonBlocking(docRef, payload);
+      toast({ title: "Payroll updated", description: "The payroll record has been updated." });
+    } else {
+      const colRef = collection(firestore, "payrollRecords");
+      addDocumentNonBlocking(colRef, { ...payload, createdAt: serverTimestamp() });
+      toast({ title: "Payroll generated", description: `Payslip for month ${selectedMonth} has been created.` });
+    }
 
     setIsModalOpen(false);
+    resetForm();
+  };
+
+  const handleEdit = (record: any) => {
+    setEditingRecordId(record.id);
+    setSelectedEmpId(record.employeeId);
+    setSelectedMonth(record.payPeriodStartDate.substring(0, 7));
+    if (record.country === "Japan") {
+      setJapanData(record.japanData);
+    } else {
+      setMyanmarData(record.myanmarData);
+    }
+    setIsModalOpen(true);
+  };
+
+  const handleDelete = (id: string) => {
+    if (!firestore || !confirm("Are you sure you want to delete this payroll record?")) return;
+    const docRef = doc(firestore, "payrollRecords", id);
+    deleteDocumentNonBlocking(docRef);
+    toast({ title: "Payroll deleted", variant: "destructive" });
   };
 
   const handlePreview = (record: any) => {
@@ -207,21 +254,24 @@ export default function PayrollPage() {
             <h2 className="text-2xl md:text-3xl font-bold text-primary">Monthly Payroll</h2>
             <p className="text-muted-foreground">Process payments for {country} employees</p>
           </div>
-          <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+          <Dialog open={isModalOpen} onOpenChange={(open) => {
+            setIsModalOpen(open);
+            if (!open) resetForm();
+          }}>
             <DialogTrigger asChild>
-              <Button className="gap-2 bg-primary shadow-lg w-full md:w-auto">
+              <Button onClick={resetForm} className="gap-2 bg-primary shadow-lg w-full md:w-auto">
                 <Calculator size={18} /> New Payroll Entry
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Process Payroll - {country}</DialogTitle>
+                <DialogTitle>{editingRecordId ? "Edit Payroll" : "Process Payroll"} - {country}</DialogTitle>
               </DialogHeader>
               <div className="space-y-6 py-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Select Employee</Label>
-                    <Select onValueChange={setSelectedEmpId}>
+                    <Select onValueChange={setSelectedEmpId} value={selectedEmpId}>
                       <SelectTrigger>
                         <SelectValue placeholder="Choose employee" />
                       </SelectTrigger>
@@ -234,7 +284,7 @@ export default function PayrollPage() {
                   </div>
                   <div className="space-y-2">
                     <Label>Payroll Month</Label>
-                    <Select onValueChange={setSelectedMonth} defaultValue={selectedMonth}>
+                    <Select onValueChange={setSelectedMonth} value={selectedMonth}>
                       <SelectTrigger>
                         <SelectValue placeholder="Choose month" />
                       </SelectTrigger>
@@ -273,7 +323,9 @@ export default function PayrollPage() {
                 )}
                 
                 <DialogFooter>
-                  <Button onClick={handleGenerate} className="w-full" disabled={!selectedEmpId}>Generate Payslip</Button>
+                  <Button onClick={handleGenerate} className="w-full" disabled={!selectedEmpId}>
+                    {editingRecordId ? "Update Payslip" : "Generate Payslip"}
+                  </Button>
                 </DialogFooter>
               </div>
             </DialogContent>
@@ -307,8 +359,14 @@ export default function PayrollPage() {
                         <span className="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">{rec.status}</span>
                       </TableCell>
                       <TableCell className="text-right space-x-2">
-                        <Button variant="ghost" size="sm" onClick={() => handlePreview(rec)} className="gap-2">
-                          <Eye size={14} /> <span className="hidden sm:inline">View Payslip</span>
+                        <Button variant="ghost" size="icon" onClick={() => handlePreview(rec)} title="View Payslip">
+                          <Eye size={14} />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(rec)} title="Edit">
+                          <Pencil size={14} />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(rec.id)} title="Delete">
+                          <Trash2 size={14} className="text-destructive" />
                         </Button>
                       </TableCell>
                     </TableRow>
