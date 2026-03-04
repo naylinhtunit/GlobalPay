@@ -6,9 +6,48 @@ import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { AuthInit } from '@/components/auth/AuthInit';
 
+/**
+ * Metadata for GlobalPay - International Payroll System.
+ * Includes Open Graph tags for high-quality social media previews on platforms like Viber and Facebook.
+ */
 export const metadata: Metadata = {
   title: 'GlobalPay - International Payroll System',
-  description: 'Manage payroll for Japan and Myanmar with ease.',
+  description: 'Streamline your international workforce management. Specialized payroll processing for Japan and Myanmar with full compliance.',
+  keywords: ['payroll', 'international payroll', 'Japan payroll', 'Myanmar payroll', 'HR management'],
+  authors: [{ name: 'GlobalPay Enterprise' }],
+  metadataBase: new URL('https://globalpay-app.vercel.app'), // Replace with your actual production URL
+  openGraph: {
+    title: 'GlobalPay: Expert International Payroll Solutions',
+    description: 'Manage your global team with ease. Automated payslip generation and compliance for Japan (JPY) and Myanmar (MMK).',
+    url: 'https://globalpay-app.vercel.app',
+    siteName: 'GlobalPay',
+    images: [
+      {
+        url: 'https://picsum.photos/seed/payroll/1200/630', // High-quality JPG/PNG representation
+        width: 1200,
+        height: 630,
+        alt: 'GlobalPay International Payroll Dashboard Preview',
+      },
+    ],
+    locale: 'en_US',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'GlobalPay - International Payroll System',
+    description: 'Efficient payroll management for cross-border teams.',
+    images: ['https://picsum.photos/seed/payroll/1200/630'],
+  },
+  icons: {
+    icon: [
+      { url: '/favicon.ico' },
+      { url: 'https://picsum.photos/seed/shield/32/32', sizes: '32x32', type: 'image/png' }
+    ],
+    shortcut: '/favicon.ico',
+    apple: [
+      { url: 'https://picsum.photos/seed/shield/180/180', sizes: '180x180', type: 'image/png' }
+    ],
+  },
 };
 
 export default function RootLayout({
