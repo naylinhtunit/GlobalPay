@@ -42,19 +42,17 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/50 p-4">
-      <Card className="w-full max-w-md shadow-2xl border-t-8 border-t-primary">
-        <CardHeader className="space-y-2 text-center">
+    <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
+      <Card className="w-full max-w-md shadow-lg">
+        <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-2">
-            <div className="p-4 bg-primary/10 rounded-full">
-              <Globe className="w-12 h-12 text-primary stroke-[2.5px]" />
-            </div>
+            <Globe className="w-10 h-10 text-primary" />
           </div>
-          <CardTitle className="text-3xl font-black tracking-tighter text-primary">GlobalPay</CardTitle>
-          <CardDescription className="font-medium">International Payroll Management System</CardDescription>
+          <CardTitle className="text-2xl font-bold">GlobalPay</CardTitle>
+          <CardDescription>International Payroll Management System</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="space-y-5">
+          <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Username / Email</Label>
               <Input
@@ -63,7 +61,6 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-12 border-primary/20 focus-visible:ring-primary"
               />
             </div>
             <div className="space-y-2">
@@ -74,16 +71,14 @@ export default function LoginPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="h-12 border-primary/20 focus-visible:ring-primary"
               />
             </div>
-            <Button type="submit" className="w-full h-12 gap-2 text-lg font-bold shadow-lg shadow-primary/25" disabled={isLoading}>
-              {isLoading ? "Signing in..." : <><LogIn size={20} /> Access Dashboard</>}
+            <Button type="submit" className="w-full gap-2" disabled={isLoading}>
+              {isLoading ? "Signing in..." : <><LogIn size={18} /> Sign In</>}
             </Button>
           </form>
-          <div className="mt-8 pt-6 border-t text-center space-y-2">
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Authorized Access Only</p>
-            <p className="text-[10px] text-muted-foreground/60 italic">Please contact GlobalPay Admin to register your company.</p>
+          <div className="mt-6 pt-4 border-t text-center">
+            <p className="text-xs text-muted-foreground">Authorized Access Only</p>
           </div>
         </CardContent>
       </Card>
