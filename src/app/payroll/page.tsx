@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useMemo } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { 
   useFirestore, 
@@ -18,7 +18,7 @@ import {
 } from "firebase/firestore";
 import { useCountry } from "@/context/CountryContext";
 import { Button } from "@/components/ui/button";
-import { Eye, Calculator, Printer, Download } from "lucide-react";
+import { Eye, Calculator, Printer } from "lucide-react";
 import { 
   Dialog, 
   DialogContent, 
@@ -53,9 +53,23 @@ export default function PayrollPage() {
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+  
+  // Dynamic months generator (Last 12 months)
+  const monthOptions = useMemo(() => {
+    const options = [];
+    const now = new Date();
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const value = d.toISOString().substring(0, 7); // YYYY-MM
+      const label = d.toLocaleString('default', { month: 'long', year: 'numeric' });
+      options.push({ value, label });
+    }
+    return options;
+  }, []);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedEmpId, setSelectedEmpId] = useState("");
-  const [selectedMonth, setSelectedMonth] = useState("2024-01");
+  const [selectedMonth, setSelectedMonth] = useState(monthOptions[0].value);
   
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewData, setPreviewData] = useState<any>(null);
@@ -220,14 +234,14 @@ export default function PayrollPage() {
                   </div>
                   <div className="space-y-2">
                     <Label>Payroll Month</Label>
-                    <Select onValueChange={setSelectedMonth} defaultValue="2024-01">
+                    <Select onValueChange={setSelectedMonth} defaultValue={selectedMonth}>
                       <SelectTrigger>
                         <SelectValue placeholder="Choose month" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="2024-01">January 2024</SelectItem>
-                        <SelectItem value="2024-02">February 2024</SelectItem>
-                        <SelectItem value="2024-03">March 2024</SelectItem>
+                        {monthOptions.map(opt => (
+                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
