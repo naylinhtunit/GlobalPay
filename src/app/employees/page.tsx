@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { 
   useFirestore, 
@@ -69,8 +69,18 @@ export default function EmployeesPage() {
     department: "",
     baseSalary: 0,
     email: "",
-    hireDate: new Date().toISOString().split('T')[0]
+    hireDate: "" // Initialize empty to avoid hydration mismatch
   });
+
+  // Handle hydration safe date initialization
+  useEffect(() => {
+    if (!formData.hireDate) {
+      setFormData(prev => ({
+        ...prev,
+        hireDate: new Date().toISOString().split('T')[0]
+      }));
+    }
+  }, []);
 
   const employeesQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -135,10 +145,10 @@ export default function EmployeesPage() {
   const openEdit = (emp: Employee) => {
     setEditingId(emp.id);
     setFormData({
-      fullName: emp.fullName,
-      employeeNumber: emp.employeeNumber,
-      department: emp.department,
-      baseSalary: emp.baseSalary,
+      fullName: emp.fullName || "",
+      employeeNumber: emp.employeeNumber || "",
+      department: emp.department || "",
+      baseSalary: emp.baseSalary || 0,
       email: emp.email || "",
       hireDate: emp.hireDate || new Date().toISOString().split('T')[0]
     });
@@ -146,8 +156,8 @@ export default function EmployeesPage() {
   };
 
   const filteredEmployees = (employees || []).filter(emp => 
-    emp.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.employeeNumber.toLowerCase().includes(searchTerm.toLowerCase())
+    (emp.fullName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (emp.employeeNumber || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -252,7 +262,7 @@ export default function EmployeesPage() {
                     <TableCell className="font-mono text-xs">{emp.employeeNumber}</TableCell>
                     <TableCell className="font-medium">{emp.fullName}</TableCell>
                     <TableCell>{emp.department}</TableCell>
-                    <TableCell>{emp.baseSalary.toLocaleString()} {currency}</TableCell>
+                    <TableCell>{emp.baseSalary?.toLocaleString() || 0} {currency}</TableCell>
                     <TableCell className="text-right space-x-2">
                       <Button variant="ghost" size="icon" onClick={() => openEdit(emp)}><Pencil size={14} /></Button>
                       <Button variant="ghost" size="icon" onClick={() => handleDelete(emp.id)}><Trash2 size={14} className="text-destructive" /></Button>

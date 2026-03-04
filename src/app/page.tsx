@@ -36,7 +36,6 @@ export default function Dashboard() {
   const { data: payrollRecords } = useCollection(payrollQuery);
 
   const employeeCount = employees?.length || 0;
-  const pendingRecords = (payrollRecords || []).filter(r => r.status === "Calculated").length;
   const totalPayroll = (employees || []).reduce((acc, emp: any) => acc + (emp.baseSalary || 0), 0);
 
   return (
@@ -107,7 +106,7 @@ export default function Dashboard() {
                     </div>
                     <div className="flex-1">
                       <p className="text-sm font-medium">Payroll for {(employees || []).find(e => e.id === rec.employeeId)?.fullName || 'Employee'}</p>
-                      <p className="text-xs text-muted-foreground">{rec.payPeriodStartDate.substring(0, 7)}</p>
+                      <p className="text-xs text-muted-foreground">{rec.payPeriodStartDate?.substring(0, 7) || 'Date N/A'}</p>
                     </div>
                   </div>
                 ))}

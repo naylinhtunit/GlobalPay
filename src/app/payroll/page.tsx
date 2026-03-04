@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useRef, useMemo } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { 
   useFirestore, 
@@ -57,26 +57,28 @@ export default function PayrollPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   
-  // Dynamic months generator (Last 12 months)
-  const monthOptions = useMemo(() => {
+  const [monthOptions, setMonthOptions] = useState<{value: string, label: string}[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
+  const [selectedEmpId, setSelectedEmpId] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState("");
+  
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewData, setPreviewData] = useState<any>(null);
+
+  // Generate hydration-safe month options
+  useEffect(() => {
     const options = [];
     const now = new Date();
     for (let i = 0; i < 12; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const value = d.toISOString().substring(0, 7); // YYYY-MM
+      const value = d.toISOString().substring(0, 7);
       const label = d.toLocaleString('default', { month: 'long', year: 'numeric' });
       options.push({ value, label });
     }
-    return options;
+    setMonthOptions(options);
+    setSelectedMonth(options[0]?.value || "");
   }, []);
-
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
-  const [selectedEmpId, setSelectedEmpId] = useState("");
-  const [selectedMonth, setSelectedMonth] = useState(monthOptions[0].value);
-  
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [previewData, setPreviewData] = useState<any>(null);
 
   const [japanData, setJapanData] = useState({
     ot125Hours: 0,
@@ -122,7 +124,7 @@ export default function PayrollPage() {
   const resetForm = () => {
     setEditingRecordId(null);
     setSelectedEmpId("");
-    setSelectedMonth(monthOptions[0].value);
+    setSelectedMonth(monthOptions[0]?.value || "");
     setJapanData({
       ot125Hours: 0,
       nightShiftHours: 0,
@@ -149,16 +151,16 @@ export default function PayrollPage() {
 
     let grossPay = 0;
     let deductions = 0;
-    const baseSalary = emp.baseSalary;
+    const baseSalary = emp.baseSalary || 0;
 
     if (country === "Japan") {
       const hourlyRate = baseSalary / 160;
       grossPay = baseSalary + (japanData.ot125Hours * hourlyRate * 1.25) + (japanData.nightShiftHours * hourlyRate * 0.25) + (japanData.lateNightOTHours * hourlyRate * 1.5);
-      deductions = japanData.healthInsurance + japanData.pension + japanData.incomeTax + japanData.hostelFee;
+      deductions = (japanData.healthInsurance || 0) + (japanData.pension || 0) + (japanData.incomeTax || 0) + (japanData.hostelFee || 0);
     } else {
       const hourlyRate = (baseSalary / 30 / 8);
-      grossPay = baseSalary + (myanmarData.otHours * hourlyRate * 2) + myanmarData.attendanceBonus + myanmarData.mealAllowance;
-      deductions = myanmarData.ssbAmount + myanmarData.incomeTax;
+      grossPay = baseSalary + (myanmarData.otHours * hourlyRate * 2) + (myanmarData.attendanceBonus || 0) + (myanmarData.mealAllowance || 0);
+      deductions = (myanmarData.ssbAmount || 0) + (myanmarData.incomeTax || 0);
     }
 
     const payload = {
@@ -195,11 +197,11 @@ export default function PayrollPage() {
   const handleEdit = (record: any) => {
     setEditingRecordId(record.id);
     setSelectedEmpId(record.employeeId);
-    setSelectedMonth(record.payPeriodStartDate.substring(0, 7));
+    setSelectedMonth(record.payPeriodStartDate?.substring(0, 7) || "");
     if (record.country === "Japan") {
-      setJapanData(record.japanData);
+      setJapanData(record.japanData || {});
     } else {
-      setMyanmarData(record.myanmarData);
+      setMyanmarData(record.myanmarData || {});
     }
     setIsModalOpen(true);
   };
@@ -217,7 +219,7 @@ export default function PayrollPage() {
       ...record, 
       employee: emp, 
       data: record.japanData || record.myanmarData, 
-      month: record.payPeriodStartDate.substring(0, 7) 
+      month: record.payPeriodStartDate?.substring(0, 7) || "" 
     });
     setIsPreviewOpen(true);
   };
@@ -230,7 +232,7 @@ export default function PayrollPage() {
       printWindow.document.write(`
         <html>
           <head>
-            <title>Payslip - ${previewData.employee?.fullName || 'Employee'}</title>
+            <title>Payslip - ${previewData?.employee?.fullName || 'Employee'}</title>
             <script src="https://cdn.tailwindcss.com"></script>
           </head>
           <body>${content}</body>
@@ -303,7 +305,7 @@ export default function PayrollPage() {
                       Employee: {(employees || []).find((e: any) => e.id === selectedEmpId)?.fullName}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Base Salary: {(employees || []).find((e: any) => e.id === selectedEmpId)?.baseSalary?.toLocaleString()} {currency}
+                      Base Salary: {(employees || []).find((e: any) => e.id === selectedEmpId)?.baseSalary?.toLocaleString() || 0} {currency}
                     </p>
                   </div>
                 )}
@@ -352,9 +354,9 @@ export default function PayrollPage() {
                 ) : (
                   (payrollRecords || []).map((rec: any) => (
                     <TableRow key={rec.id} className="hover:bg-muted/20">
-                      <TableCell className="font-medium">{rec.payPeriodStartDate.substring(0, 7)}</TableCell>
+                      <TableCell className="font-medium">{rec.payPeriodStartDate?.substring(0, 7) || 'N/A'}</TableCell>
                       <TableCell>{(employees || []).find((e: any) => e.id === rec.employeeId)?.fullName || 'Unknown'}</TableCell>
-                      <TableCell className="hidden sm:table-cell font-mono">{rec.netPay?.toLocaleString()}</TableCell>
+                      <TableCell className="hidden sm:table-cell font-mono">{rec.netPay?.toLocaleString() || 0}</TableCell>
                       <TableCell>
                         <span className="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">{rec.status}</span>
                       </TableCell>
