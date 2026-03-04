@@ -1,10 +1,25 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Navbar } from "@/components/layout/Navbar";
-import { db } from "@/lib/firebase";
-import { collection, addDoc, getDocs, query, where, deleteDoc, doc, updateDoc } from "firebase/firestore";
+import { 
+  useFirestore, 
+  useCollection, 
+  useMemoFirebase, 
+  errorEmitter, 
+  FirestorePermissionError 
+} from "@/firebase";
+import { 
+  collection, 
+  addDoc, 
+  query, 
+  where, 
+  deleteDoc, 
+  doc, 
+  updateDoc, 
+  serverTimestamp 
+} from "firebase/firestore";
 import { useCountry } from "@/context/CountryContext";
 import { Button } from "@/components/ui/button";
 import { Plus, Pencil, Trash2, Search, UserCircle } from "lucide-react";
@@ -39,9 +54,8 @@ interface Employee {
 
 export default function EmployeesPage() {
   const { country } = useCountry();
+  const { firestore } = useFirestore();
   const { toast } = useToast();
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -53,52 +67,78 @@ export default function EmployeesPage() {
     baseSalary: 0
   });
 
-  const fetchEmployees = async () => {
-    setLoading(true);
-    try {
-      const q = query(collection(db, "employees"), where("country", "==", country));
-      const querySnapshot = await getDocs(q);
-      const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Employee[];
-      setEmployees(data);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
+  const employeesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, "employees"), where("country", "==", country));
+  }, [firestore, country]);
+
+  const { data: employees, isLoading: loading } = useCollection<Employee>(employeesQuery);
+
+  const resetForm = () => {
+    setFormData({ name: "", employeeCode: "", department: "", baseSalary: 0 });
+    setEditingId(null);
   };
 
-  useEffect(() => {
-    fetchEmployees();
-  }, [country]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      if (editingId) {
-        await updateDoc(doc(db, "employees", editingId), { ...formData, country });
-        toast({ title: "Success", description: "Employee updated successfully." });
-      } else {
-        await addDoc(collection(db, "employees"), { ...formData, country });
-        toast({ title: "Success", description: "Employee added successfully." });
-      }
-      setIsModalOpen(false);
-      setEditingId(null);
-      setFormData({ name: "", employeeCode: "", department: "", baseSalary: 0 });
-      fetchEmployees();
-    } catch (error) {
-      toast({ variant: "destructive", title: "Error", description: "Failed to save employee." });
+    if (!firestore) return;
+
+    const dataToSave = {
+      ...formData,
+      country,
+      updatedAt: serverTimestamp()
+    };
+
+    if (editingId) {
+      const docRef = doc(firestore, "employees", editingId);
+      updateDoc(docRef, dataToSave)
+        .then(() => {
+          toast({ title: "Success", description: "Employee updated successfully." });
+          setIsModalOpen(false);
+          resetForm();
+        })
+        .catch(async (error) => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'update',
+            requestResourceData: dataToSave
+          }));
+          toast({ variant: "destructive", title: "Error", description: "Failed to update employee." });
+        });
+    } else {
+      const colRef = collection(firestore, "employees");
+      addDoc(colRef, { ...dataToSave, createdAt: serverTimestamp() })
+        .then(() => {
+          toast({ title: "Success", description: "Employee added successfully." });
+          setIsModalOpen(false);
+          resetForm();
+        })
+        .catch(async (error) => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: colRef.path,
+            operation: 'create',
+            requestResourceData: dataToSave
+          }));
+          toast({ variant: "destructive", title: "Error", description: "Failed to add employee." });
+        });
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this employee?")) return;
-    try {
-      await deleteDoc(doc(db, "employees", id));
-      toast({ title: "Deleted", description: "Employee removed from database." });
-      fetchEmployees();
-    } catch (error) {
-      toast({ variant: "destructive", title: "Error", description: "Delete failed." });
-    }
+  const handleDelete = (id: string) => {
+    if (!firestore || !confirm("Are you sure you want to delete this employee?")) return;
+    
+    const docRef = doc(firestore, "employees", id);
+    deleteDoc(docRef)
+      .then(() => {
+        toast({ title: "Deleted", description: "Employee removed from database." });
+      })
+      .catch(async (error) => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: docRef.path,
+          operation: 'delete'
+        }));
+        toast({ variant: "destructive", title: "Error", description: "Delete failed." });
+      });
   };
 
   const openEdit = (emp: Employee) => {
@@ -118,7 +158,7 @@ export default function EmployeesPage() {
     }
   };
 
-  const filteredEmployees = employees.filter(emp => 
+  const filteredEmployees = (employees || []).filter(emp => 
     emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     emp.employeeCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
     emp.department.toLowerCase().includes(searchTerm.toLowerCase())
@@ -133,12 +173,12 @@ export default function EmployeesPage() {
             <h2 className="text-2xl md:text-3xl font-bold text-primary">Employees</h2>
             <p className="text-muted-foreground">Manage your workforce in {country}</p>
           </div>
-          <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+          <Dialog open={isModalOpen} onOpenChange={(open) => {
+            setIsModalOpen(open);
+            if (!open) resetForm();
+          }}>
             <DialogTrigger asChild>
-              <Button onClick={() => {
-                setEditingId(null);
-                setFormData({ name: "", employeeCode: "", department: "", baseSalary: 0 });
-              }} className="gap-2 bg-accent hover:bg-accent/90 shadow-lg w-full md:w-auto">
+              <Button onClick={() => resetForm()} className="gap-2 bg-accent hover:bg-accent/90 shadow-lg w-full md:w-auto">
                 <Plus size={18} /> Add Employee
               </Button>
             </DialogTrigger>

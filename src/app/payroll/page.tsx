@@ -1,13 +1,25 @@
 
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { Navbar } from "@/components/layout/Navbar";
-import { db } from "@/lib/firebase";
-import { collection, addDoc, getDocs, query, where, doc, getDoc } from "firebase/firestore";
+import { 
+  useFirestore, 
+  useCollection, 
+  useMemoFirebase, 
+  errorEmitter, 
+  FirestorePermissionError 
+} from "@/firebase";
+import { 
+  collection, 
+  addDoc, 
+  query, 
+  where, 
+  serverTimestamp 
+} from "firebase/firestore";
 import { useCountry } from "@/context/CountryContext";
 import { Button } from "@/components/ui/button";
-import { FileText, Printer, Download, Eye, Calculator } from "lucide-react";
+import { Eye, Calculator, Printer, Download } from "lucide-react";
 import { 
   Dialog, 
   DialogContent, 
@@ -39,10 +51,8 @@ import {
 
 export default function PayrollPage() {
   const { country } = useCountry();
+  const { firestore } = useFirestore();
   const { toast } = useToast();
-  const [employees, setEmployees] = useState<any[]>([]);
-  const [payrollRecords, setPayrollRecords] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedEmpId, setSelectedEmpId] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("2024-01");
@@ -70,51 +80,50 @@ export default function PayrollPage() {
 
   const printRef = useRef<HTMLDivElement>(null);
 
-  const fetchRecords = async () => {
-    setLoading(true);
-    try {
-      const q = query(collection(db, "payroll_records"), where("country", "==", country));
-      const querySnapshot = await getDocs(q);
-      const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setPayrollRecords(data);
+  const payrollQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, "payroll_records"), where("country", "==", country));
+  }, [firestore, country]);
 
-      const eq = query(collection(db, "employees"), where("country", "==", country));
-      const empSnapshot = await getDocs(eq);
-      setEmployees(empSnapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const employeesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, "employees"), where("country", "==", country));
+  }, [firestore, country]);
 
-  useEffect(() => {
-    fetchRecords();
-  }, [country]);
+  const { data: payrollRecords, isLoading: payrollLoading } = useCollection(payrollQuery);
+  const { data: employees, isLoading: employeesLoading } = useCollection(employeesQuery);
 
-  const handleGenerate = async () => {
-    if (!selectedEmpId) return;
-    try {
-      const emp = employees.find(e => e.id === selectedEmpId);
-      const payload = {
-        employeeId: selectedEmpId,
-        employeeName: emp.name,
-        month: selectedMonth,
-        country,
-        data: country === "Japan" ? japanData : myanmarData,
-        createdAt: new Date()
-      };
-      await addDoc(collection(db, "payroll_records"), payload);
-      toast({ title: "Success", description: "Payroll record generated." });
-      setIsModalOpen(false);
-      fetchRecords();
-    } catch (e) {
-      toast({ variant: "destructive", title: "Error", description: "Failed to generate record." });
-    }
+  const handleGenerate = () => {
+    if (!selectedEmpId || !firestore) return;
+    
+    const emp = (employees || []).find(e => e.id === selectedEmpId);
+    const colRef = collection(firestore, "payroll_records");
+    const payload = {
+      employeeId: selectedEmpId,
+      employeeName: emp?.name || "Unknown",
+      month: selectedMonth,
+      country,
+      data: country === "Japan" ? japanData : myanmarData,
+      createdAt: serverTimestamp()
+    };
+
+    addDoc(colRef, payload)
+      .then(() => {
+        toast({ title: "Success", description: "Payroll record generated." });
+        setIsModalOpen(false);
+      })
+      .catch(async (error) => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: colRef.path,
+          operation: 'create',
+          requestResourceData: payload
+        }));
+        toast({ variant: "destructive", title: "Error", description: "Failed to generate record." });
+      });
   };
 
   const handlePreview = (record: any) => {
-    const emp = employees.find(e => e.id === record.employeeId);
+    const emp = (employees || []).find(e => e.id === record.employeeId);
     setPreviewData({ ...record, employee: emp });
     setIsPreviewOpen(true);
   };
@@ -127,7 +136,7 @@ export default function PayrollPage() {
       printWindow.document.write(`
         <html>
           <head>
-            <title>Payslip - ${previewData.employee.name}</title>
+            <title>Payslip - ${previewData.employee?.name || 'Employee'}</title>
             <script src="https://cdn.tailwindcss.com"></script>
           </head>
           <body>${content}</body>
@@ -170,7 +179,7 @@ export default function PayrollPage() {
                         <SelectValue placeholder="Choose employee" />
                       </SelectTrigger>
                       <SelectContent>
-                        {employees.map(emp => (
+                        {(employees || []).map(emp => (
                           <SelectItem key={emp.id} value={emp.id}>{emp.name} ({emp.employeeCode})</SelectItem>
                         ))}
                       </SelectContent>
@@ -193,8 +202,8 @@ export default function PayrollPage() {
 
                 {selectedEmpId && (
                   <div className="mt-4 p-4 border rounded-lg bg-primary/5">
-                    <p className="text-sm font-bold text-primary">Employee: {employees.find(e => e.id === selectedEmpId)?.name}</p>
-                    <p className="text-xs text-muted-foreground">Base Salary: {employees.find(e => e.id === selectedEmpId)?.baseSalary.toLocaleString()} {country === "Japan" ? "JPY" : "MMK"}</p>
+                    <p className="text-sm font-bold text-primary">Employee: {(employees || []).find(e => e.id === selectedEmpId)?.name}</p>
+                    <p className="text-xs text-muted-foreground">Base Salary: {(employees || []).find(e => e.id === selectedEmpId)?.baseSalary.toLocaleString()} {country === "Japan" ? "JPY" : "MMK"}</p>
                   </div>
                 )}
 
@@ -202,13 +211,13 @@ export default function PayrollPage() {
                   <JapanPayrollForm 
                     data={japanData} 
                     onChange={setJapanData} 
-                    baseSalary={employees.find(e => e.id === selectedEmpId)?.baseSalary || 0}
+                    baseSalary={(employees || []).find(e => e.id === selectedEmpId)?.baseSalary || 0}
                   />
                 ) : (
                   <MyanmarPayrollForm 
                     data={myanmarData} 
                     onChange={setMyanmarData} 
-                    baseSalary={employees.find(e => e.id === selectedEmpId)?.baseSalary || 0}
+                    baseSalary={(employees || []).find(e => e.id === selectedEmpId)?.baseSalary || 0}
                   />
                 )}
                 
@@ -233,12 +242,12 @@ export default function PayrollPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loading ? (
+                {payrollLoading ? (
                   <TableRow><TableCell colSpan={5} className="text-center py-8">Loading records...</TableCell></TableRow>
-                ) : payrollRecords.length === 0 ? (
+                ) : (payrollRecords || []).length === 0 ? (
                   <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No payroll records found.</TableCell></TableRow>
                 ) : (
-                  payrollRecords.map((rec) => (
+                  (payrollRecords || []).map((rec: any) => (
                     <TableRow key={rec.id} className="hover:bg-muted/20">
                       <TableCell className="font-medium">{rec.month}</TableCell>
                       <TableCell>{rec.employeeName}</TableCell>
@@ -259,7 +268,6 @@ export default function PayrollPage() {
           </div>
         </div>
 
-        {/* Payslip Preview Dialog */}
         <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
           <DialogContent className="max-w-[900px] w-[95vw] h-[90vh] overflow-y-auto p-4 md:p-6">
             <DialogHeader>
