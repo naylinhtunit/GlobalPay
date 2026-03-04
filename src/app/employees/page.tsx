@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -69,18 +68,17 @@ export default function EmployeesPage() {
     department: "",
     baseSalary: 0,
     email: "",
-    hireDate: "" // Initialize empty to avoid hydration mismatch
+    hireDate: ""
   });
 
-  // Handle hydration safe date initialization
   useEffect(() => {
-    if (!formData.hireDate) {
+    if (!formData.hireDate && isModalOpen && !editingId) {
       setFormData(prev => ({
         ...prev,
         hireDate: new Date().toISOString().split('T')[0]
       }));
     }
-  }, []);
+  }, [isModalOpen, editingId]);
 
   const employeesQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -123,10 +121,8 @@ export default function EmployeesPage() {
       toast({ title: "Employee updated", description: `${formData.fullName} has been updated.` });
     } else {
       const colRef = collection(firestore, "employees");
-      const id = crypto.randomUUID();
       addDocumentNonBlocking(colRef, { 
         ...dataToSave, 
-        id, 
         createdAt: serverTimestamp() 
       });
       toast({ title: "Employee added", description: `${formData.fullName} has been added successfully.` });
@@ -210,7 +206,6 @@ export default function EmployeesPage() {
                     type="number" 
                     required 
                     value={formData.baseSalary} 
-                    onFocus={(e) => e.target.value === "0" && e.target.select()}
                     onChange={e => setFormData({...formData, baseSalary: Number(e.target.value)})} 
                   />
                 </div>

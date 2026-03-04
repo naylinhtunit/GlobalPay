@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
@@ -21,7 +20,9 @@ export function CountryProvider({ children }: { children: React.ReactNode }) {
   const setCountry = (newCountry: Country) => {
     setCountryState(newCountry);
     setCurrency(newCountry === "Japan" ? "JPY" : "MMK");
-    localStorage.setItem("globalpay_country", newCountry);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("globalpay_country", newCountry);
+    }
   };
 
   useEffect(() => {

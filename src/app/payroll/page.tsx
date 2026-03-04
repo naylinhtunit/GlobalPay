@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
@@ -66,7 +65,6 @@ export default function PayrollPage() {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewData, setPreviewData] = useState<any>(null);
 
-  // Generate hydration-safe month options
   useEffect(() => {
     const options = [];
     const now = new Date();
@@ -77,7 +75,9 @@ export default function PayrollPage() {
       options.push({ value, label });
     }
     setMonthOptions(options);
-    setSelectedMonth(options[0]?.value || "");
+    if (!selectedMonth && options.length > 0) {
+      setSelectedMonth(options[0].value);
+    }
   }, []);
 
   const [japanData, setJapanData] = useState({
@@ -124,7 +124,7 @@ export default function PayrollPage() {
   const resetForm = () => {
     setEditingRecordId(null);
     setSelectedEmpId("");
-    setSelectedMonth(monthOptions[0]?.value || "");
+    if (monthOptions.length > 0) setSelectedMonth(monthOptions[0].value);
     setJapanData({
       ot125Hours: 0,
       nightShiftHours: 0,
@@ -235,7 +235,7 @@ export default function PayrollPage() {
             <title>Payslip - ${previewData?.employee?.fullName || 'Employee'}</title>
             <script src="https://cdn.tailwindcss.com"></script>
           </head>
-          <body>${content}</body>
+          <body class="p-8">${content}</body>
         </html>
       `);
       printWindow.document.close();
