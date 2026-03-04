@@ -1,9 +1,9 @@
-
 import type { Metadata } from 'next';
 import './globals.css';
 import { CountryProvider } from '@/context/CountryContext';
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
+import { AuthInit } from '@/components/auth/AuthInit';
 
 export const metadata: Metadata = {
   title: 'GlobalPay - International Payroll System',
@@ -25,6 +25,7 @@ export default function RootLayout({
       <body className="font-body antialiased bg-background min-h-screen">
         <FirebaseClientProvider>
           <CountryProvider>
+            <AuthInit />
             {children}
             <Toaster />
           </CountryProvider>

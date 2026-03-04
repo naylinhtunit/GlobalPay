@@ -89,7 +89,10 @@ export default function EmployeesPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!firestore) return;
+    if (!firestore) {
+      toast({ title: "Error", description: "Database not connected.", variant: "destructive" });
+      return;
+    }
 
     const dataToSave = {
       ...formData,
@@ -98,23 +101,28 @@ export default function EmployeesPage() {
       updatedAt: serverTimestamp()
     };
 
-    if (editingId) {
-      const docRef = doc(firestore, "employees", editingId);
-      updateDocumentNonBlocking(docRef, dataToSave);
-      toast({ title: "Employee updated", description: `${formData.fullName} has been updated.` });
-    } else {
-      const colRef = collection(firestore, "employees");
-      const id = crypto.randomUUID();
-      addDocumentNonBlocking(colRef, { 
-        ...dataToSave, 
-        id, 
-        createdAt: serverTimestamp() 
-      });
-      toast({ title: "Employee added", description: `${formData.fullName} has been added successfully.` });
+    try {
+      if (editingId) {
+        const docRef = doc(firestore, "employees", editingId);
+        updateDocumentNonBlocking(docRef, dataToSave);
+        toast({ title: "Employee updated", description: `${formData.fullName} has been updated.` });
+      } else {
+        const colRef = collection(firestore, "employees");
+        // Using a reliable ID generation or letting Firestore handle it
+        const id = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2);
+        addDocumentNonBlocking(colRef, { 
+          ...dataToSave, 
+          id, 
+          createdAt: serverTimestamp() 
+        });
+        toast({ title: "Employee added", description: `${formData.fullName} has been added successfully.` });
+      }
+      setIsModalOpen(false);
+      resetForm();
+    } catch (err) {
+      console.error("Submit error:", err);
+      toast({ title: "Submission failed", description: "An unexpected error occurred.", variant: "destructive" });
     }
-
-    setIsModalOpen(false);
-    resetForm();
   };
 
   const handleDelete = (id: string) => {
