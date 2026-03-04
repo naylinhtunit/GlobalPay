@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useRef } from "react";
@@ -6,6 +7,7 @@ import {
   useFirestore, 
   useCollection, 
   useMemoFirebase,
+  useUser,
   addDocumentNonBlocking
 } from "@/firebase";
 import { 
@@ -48,6 +50,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function PayrollPage() {
   const { country, currency } = useCountry();
+  const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -78,27 +81,35 @@ export default function PayrollPage() {
   const printRef = useRef<HTMLDivElement>(null);
 
   const payrollQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, "payrollRecords"), where("country", "==", country));
-  }, [firestore, country]);
+    if (!firestore || !user) return null;
+    return query(
+      collection(firestore, "payrollRecords"), 
+      where("country", "==", country),
+      where("companyId", "==", user.uid)
+    );
+  }, [firestore, country, user]);
 
   const employeesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, "employees"), where("country", "==", country));
-  }, [firestore, country]);
+    if (!firestore || !user) return null;
+    return query(
+      collection(firestore, "employees"), 
+      where("country", "==", country),
+      where("companyId", "==", user.uid)
+    );
+  }, [firestore, country, user]);
 
   const { data: payrollRecords, isLoading: payrollLoading } = useCollection(payrollQuery);
   const { data: employees } = useCollection(employeesQuery);
 
   const handleGenerate = () => {
-    if (!selectedEmpId || !firestore) return;
+    if (!selectedEmpId || !firestore || !user) return;
     
-    const emp = (employees || []).find(e => e.id === selectedEmpId);
+    const emp = (employees || []).find((e: any) => e.id === selectedEmpId);
     if (!emp) return;
 
     let grossPay = 0;
     let deductions = 0;
-    const baseSalary = emp.baseSalary || (country === "Japan" ? 200000 : 400000);
+    const baseSalary = emp.baseSalary;
 
     if (country === "Japan") {
       const hourlyRate = baseSalary / 160;
@@ -112,6 +123,7 @@ export default function PayrollPage() {
 
     const payload = {
       employeeId: selectedEmpId,
+      companyId: user.uid,
       payPeriodStartDate: `${selectedMonth}-01`,
       payPeriodEndDate: `${selectedMonth}-30`,
       payoutDate: new Date().toISOString(),
@@ -139,7 +151,7 @@ export default function PayrollPage() {
   };
 
   const handlePreview = (record: any) => {
-    const emp = (employees || []).find(e => e.id === record.employeeId);
+    const emp = (employees || []).find((e: any) => e.id === record.employeeId);
     setPreviewData({ 
       ...record, 
       employee: emp, 
@@ -200,7 +212,7 @@ export default function PayrollPage() {
                         <SelectValue placeholder="Choose employee" />
                       </SelectTrigger>
                       <SelectContent>
-                        {(employees || []).map(emp => (
+                        {(employees || []).map((emp: any) => (
                           <SelectItem key={emp.id} value={emp.id}>{emp.fullName} ({emp.employeeNumber})</SelectItem>
                         ))}
                       </SelectContent>
@@ -216,8 +228,6 @@ export default function PayrollPage() {
                         <SelectItem value="2024-01">January 2024</SelectItem>
                         <SelectItem value="2024-02">February 2024</SelectItem>
                         <SelectItem value="2024-03">March 2024</SelectItem>
-                        <SelectItem value="2024-04">April 2024</SelectItem>
-                        <SelectItem value="2024-05">May 2024</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -225,8 +235,12 @@ export default function PayrollPage() {
 
                 {selectedEmpId && (
                   <div className="mt-4 p-4 border rounded-lg bg-primary/5">
-                    <p className="text-sm font-bold text-primary">Employee: {(employees || []).find(e => e.id === selectedEmpId)?.fullName}</p>
-                    <p className="text-xs text-muted-foreground">Base Salary: {(employees || []).find(e => e.id === selectedEmpId)?.baseSalary?.toLocaleString()} {currency}</p>
+                    <p className="text-sm font-bold text-primary">
+                      Employee: {(employees || []).find((e: any) => e.id === selectedEmpId)?.fullName}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Base Salary: {(employees || []).find((e: any) => e.id === selectedEmpId)?.baseSalary?.toLocaleString()} {currency}
+                    </p>
                   </div>
                 )}
 
@@ -234,13 +248,13 @@ export default function PayrollPage() {
                   <JapanPayrollForm 
                     data={japanData} 
                     onChange={setJapanData} 
-                    baseSalary={(employees || []).find(e => e.id === selectedEmpId)?.baseSalary || 200000}
+                    baseSalary={(employees || []).find((e: any) => e.id === selectedEmpId)?.baseSalary || 200000}
                   />
                 ) : (
                   <MyanmarPayrollForm 
                     data={myanmarData} 
                     onChange={setMyanmarData} 
-                    baseSalary={(employees || []).find(e => e.id === selectedEmpId)?.baseSalary || 400000}
+                    baseSalary={(employees || []).find((e: any) => e.id === selectedEmpId)?.baseSalary || 400000}
                   />
                 )}
                 
@@ -268,12 +282,12 @@ export default function PayrollPage() {
                 {payrollLoading ? (
                   <TableRow><TableCell colSpan={5} className="text-center py-8">Loading records...</TableCell></TableRow>
                 ) : (payrollRecords || []).length === 0 ? (
-                  <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No payroll records found.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No records found.</TableCell></TableRow>
                 ) : (
                   (payrollRecords || []).map((rec: any) => (
                     <TableRow key={rec.id} className="hover:bg-muted/20">
                       <TableCell className="font-medium">{rec.payPeriodStartDate.substring(0, 7)}</TableCell>
-                      <TableCell>{(employees || []).find(e => e.id === rec.employeeId)?.fullName || 'Unknown'}</TableCell>
+                      <TableCell>{(employees || []).find((e: any) => e.id === rec.employeeId)?.fullName || 'Unknown'}</TableCell>
                       <TableCell className="hidden sm:table-cell font-mono">{rec.netPay?.toLocaleString()}</TableCell>
                       <TableCell>
                         <span className="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">{rec.status}</span>
@@ -299,9 +313,6 @@ export default function PayrollPage() {
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={handlePrint} className="gap-2">
                     <Printer size={16} /> Print
-                  </Button>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Download size={16} /> <span className="hidden sm:inline">PDF</span>
                   </Button>
                 </div>
               </div>

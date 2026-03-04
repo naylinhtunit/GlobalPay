@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState } from "react";
@@ -6,6 +7,7 @@ import {
   useFirestore, 
   useCollection, 
   useMemoFirebase,
+  useUser,
   addDocumentNonBlocking,
   updateDocumentNonBlocking,
   deleteDocumentNonBlocking
@@ -42,6 +44,7 @@ import { useToast } from "@/hooks/use-toast";
 
 interface Employee {
   id: string;
+  companyId: string;
   employeeNumber: string;
   fullName: string;
   department: string;
@@ -53,6 +56,7 @@ interface Employee {
 
 export default function EmployeesPage() {
   const { country, currency } = useCountry();
+  const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -69,9 +73,13 @@ export default function EmployeesPage() {
   });
 
   const employeesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, "employees"), where("country", "==", country));
-  }, [firestore, country]);
+    if (!firestore || !user) return null;
+    return query(
+      collection(firestore, "employees"), 
+      where("country", "==", country),
+      where("companyId", "==", user.uid)
+    );
+  }, [firestore, country, user]);
 
   const { data: employees, isLoading: loading } = useCollection<Employee>(employeesQuery);
 
@@ -89,7 +97,7 @@ export default function EmployeesPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!firestore) {
+    if (!firestore || !user) {
       toast({ title: "Error", description: "Database not connected.", variant: "destructive" });
       return;
     }
@@ -98,6 +106,7 @@ export default function EmployeesPage() {
       ...formData,
       baseSalary: Number(formData.baseSalary),
       country,
+      companyId: user.uid,
       updatedAt: serverTimestamp()
     };
 
@@ -145,12 +154,6 @@ export default function EmployeesPage() {
     emp.department.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    if (e.target.value === "0") {
-      e.target.select();
-    }
-  };
-
   return (
     <div className="md:pl-64 pt-16 md:pt-0 min-h-screen">
       <Navbar />
@@ -178,84 +181,36 @@ export default function EmployeesPage() {
                   <Label htmlFor="fullName" className="flex items-center gap-2">
                     <UserCircle size={14} className="text-muted-foreground" /> Full Name
                   </Label>
-                  <Input 
-                    id="fullName" 
-                    required 
-                    placeholder="Enter full name"
-                    value={formData.fullName} 
-                    onChange={e => setFormData({...formData, fullName: e.target.value})} 
-                  />
+                  <Input id="fullName" required value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})} />
                 </div>
-                
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="code" className="flex items-center gap-2">
-                      <Hash size={14} className="text-muted-foreground" /> Employee Code
+                      <Hash size={14} className="text-muted-foreground" /> Code
                     </Label>
-                    <Input 
-                      id="code" 
-                      required 
-                      placeholder="EMP-XXXX"
-                      value={formData.employeeNumber} 
-                      onChange={e => setFormData({...formData, employeeNumber: e.target.value})} 
-                    />
+                    <Input id="code" required value={formData.employeeNumber} onChange={e => setFormData({...formData, employeeNumber: e.target.value})} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="dept" className="flex items-center gap-2">
                       <Briefcase size={14} className="text-muted-foreground" /> Department
                     </Label>
-                    <Input 
-                      id="dept" 
-                      required 
-                      placeholder="e.g. Sales"
-                      value={formData.department} 
-                      onChange={e => setFormData({...formData, department: e.target.value})} 
-                    />
+                    <Input id="dept" required value={formData.department} onChange={e => setFormData({...formData, department: e.target.value})} />
                   </div>
                 </div>
-
                 <div className="space-y-2">
-                  <Label htmlFor="salary" className="flex items-center gap-2">
-                    <Banknote size={14} className="text-muted-foreground" /> Base Salary ({currency})
-                  </Label>
-                  <Input 
-                    id="salary" 
-                    type="number"
-                    required 
-                    onFocus={handleFocus}
-                    value={formData.baseSalary} 
-                    onChange={e => setFormData({...formData, baseSalary: e.target.value === "" ? 0 : Number(e.target.value)})} 
-                  />
+                  <Label htmlFor="salary">Base Salary ({currency})</Label>
+                  <Input id="salary" type="number" required value={formData.baseSalary} onChange={e => setFormData({...formData, baseSalary: Number(e.target.value)})} />
                 </div>
-
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="flex items-center gap-2">
-                    <Mail size={14} className="text-muted-foreground" /> Email
-                  </Label>
-                  <Input 
-                    id="email" 
-                    type="email" 
-                    placeholder="email@company.com"
-                    value={formData.email} 
-                    onChange={e => setFormData({...formData, email: e.target.value})} 
-                  />
+                  <Label htmlFor="email">Email</Label>
+                  <Input id="email" type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
                 </div>
-
                 <div className="space-y-2">
-                  <Label htmlFor="hireDate" className="flex items-center gap-2">
-                    <Calendar size={14} className="text-muted-foreground" /> Hire Date
-                  </Label>
-                  <Input 
-                    id="hireDate" 
-                    type="date" 
-                    required 
-                    value={formData.hireDate} 
-                    onChange={e => setFormData({...formData, hireDate: e.target.value})} 
-                  />
+                  <Label htmlFor="hireDate">Hire Date</Label>
+                  <Input id="hireDate" type="date" required value={formData.hireDate} onChange={e => setFormData({...formData, hireDate: e.target.value})} />
                 </div>
-
                 <DialogFooter className="pt-4">
-                  <Button type="submit" className="w-full">{editingId ? "Update Employee" : "Save Employee"}</Button>
+                  <Button type="submit" className="w-full">{editingId ? "Update" : "Save"}</Button>
                 </DialogFooter>
               </form>
             </DialogContent>
@@ -263,63 +218,38 @@ export default function EmployeesPage() {
         </div>
 
         <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
-          <div className="p-4 border-b flex items-center gap-4">
-            <div className="relative flex-1">
+          <div className="p-4 border-b">
+            <div className="relative max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-              <Input 
-                placeholder="Search employees..." 
-                className="pl-10" 
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-              />
+              <Input placeholder="Search employees..." className="pl-10" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
             </div>
           </div>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/30">
+                <TableRow>
                   <TableHead>Code</TableHead>
-                  <TableHead>Employee</TableHead>
-                  <TableHead className="hidden sm:table-cell">Department</TableHead>
-                  <TableHead className="hidden md:table-cell">Base Salary</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Department</TableHead>
+                  <TableHead>Salary</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow><TableCell colSpan={5} className="text-center py-8">Loading employees...</TableCell></TableRow>
-                ) : filteredEmployees.length === 0 ? (
-                  <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No employees found.</TableCell></TableRow>
-                ) : (
-                  filteredEmployees.map((emp) => (
-                    <TableRow key={emp.id} className="hover:bg-muted/20">
-                      <TableCell className="font-mono text-xs font-semibold">{emp.employeeNumber}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="h-8 w-8 rounded-full bg-accent/10 flex items-center justify-center text-accent hidden sm:flex">
-                            <UserCircle size={20} />
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="font-medium">{emp.fullName}</span>
-                            <span className="text-xs text-muted-foreground sm:hidden">{emp.department}</span>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell">{emp.department}</TableCell>
-                      <TableCell className="hidden md:table-cell font-mono">
-                        {emp.baseSalary?.toLocaleString()} {currency}
-                      </TableCell>
-                      <TableCell className="text-right space-x-1 md:space-x-2">
-                        <Button variant="ghost" size="icon" onClick={() => openEdit(emp)} className="h-8 w-8">
-                          <Pencil size={14} className="text-blue-600" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(emp.id)} className="h-8 w-8">
-                          <Trash2 size={14} className="text-destructive" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
+                  <TableRow><TableCell colSpan={5} className="text-center py-8">Loading...</TableCell></TableRow>
+                ) : filteredEmployees.map((emp) => (
+                  <TableRow key={emp.id}>
+                    <TableCell className="font-mono text-xs">{emp.employeeNumber}</TableCell>
+                    <TableCell className="font-medium">{emp.fullName}</TableCell>
+                    <TableCell>{emp.department}</TableCell>
+                    <TableCell>{emp.baseSalary.toLocaleString()} {currency}</TableCell>
+                    <TableCell className="text-right space-x-2">
+                      <Button variant="ghost" size="icon" onClick={() => openEdit(emp)}><Pencil size={14} /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(emp.id)}><Trash2 size={14} className="text-destructive" /></Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </div>

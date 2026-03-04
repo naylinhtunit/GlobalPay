@@ -8,42 +8,39 @@
       "description": "Represents an individual employee with their core personal and employment details within the GlobalPay system.",
       "properties": {
         "id": {
+          "type": "string"
+        },
+        "companyId": {
           "type": "string",
-          "description": "Unique identifier for the Employee entity."
+          "description": "ID of the company/tenant this employee belongs to."
         },
         "employeeNumber": {
-          "type": "string",
-          "description": "A unique identifier assigned to the employee within the organization."
+          "type": "string"
         },
         "fullName": {
-          "type": "string",
-          "description": "The employee's full legal name."
+          "type": "string"
         },
         "email": {
           "type": "string",
-          "description": "The employee's professional email address.",
           "format": "email"
         },
         "baseSalary": {
-          "type": "number",
-          "description": "The fundamental base salary amount for the employee."
+          "type": "number"
         },
         "country": {
-          "type": "string",
-          "description": "The primary country of employment (e.g., 'Japan', 'Myanmar')."
+          "type": "string"
         },
         "hireDate": {
           "type": "string",
-          "description": "The official date when the employee commenced employment.",
           "format": "date"
         },
         "department": {
-          "type": "string",
-          "description": "The department or organizational unit to which the employee is assigned."
+          "type": "string"
         }
       },
       "required": [
         "id",
+        "companyId",
         "employeeNumber",
         "fullName",
         "country",
@@ -58,70 +55,53 @@
       "description": "Represents a single monthly payroll record for a specific employee.",
       "properties": {
         "id": {
-          "type": "string",
-          "description": "Unique identifier for the PayrollRecord entity."
+          "type": "string"
+        },
+        "companyId": {
+          "type": "string"
         },
         "employeeId": {
-          "type": "string",
-          "description": "Reference to the Employee entity."
+          "type": "string"
         },
         "payPeriodStartDate": {
           "type": "string",
-          "description": "Start date of the payroll period.",
           "format": "date-time"
         },
         "payPeriodEndDate": {
           "type": "string",
-          "description": "End date of the payroll period.",
           "format": "date-time"
         },
         "payoutDate": {
           "type": "string",
-          "description": "Date of disbursement.",
           "format": "date-time"
         },
         "country": {
-          "type": "string",
-          "description": "Country context."
+          "type": "string"
         },
         "basicSalary": {
-          "type": "number",
-          "description": "Base salary for the period."
+          "type": "number"
         },
         "status": {
-          "type": "string",
-          "description": "Processing status."
+          "type": "string"
         },
         "totalGrossPay": {
-          "type": "number",
-          "description": "Total earnings before deductions."
+          "type": "number"
         },
         "totalDeductions": {
-          "type": "number",
-          "description": "Total deductions."
+          "type": "number"
         },
         "netPay": {
-          "type": "number",
-          "description": "Final take-home pay."
+          "type": "number"
         },
         "japanData": {
-          "type": "object",
-          "description": "Regional payroll fields for Japan."
+          "type": "object"
         },
         "myanmarData": {
-          "type": "object",
-          "description": "Regional payroll fields for Myanmar."
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "format": "date-time"
+          "type": "object"
         }
       },
       "required": [
+        "companyId",
         "employeeId",
         "payPeriodStartDate",
         "payoutDate",
@@ -136,8 +116,7 @@
   },
   "auth": {
     "providers": [
-      "password",
-      "anonymous"
+      "password"
     ]
   },
   "firestore": {
@@ -148,18 +127,7 @@
           "entityName": "Employee",
           "schema": {
             "$ref": "#/backend/entities/Employee"
-          },
-          "description": "Stores individual employee profiles."
-        }
-      },
-      {
-        "path": "/employees/{employeeId}/payrollRecords/{payrollRecordId}",
-        "definition": {
-          "entityName": "PayrollRecord",
-          "schema": {
-            "$ref": "#/backend/entities/PayrollRecord"
-          },
-          "description": "Monthly payroll records nested under employees."
+          }
         }
       },
       {
@@ -168,8 +136,7 @@
           "entityName": "PayrollRecord",
           "schema": {
             "$ref": "#/backend/entities/PayrollRecord"
-          },
-          "description": "Flat collection of payroll records for dashboard indexing."
+          }
         }
       }
     ]

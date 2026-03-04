@@ -2,9 +2,11 @@
 "use client";
 
 import React, { useState } from "react";
-import { Globe, LayoutDashboard, Users, FileText, LogOut, Menu } from "lucide-react";
+import { Globe, LayoutDashboard, Users, FileText, LogOut, Menu, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCountry } from "@/context/CountryContext";
+import { useAuth, useUser } from "@/firebase";
+import { signOut } from "firebase/auth";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,12 +21,17 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 export function Navbar() {
   const { country, setCountry } = useCountry();
+  const { user } = useUser();
+  const auth = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
+  const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
 
   const navItems = [
@@ -32,6 +39,16 @@ export function Navbar() {
     { name: "Employees", href: "/employees", icon: Users },
     { name: "Payroll", href: "/payroll", icon: FileText },
   ];
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      toast({ title: "Signed Out", description: "You have been logged out successfully." });
+      router.push("/login");
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to sign out.", variant: "destructive" });
+    }
+  };
 
   const NavLinks = ({ onClick }: { onClick?: () => void }) => (
     <div className="space-y-2 mt-4">
@@ -56,9 +73,9 @@ export function Navbar() {
   const CountrySwitcher = () => (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="w-full justify-start gap-3">
+        <Button variant="outline" className="w-full justify-start gap-3 border-accent/20">
           <Globe size={18} className="text-accent" />
-          <span className="flex-1 text-left">{country} ({country === "Japan" ? "JPY" : "MMK"})</span>
+          <span className="flex-1 text-left">{country}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
@@ -78,23 +95,39 @@ export function Navbar() {
       <nav className="hidden md:flex fixed left-0 top-0 h-full w-64 bg-card border-r flex flex-col z-50">
         <div className="p-6">
           <h1 className="text-2xl font-bold text-primary tracking-tight">GlobalPay</h1>
+          <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest mt-1 opacity-60">Professional Payroll</p>
         </div>
 
         <div className="flex-1 px-4">
           <NavLinks />
         </div>
 
-        <div className="p-4 border-t space-y-4">
+        <div className="p-4 border-t space-y-4 bg-muted/10">
+          {user && (
+            <div className="px-4 py-2 flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                <User size={16} />
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <p className="text-xs font-bold truncate">{user.email?.split('@')[0]}</p>
+                <p className="text-[10px] text-muted-foreground truncate">Active Session</p>
+              </div>
+            </div>
+          )}
           <CountrySwitcher />
-          <div className="flex items-center gap-3 px-4 py-2 text-sm text-muted-foreground hover:text-destructive cursor-pointer transition-colors">
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start gap-3 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+            onClick={handleSignOut}
+          >
             <LogOut size={18} />
             Sign Out
-          </div>
+          </Button>
         </div>
       </nav>
 
       {/* Mobile Header */}
-      <header className="md:hidden fixed top-0 left-0 right-0 h-16 bg-card border-b flex items-center justify-between px-4 z-50">
+      <header className="md:hidden fixed top-0 left-0 right-0 h-16 bg-card border-b flex items-center justify-between px-4 z-50 shadow-sm">
         <Link href="/">
           <h1 className="text-xl font-bold text-primary tracking-tight">GlobalPay</h1>
         </Link>
@@ -105,19 +138,31 @@ export function Navbar() {
               <Menu size={24} />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-72 p-0 flex flex-col">
-            <SheetHeader className="p-6 text-left border-b">
+          <SheetContent side="left" className="w-72 p-0 flex flex-col border-r-0">
+            <SheetHeader className="p-6 text-left border-b bg-primary/5">
               <SheetTitle className="text-2xl font-bold text-primary">GlobalPay</SheetTitle>
             </SheetHeader>
             <div className="flex-1 px-4 overflow-y-auto">
               <NavLinks onClick={() => setIsOpen(false)} />
             </div>
             <div className="p-4 border-t space-y-4 bg-muted/20">
+              {user && (
+                <div className="flex items-center gap-3 px-4 py-2 border border-primary/10 rounded-lg bg-card">
+                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                    <User size={16} />
+                  </div>
+                  <p className="text-xs font-medium truncate">{user.email}</p>
+                </div>
+              )}
               <CountrySwitcher />
-              <div className="flex items-center gap-3 px-4 py-2 text-sm text-muted-foreground hover:text-destructive cursor-pointer transition-colors">
+              <Button 
+                variant="ghost" 
+                className="w-full justify-start gap-3 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                onClick={handleSignOut}
+              >
                 <LogOut size={18} />
                 Sign Out
-              </div>
+              </Button>
             </div>
           </SheetContent>
         </Sheet>
