@@ -23,7 +23,6 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
     
-    // Auto-append domain if not present for convenience
     const loginEmail = email.includes("@") ? email : `${email}@globalpay.com`;
 
     try {
@@ -43,43 +42,47 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="space-y-1 text-center">
-          <div className="flex justify-center mb-2">
-            <Shield className="w-10 h-10 text-primary" />
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+      <Card className="w-full max-w-md shadow-xl border-none">
+        <CardHeader className="space-y-2 text-center pt-10">
+          <div className="flex justify-center mb-4">
+            <Shield className="w-16 h-16 text-primary" strokeWidth={1.5} />
           </div>
-          <CardTitle className="text-2xl font-bold">GlobalPay</CardTitle>
-          <CardDescription>International Payroll Management System</CardDescription>
+          <CardTitle className="text-4xl font-bold tracking-tight text-slate-900">GlobalPay</CardTitle>
+          <CardDescription className="text-base text-slate-500">
+            International Payroll Management System
+          </CardDescription>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
+        <CardContent className="px-8 pb-10">
+          <form onSubmit={handleLogin} className="space-y-6 mt-6">
             <div className="space-y-2">
-              <Label htmlFor="email">Username / Email</Label>
+              <Label htmlFor="email" className="text-sm font-semibold text-slate-700">Username / Email</Label>
               <Input
                 id="email"
                 placeholder="e.g. globalpay"
+                className="h-12 bg-slate-50 border-slate-200"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" throws-error="false" className="text-sm font-semibold text-slate-700">Password</Label>
               <Input
                 id="password"
                 type="password"
+                className="h-12 bg-slate-50 border-slate-200"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
-            <Button type="submit" className="w-full gap-2" disabled={isLoading}>
-              {isLoading ? "Signing in..." : <><LogIn size={18} /> Sign In</>}
+            <Button type="submit" className="w-full h-12 text-base font-semibold gap-2 mt-4 transition-all hover:scale-[1.01]" disabled={isLoading}>
+              {isLoading ? "Signing in..." : <><LogIn size={20} /> Sign In</>}
             </Button>
           </form>
-          <div className="mt-6 pt-4 border-t text-center">
-            <p className="text-xs text-muted-foreground">Authorized Access Only</p>
+          <div className="mt-10 pt-6 border-t border-slate-100 text-center">
+            <p className="text-xs font-medium text-slate-400 tracking-wider uppercase">Authorized Access Only</p>
           </div>
         </CardContent>
       </Card>

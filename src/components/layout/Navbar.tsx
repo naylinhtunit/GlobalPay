@@ -57,7 +57,7 @@ export function Navbar() {
             className={cn(
               "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors cursor-pointer",
               pathname === item.href
-                ? "bg-primary text-primary-foreground"
+                ? "bg-primary text-primary-foreground shadow-md"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             )}
           >
@@ -72,16 +72,16 @@ export function Navbar() {
   const CountrySwitcher = () => (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="w-full justify-start gap-2 border-primary/20">
+        <Button variant="outline" className="w-full justify-start gap-2 border-primary/20 bg-background hover:bg-muted">
           <Globe size={16} className="text-primary" />
-          <span className="flex-1 text-left">{country}</span>
+          <span className="flex-1 text-left font-medium">{country}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuItem onClick={() => setCountry("Japan")} className="gap-2 cursor-pointer">
+        <DropdownMenuItem onClick={() => setCountry("Japan")} className="gap-2 cursor-pointer py-2">
           <span className="text-lg">🇯🇵</span> Japan (JPY)
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setCountry("Myanmar")} className="gap-2 cursor-pointer">
+        <DropdownMenuItem onClick={() => setCountry("Myanmar")} className="gap-2 cursor-pointer py-2">
           <span className="text-lg">🇲🇲</span> Myanmar (MMK)
         </DropdownMenuItem>
       </DropdownMenuContent>
@@ -91,34 +91,35 @@ export function Navbar() {
   return (
     <>
       {/* Desktop Sidebar */}
-      <nav className="hidden md:flex fixed left-0 top-0 h-full w-64 bg-card border-r flex flex-col z-50">
-        <div className="p-6">
-          <div className="flex items-center gap-2 text-primary">
-            <Shield size={24} />
-            <h1 className="text-xl font-bold tracking-tight">GlobalPay</h1>
+      <nav className="hidden md:flex fixed left-0 top-0 h-full w-64 bg-card border-r flex flex-col z-50 shadow-sm">
+        <div className="p-8">
+          <div className="flex items-center gap-3 text-primary">
+            <Shield size={32} strokeWidth={2} />
+            <h1 className="text-2xl font-bold tracking-tighter text-slate-900">GlobalPay</h1>
           </div>
-          <p className="text-[10px] text-muted-foreground font-semibold uppercase mt-1">Enterprise Edition</p>
+          <p className="text-[10px] text-primary/70 font-bold uppercase mt-2 tracking-widest bg-primary/5 px-2 py-1 rounded inline-block">Enterprise</p>
         </div>
 
         <div className="flex-1 px-4">
           <NavLinks />
         </div>
 
-        <div className="p-4 border-t space-y-4">
+        <div className="p-6 border-t space-y-4 bg-slate-50/50">
           {user && (
-            <div className="px-3 py-2 flex items-center gap-3 bg-muted/50 rounded-lg">
-              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                <User size={16} />
+            <div className="px-3 py-3 flex items-center gap-3 bg-white border rounded-xl shadow-sm">
+              <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                <User size={18} />
               </div>
               <div className="flex-1 overflow-hidden">
-                <p className="text-xs font-semibold truncate">{user.email?.split('@')[0]}</p>
+                <p className="text-sm font-bold text-slate-900 truncate capitalize">{user.email?.split('@')[0]}</p>
+                <p className="text-[10px] text-muted-foreground truncate">Administrator</p>
               </div>
             </div>
           )}
           <CountrySwitcher />
           <Button 
             variant="ghost" 
-            className="w-full justify-start gap-2 text-muted-foreground hover:text-destructive hover:bg-destructive/5"
+            className="w-full justify-start gap-2 text-muted-foreground hover:text-destructive hover:bg-destructive/5 font-medium"
             onClick={handleSignOut}
           >
             <LogOut size={18} />
@@ -128,41 +129,41 @@ export function Navbar() {
       </nav>
 
       {/* Mobile Header */}
-      <header className="md:hidden fixed top-0 left-0 right-0 h-16 bg-card border-b flex items-center justify-between px-4 z-50">
+      <header className="md:hidden fixed top-0 left-0 right-0 h-16 bg-card border-b flex items-center justify-between px-4 z-50 shadow-sm">
         <Link href="/">
           <div className="flex items-center gap-2 text-primary">
-            <Shield size={24} />
-            <h1 className="text-xl font-bold tracking-tight">GlobalPay</h1>
+            <Shield size={28} />
+            <h1 className="text-xl font-bold tracking-tight text-slate-900">GlobalPay</h1>
           </div>
         </Link>
 
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" className="hover:bg-muted">
               <Menu size={24} />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-64 p-0 flex flex-col">
-            <SheetHeader className="p-6 text-left border-b">
+          <SheetContent side="left" className="w-64 p-0 flex flex-col border-none">
+            <SheetHeader className="p-6 text-left border-b bg-slate-50">
               <SheetTitle className="flex items-center gap-2 text-primary">
-                <Shield size={24} />
-                <span>GlobalPay</span>
+                <Shield size={28} />
+                <span className="text-xl font-bold text-slate-900">GlobalPay</span>
               </SheetTitle>
             </SheetHeader>
             <div className="flex-1 px-4">
               <NavLinks onClick={() => setIsOpen(false)} />
             </div>
-            <div className="p-4 border-t space-y-4">
+            <div className="p-6 border-t space-y-4 bg-slate-50">
               {user && (
-                <div className="flex items-center gap-3 px-3 py-2 border rounded-lg">
-                  <User size={16} className="text-primary" />
-                  <p className="text-xs font-medium truncate">{user.email}</p>
+                <div className="flex items-center gap-3 px-3 py-3 bg-white border rounded-xl shadow-sm">
+                  <User size={18} className="text-primary" />
+                  <p className="text-sm font-bold text-slate-900 truncate">{user.email}</p>
                 </div>
               )}
               <CountrySwitcher />
               <Button 
                 variant="ghost" 
-                className="w-full justify-start gap-2 text-muted-foreground hover:text-destructive"
+                className="w-full justify-start gap-2 text-muted-foreground hover:text-destructive font-medium"
                 onClick={handleSignOut}
               >
                 <LogOut size={18} />
