@@ -164,7 +164,7 @@ export default function EmployeesPage() {
             if (!open) resetForm();
           }}>
             <DialogTrigger asChild>
-              <Button onClick={() => resetForm()} className="gap-2 bg-accent hover:bg-accent/90 shadow-lg w-full md:w-auto">
+              <Button onClick={() => resetForm()} className="gap-2 bg-primary shadow-lg w-full md:w-auto">
                 <Plus size={18} /> Add Employee
               </Button>
             </DialogTrigger>
