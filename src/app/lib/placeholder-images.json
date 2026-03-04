@@ -6,6 +6,18 @@
       "description": "Professional payroll management illustration",
       "imageUrl": "https://picsum.photos/seed/payroll/1200/600",
       "imageHint": "finance payroll"
+    },
+    {
+      "id": "branding-og",
+      "description": "GlobalPay Brand Social Preview Image",
+      "imageUrl": "https://picsum.photos/seed/shield-branding/1200/630",
+      "imageHint": "security shield"
+    },
+    {
+      "id": "branding-favicon",
+      "description": "GlobalPay Shield Favicon",
+      "imageUrl": "https://picsum.photos/seed/shield-logo/32/32",
+      "imageHint": "shield icon"
     }
   ]
 }
