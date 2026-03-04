@@ -1,40 +1,33 @@
-
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCountry } from "@/context/CountryContext";
-import { collection, query, where, getDocs } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { collection, query, where } from "firebase/firestore";
 import { Users, CreditCard, CalendarCheck, TrendingUp } from "lucide-react";
 
 export default function Dashboard() {
   const { country, currency } = useCountry();
-  const [stats, setStats] = useState({
-    employees: 0,
-    totalPayroll: 0,
-    pendingReviews: 0
-  });
+  const { firestore } = useFirestore();
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const empQuery = query(collection(db, "employees"), where("country", "==", country));
-        const empSnapshot = await getDocs(empQuery);
-        
-        // Simulating some stats based on available data
-        setStats({
-          employees: empSnapshot.size,
-          totalPayroll: empSnapshot.size * (country === "Japan" ? 250000 : 450000),
-          pendingReviews: 2
-        });
-      } catch (e) {
-        console.error("Error fetching dashboard data", e);
-      }
-    }
-    fetchData();
-  }, [country]);
+  const empQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, "employees"), where("country", "==", country));
+  }, [firestore, country]);
+
+  const payrollQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, "payrollRecords"), where("country", "==", country));
+  }, [firestore, country]);
+
+  const { data: employees } = useCollection(empQuery);
+  const { data: payrollRecords } = useCollection(payrollQuery);
+
+  const employeeCount = employees?.length || 0;
+  const pendingRecords = (payrollRecords || []).filter(r => r.status === "Calculated").length;
+  const totalPayroll = employeeCount * (country === "Japan" ? 250000 : 450000);
 
   return (
     <div className="md:pl-64 pt-16 md:pt-0 min-h-screen">
@@ -52,7 +45,7 @@ export default function Dashboard() {
               <Users className="h-4 w-4 text-accent" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.employees}</div>
+              <div className="text-2xl font-bold">{employeeCount}</div>
               <p className="text-xs text-muted-foreground">In {country} region</p>
             </CardContent>
           </Card>
@@ -63,7 +56,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {stats.totalPayroll.toLocaleString()} {currency}
+                {totalPayroll.toLocaleString()} {currency}
               </div>
               <p className="text-xs text-muted-foreground">Average projection</p>
             </CardContent>
@@ -74,7 +67,7 @@ export default function Dashboard() {
               <CalendarCheck className="h-4 w-4 text-accent" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.pendingReviews}</div>
+              <div className="text-2xl font-bold">{pendingRecords}</div>
               <p className="text-xs text-muted-foreground">Requires attention</p>
             </CardContent>
           </Card>
@@ -97,17 +90,20 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center gap-4 p-3 rounded-lg border bg-muted/30">
+                {(payrollRecords || []).slice(0, 3).map((rec, i) => (
+                  <div key={rec.id} className="flex items-center gap-4 p-3 rounded-lg border bg-muted/30">
                     <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                      {i}
+                      {i + 1}
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-medium">Payroll generated for employee #{100+i}</p>
-                      <p className="text-xs text-muted-foreground">2 hours ago</p>
+                      <p className="text-sm font-medium">Payroll generated for employee {rec.employeeId.substring(0, 8)}</p>
+                      <p className="text-xs text-muted-foreground">Recent update</p>
                     </div>
                   </div>
                 ))}
+                {(!payrollRecords || payrollRecords.length === 0) && (
+                   <p className="text-sm text-muted-foreground text-center py-4">No recent payroll activity.</p>
+                )}
               </div>
             </CardContent>
           </Card>

@@ -5,17 +5,16 @@ import { Navbar } from "@/components/layout/Navbar";
 import { 
   useFirestore, 
   useCollection, 
-  useMemoFirebase, 
-  errorEmitter, 
-  FirestorePermissionError 
+  useMemoFirebase,
+  addDocumentNonBlocking,
+  updateDocumentNonBlocking,
+  deleteDocumentNonBlocking
 } from "@/firebase";
 import { 
   collection, 
-  addDoc, 
   query, 
   where, 
   doc, 
-  updateDoc, 
   serverTimestamp 
 } from "firebase/firestore";
 import { useCountry } from "@/context/CountryContext";
@@ -39,7 +38,7 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { useToast } from "@/hooks/use-toast";
 
 interface Employee {
   id: string;
@@ -56,6 +55,7 @@ interface Employee {
 export default function EmployeesPage() {
   const { country } = useCountry();
   const { firestore } = useFirestore();
+  const { toast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -100,41 +100,30 @@ export default function EmployeesPage() {
       updatedAt: serverTimestamp()
     };
 
-    // Optimistic UI: Close and reset immediately
-    setIsModalOpen(false);
-    resetForm();
-
     if (editingId) {
       const docRef = doc(firestore, "employees", editingId);
-      updateDoc(docRef, dataToSave)
-        .catch(async (error) => {
-          errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: docRef.path,
-            operation: 'update',
-            requestResourceData: dataToSave
-          }));
-        });
+      updateDocumentNonBlocking(docRef, dataToSave);
+      toast({ title: "Employee updated", description: `${formData.firstName} ${formData.lastName} has been updated.` });
     } else {
       const colRef = collection(firestore, "employees");
-      addDoc(colRef, { 
+      const id = crypto.randomUUID();
+      addDocumentNonBlocking(colRef, { 
         ...dataToSave, 
-        id: crypto.randomUUID(), // Ensuring an ID is present if rules require it
+        id, 
         createdAt: serverTimestamp() 
-      })
-        .catch(async (error) => {
-          errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: colRef.path,
-            operation: 'create',
-            requestResourceData: dataToSave
-          }));
-        });
+      });
+      toast({ title: "Employee added", description: `${formData.firstName} ${formData.lastName} has been added successfully.` });
     }
+
+    setIsModalOpen(false);
+    resetForm();
   };
 
   const handleDelete = (id: string) => {
     if (!firestore || !confirm("Are you sure you want to delete this employee?")) return;
     const docRef = doc(firestore, "employees", id);
     deleteDocumentNonBlocking(docRef);
+    toast({ title: "Employee deleted", variant: "destructive" });
   };
 
   const openEdit = (emp: Employee) => {
@@ -183,34 +172,71 @@ export default function EmployeesPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="firstName">First Name</Label>
-                    <Input id="firstName" required value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})} />
+                    <Input 
+                      id="firstName" 
+                      required 
+                      value={formData.firstName} 
+                      onChange={e => setFormData({...formData, firstName: e.target.value})} 
+                      onFocus={(e) => e.target.value === "" && e.target.select()}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="lastName">Last Name</Label>
-                    <Input id="lastName" required value={formData.lastName} onChange={e => setFormData({...formData, lastName: e.target.value})} />
+                    <Input 
+                      id="lastName" 
+                      required 
+                      value={formData.lastName} 
+                      onChange={e => setFormData({...formData, lastName: e.target.value})} 
+                      onFocus={(e) => e.target.value === "" && e.target.select()}
+                    />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="code">Employee Number</Label>
-                  <Input id="code" required value={formData.employeeNumber} onChange={e => setFormData({...formData, employeeNumber: e.target.value})} />
+                  <Input 
+                    id="code" 
+                    required 
+                    value={formData.employeeNumber} 
+                    onChange={e => setFormData({...formData, employeeNumber: e.target.value})} 
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
+                  <Input 
+                    id="email" 
+                    type="email" 
+                    value={formData.email} 
+                    onChange={e => setFormData({...formData, email: e.target.value})} 
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="dept">Department</Label>
-                    <Input id="dept" required value={formData.department} onChange={e => setFormData({...formData, department: e.target.value})} />
+                    <Input 
+                      id="dept" 
+                      required 
+                      value={formData.department} 
+                      onChange={e => setFormData({...formData, department: e.target.value})} 
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="job">Job Title</Label>
-                    <Input id="job" value={formData.jobTitle} onChange={e => setFormData({...formData, jobTitle: e.target.value})} />
+                    <Input 
+                      id="job" 
+                      value={formData.jobTitle} 
+                      onChange={e => setFormData({...formData, jobTitle: e.target.value})} 
+                    />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="hireDate">Hire Date</Label>
-                  <Input id="hireDate" type="date" required value={formData.hireDate} onChange={e => setFormData({...formData, hireDate: e.target.value})} />
+                  <Input 
+                    id="hireDate" 
+                    type="date" 
+                    required 
+                    value={formData.hireDate} 
+                    onChange={e => setFormData({...formData, hireDate: e.target.value})} 
+                  />
                 </div>
                 <DialogFooter>
                   <Button type="submit" className="w-full">{editingId ? "Update Employee" : "Save Employee"}</Button>
