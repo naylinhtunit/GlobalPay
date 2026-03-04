@@ -21,7 +21,7 @@ import {
 } from "firebase/firestore";
 import { useCountry } from "@/context/CountryContext";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, Search, UserCircle, Briefcase, Mail, Calendar, Hash, Banknote } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, UserCircle, Briefcase, Mail, Calendar, Hash } from "lucide-react";
 import { 
   Dialog, 
   DialogContent, 
@@ -97,10 +97,7 @@ export default function EmployeesPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!firestore || !user) {
-      toast({ title: "Error", description: "Database not connected.", variant: "destructive" });
-      return;
-    }
+    if (!firestore || !user) return;
 
     const dataToSave = {
       ...formData,
@@ -143,15 +140,14 @@ export default function EmployeesPage() {
       department: emp.department,
       baseSalary: emp.baseSalary,
       email: emp.email || "",
-      hireDate: emp.hireDate ? emp.hireDate.split('T')[0] : new Date().toISOString().split('T')[0]
+      hireDate: emp.hireDate || new Date().toISOString().split('T')[0]
     });
     setIsModalOpen(true);
   };
 
   const filteredEmployees = (employees || []).filter(emp => 
     emp.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.employeeNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.department.toLowerCase().includes(searchTerm.toLowerCase())
+    emp.employeeNumber.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -199,14 +195,25 @@ export default function EmployeesPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="salary">Base Salary ({currency})</Label>
-                  <Input id="salary" type="number" required value={formData.baseSalary} onChange={e => setFormData({...formData, baseSalary: Number(e.target.value)})} />
+                  <Input 
+                    id="salary" 
+                    type="number" 
+                    required 
+                    value={formData.baseSalary} 
+                    onFocus={(e) => e.target.value === "0" && e.target.select()}
+                    onChange={e => setFormData({...formData, baseSalary: Number(e.target.value)})} 
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email" className="flex items-center gap-2">
+                    <Mail size={14} className="text-muted-foreground" /> Email
+                  </Label>
                   <Input id="email" type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="hireDate">Hire Date</Label>
+                  <Label htmlFor="hireDate" className="flex items-center gap-2">
+                    <Calendar size={14} className="text-muted-foreground" /> Hire Date
+                  </Label>
                   <Input id="hireDate" type="date" required value={formData.hireDate} onChange={e => setFormData({...formData, hireDate: e.target.value})} />
                 </div>
                 <DialogFooter className="pt-4">
@@ -238,6 +245,8 @@ export default function EmployeesPage() {
               <TableBody>
                 {loading ? (
                   <TableRow><TableCell colSpan={5} className="text-center py-8">Loading...</TableCell></TableRow>
+                ) : filteredEmployees.length === 0 ? (
+                  <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No employees found.</TableCell></TableRow>
                 ) : filteredEmployees.map((emp) => (
                   <TableRow key={emp.id}>
                     <TableCell className="font-mono text-xs">{emp.employeeNumber}</TableCell>

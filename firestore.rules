@@ -24,9 +24,5 @@ service cloud.firestore {
       allow read, update, delete: if isDataOwner(resource);
       allow create: if isNewDataOwner();
     }
-    
-    match /roles_admin/{adminUid} {
-      allow get: if isSignedIn();
-    }
   }
 }
