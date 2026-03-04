@@ -1,8 +1,7 @@
-
 "use client";
 
 import React, { useState } from "react";
-import { Globe, LayoutDashboard, Users, FileText, LogOut, Menu, User, Shield } from "lucide-react";
+import { Globe, LayoutDashboard, Users, FileText, LogOut, Menu, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCountry } from "@/context/CountryContext";
 import { useAuth, useUser } from "@/firebase";
@@ -73,8 +72,8 @@ export function Navbar() {
   const CountrySwitcher = () => (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="w-full justify-start gap-3 border-accent/20 h-11 hover:bg-accent/5">
-          <Globe size={18} className="text-accent" />
+        <Button variant="outline" className="w-full justify-start gap-3 border-primary/20 h-11 hover:bg-primary/5">
+          <Globe size={18} className="text-primary" />
           <span className="flex-1 text-left font-medium">{country}</span>
         </Button>
       </DropdownMenuTrigger>
@@ -95,7 +94,7 @@ export function Navbar() {
       <nav className="hidden md:flex fixed left-0 top-0 h-full w-64 bg-card border-r flex flex-col z-50 shadow-2xl">
         <div className="p-8">
           <div className="flex items-center gap-2 text-primary mb-1">
-            <Shield size={24} />
+            <Globe size={28} className="stroke-[2.5px]" />
             <h1 className="text-2xl font-black tracking-tighter">GlobalPay</h1>
           </div>
           <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.2em] opacity-50">Enterprise Edition</p>
@@ -133,7 +132,7 @@ export function Navbar() {
       <header className="md:hidden fixed top-0 left-0 right-0 h-16 bg-card border-b flex items-center justify-between px-5 z-50 shadow-md">
         <Link href="/">
           <div className="flex items-center gap-2 text-primary">
-            <Shield size={20} />
+            <Globe size={24} className="stroke-[2.5px]" />
             <h1 className="text-xl font-black tracking-tighter">GlobalPay</h1>
           </div>
         </Link>
@@ -147,7 +146,7 @@ export function Navbar() {
           <SheetContent side="left" className="w-[85%] p-0 flex flex-col border-r-0 rounded-r-3xl">
             <SheetHeader className="p-8 text-left border-b bg-primary/5">
               <SheetTitle className="flex items-center gap-2 text-primary">
-                <Shield size={22} />
+                <Globe size={26} className="stroke-[2.5px]" />
                 <span className="text-2xl font-black tracking-tighter">GlobalPay</span>
               </SheetTitle>
             </SheetHeader>

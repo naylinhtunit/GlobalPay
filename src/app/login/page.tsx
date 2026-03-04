@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from "react";
@@ -10,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LogIn, ShieldCheck } from "lucide-react";
+import { LogIn, Globe } from "lucide-react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -24,7 +23,6 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
     
-    // Convert simple username to email format if needed
     const loginEmail = email.includes("@") ? email : `${email}@globalpay.com`;
 
     try {
@@ -48,12 +46,12 @@ export default function LoginPage() {
       <Card className="w-full max-w-md shadow-2xl border-t-8 border-t-primary">
         <CardHeader className="space-y-2 text-center">
           <div className="flex justify-center mb-2">
-            <div className="p-3 bg-primary/10 rounded-full">
-              <ShieldCheck className="w-10 h-10 text-primary" />
+            <div className="p-4 bg-primary/10 rounded-full">
+              <Globe className="w-12 h-12 text-primary stroke-[2.5px]" />
             </div>
           </div>
-          <CardTitle className="text-3xl font-bold tracking-tight text-primary">GlobalPay</CardTitle>
-          <CardDescription>International Payroll Management System</CardDescription>
+          <CardTitle className="text-3xl font-black tracking-tighter text-primary">GlobalPay</CardTitle>
+          <CardDescription className="font-medium">International Payroll Management System</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-5">
@@ -65,7 +63,7 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-12"
+                className="h-12 border-primary/20 focus-visible:ring-primary"
               />
             </div>
             <div className="space-y-2">
@@ -76,15 +74,15 @@ export default function LoginPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="h-12"
+                className="h-12 border-primary/20 focus-visible:ring-primary"
               />
             </div>
-            <Button type="submit" className="w-full h-12 gap-2 text-lg font-semibold" disabled={isLoading}>
+            <Button type="submit" className="w-full h-12 gap-2 text-lg font-bold shadow-lg shadow-primary/25" disabled={isLoading}>
               {isLoading ? "Signing in..." : <><LogIn size={20} /> Access Dashboard</>}
             </Button>
           </form>
           <div className="mt-8 pt-6 border-t text-center space-y-2">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest">Authorized Access Only</p>
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Authorized Access Only</p>
             <p className="text-[10px] text-muted-foreground/60 italic">Please contact GlobalPay Admin to register your company.</p>
           </div>
         </CardContent>
