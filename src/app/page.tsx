@@ -10,7 +10,7 @@ import { Users, CreditCard, CalendarCheck, TrendingUp } from "lucide-react";
 
 export default function Dashboard() {
   const { country, currency } = useCountry();
-  const { firestore } = useFirestore();
+  const firestore = useFirestore();
 
   const empQuery = useMemoFirebase(() => {
     if (!firestore) return null;

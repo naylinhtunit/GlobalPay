@@ -53,7 +53,7 @@ interface Employee {
 
 export default function EmployeesPage() {
   const { country, currency } = useCountry();
-  const { firestore } = useFirestore();
+  const firestore = useFirestore();
   const { toast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -101,28 +101,22 @@ export default function EmployeesPage() {
       updatedAt: serverTimestamp()
     };
 
-    try {
-      if (editingId) {
-        const docRef = doc(firestore, "employees", editingId);
-        updateDocumentNonBlocking(docRef, dataToSave);
-        toast({ title: "Employee updated", description: `${formData.fullName} has been updated.` });
-      } else {
-        const colRef = collection(firestore, "employees");
-        // Using a reliable ID generation or letting Firestore handle it
-        const id = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2);
-        addDocumentNonBlocking(colRef, { 
-          ...dataToSave, 
-          id, 
-          createdAt: serverTimestamp() 
-        });
-        toast({ title: "Employee added", description: `${formData.fullName} has been added successfully.` });
-      }
-      setIsModalOpen(false);
-      resetForm();
-    } catch (err) {
-      console.error("Submit error:", err);
-      toast({ title: "Submission failed", description: "An unexpected error occurred.", variant: "destructive" });
+    if (editingId) {
+      const docRef = doc(firestore, "employees", editingId);
+      updateDocumentNonBlocking(docRef, dataToSave);
+      toast({ title: "Employee updated", description: `${formData.fullName} has been updated.` });
+    } else {
+      const colRef = collection(firestore, "employees");
+      const id = crypto.randomUUID();
+      addDocumentNonBlocking(colRef, { 
+        ...dataToSave, 
+        id, 
+        createdAt: serverTimestamp() 
+      });
+      toast({ title: "Employee added", description: `${formData.fullName} has been added successfully.` });
     }
+    setIsModalOpen(false);
+    resetForm();
   };
 
   const handleDelete = (id: string) => {
