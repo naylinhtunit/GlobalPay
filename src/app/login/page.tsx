@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LogIn } from "lucide-react";
+import { LogIn, ShieldCheck } from "lucide-react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -23,14 +23,19 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    
+    // Convert simple username to email format if needed
+    const loginEmail = email.includes("@") ? email : `${email}@globalpay.com`;
+
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth, loginEmail, password);
       toast({ title: "Login Successful", description: "Welcome back to GlobalPay." });
       router.push("/");
     } catch (error: any) {
+      console.error(error);
       toast({
         title: "Login Failed",
-        description: "Invalid email or password.",
+        description: "Invalid credentials. Please check your username and password.",
         variant: "destructive",
       });
     } finally {
@@ -40,22 +45,27 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/50 p-4">
-      <Card className="w-full max-w-md shadow-xl border-t-4 border-t-primary">
-        <CardHeader className="space-y-1 text-center">
+      <Card className="w-full max-w-md shadow-2xl border-t-8 border-t-primary">
+        <CardHeader className="space-y-2 text-center">
+          <div className="flex justify-center mb-2">
+            <div className="p-3 bg-primary/10 rounded-full">
+              <ShieldCheck className="w-10 h-10 text-primary" />
+            </div>
+          </div>
           <CardTitle className="text-3xl font-bold tracking-tight text-primary">GlobalPay</CardTitle>
-          <CardDescription>Enter your credentials to access your payroll dashboard</CardDescription>
+          <CardDescription>International Payroll Management System</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="email">Email address</Label>
+              <Label htmlFor="email">Username / Email</Label>
               <Input
                 id="email"
-                type="email"
-                placeholder="globalpay@globalpay.com"
+                placeholder="e.g. globalpay"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                className="h-12"
               />
             </div>
             <div className="space-y-2">
@@ -66,15 +76,16 @@ export default function LoginPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                className="h-12"
               />
             </div>
-            <Button type="submit" className="w-full gap-2 mt-2" disabled={isLoading}>
-              {isLoading ? "Logging in..." : <><LogIn size={18} /> Sign In</>}
+            <Button type="submit" className="w-full h-12 gap-2 text-lg font-semibold" disabled={isLoading}>
+              {isLoading ? "Signing in..." : <><LogIn size={20} /> Access Dashboard</>}
             </Button>
           </form>
-          <div className="mt-6 text-center text-xs text-muted-foreground">
-            <p>Authorized Companies Only</p>
-            <p className="mt-1">Please contact GlobalPay Admin for registration.</p>
+          <div className="mt-8 pt-6 border-t text-center space-y-2">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest">Authorized Access Only</p>
+            <p className="text-[10px] text-muted-foreground/60 italic">Please contact GlobalPay Admin to register your company.</p>
           </div>
         </CardContent>
       </Card>

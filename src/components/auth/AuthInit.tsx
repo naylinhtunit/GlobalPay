@@ -15,9 +15,12 @@ export function AuthInit() {
     if (!auth) return;
 
     const unsubscribe = onAuthStateChanged(auth, (user) => {
+      // Redirect to login if not authenticated and not on the login page
       if (!user && pathname !== "/login") {
         router.push("/login");
-      } else if (user && pathname === "/login") {
+      } 
+      // Redirect to home if authenticated and on the login page
+      else if (user && pathname === "/login") {
         router.push("/");
       }
     });
