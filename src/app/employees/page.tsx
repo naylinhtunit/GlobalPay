@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from "react";
@@ -15,7 +14,6 @@ import {
   addDoc, 
   query, 
   where, 
-  deleteDoc, 
   doc, 
   updateDoc, 
   serverTimestamp 
@@ -41,30 +39,35 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { useToast } from "@/hooks/use-toast";
+import { deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
 interface Employee {
   id: string;
-  employeeCode: string;
-  name: string;
+  employeeNumber: string;
+  firstName: string;
+  lastName: string;
   department: string;
-  baseSalary: number;
+  jobTitle: string;
+  email: string;
   country: string;
+  hireDate: string;
 }
 
 export default function EmployeesPage() {
   const { country } = useCountry();
   const { firestore } = useFirestore();
-  const { toast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   
   const [formData, setFormData] = useState({
-    name: "",
-    employeeCode: "",
+    firstName: "",
+    lastName: "",
+    employeeNumber: "",
     department: "",
-    baseSalary: 0
+    jobTitle: "",
+    email: "",
+    hireDate: new Date().toISOString().split('T')[0]
   });
 
   const employeesQuery = useMemoFirebase(() => {
@@ -75,7 +78,15 @@ export default function EmployeesPage() {
   const { data: employees, isLoading: loading } = useCollection<Employee>(employeesQuery);
 
   const resetForm = () => {
-    setFormData({ name: "", employeeCode: "", department: "", baseSalary: 0 });
+    setFormData({ 
+      firstName: "", 
+      lastName: "", 
+      employeeNumber: "", 
+      department: "", 
+      jobTitle: "", 
+      email: "",
+      hireDate: new Date().toISOString().split('T')[0]
+    });
     setEditingId(null);
   };
 
@@ -89,78 +100,60 @@ export default function EmployeesPage() {
       updatedAt: serverTimestamp()
     };
 
+    // Optimistic UI: Close and reset immediately
+    setIsModalOpen(false);
+    resetForm();
+
     if (editingId) {
       const docRef = doc(firestore, "employees", editingId);
       updateDoc(docRef, dataToSave)
-        .then(() => {
-          toast({ title: "Success", description: "Employee updated successfully." });
-          setIsModalOpen(false);
-          resetForm();
-        })
         .catch(async (error) => {
           errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'update',
             requestResourceData: dataToSave
           }));
-          toast({ variant: "destructive", title: "Error", description: "Failed to update employee." });
         });
     } else {
       const colRef = collection(firestore, "employees");
-      addDoc(colRef, { ...dataToSave, createdAt: serverTimestamp() })
-        .then(() => {
-          toast({ title: "Success", description: "Employee added successfully." });
-          setIsModalOpen(false);
-          resetForm();
-        })
+      addDoc(colRef, { 
+        ...dataToSave, 
+        id: crypto.randomUUID(), // Ensuring an ID is present if rules require it
+        createdAt: serverTimestamp() 
+      })
         .catch(async (error) => {
           errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: colRef.path,
             operation: 'create',
             requestResourceData: dataToSave
           }));
-          toast({ variant: "destructive", title: "Error", description: "Failed to add employee." });
         });
     }
   };
 
   const handleDelete = (id: string) => {
     if (!firestore || !confirm("Are you sure you want to delete this employee?")) return;
-    
     const docRef = doc(firestore, "employees", id);
-    deleteDoc(docRef)
-      .then(() => {
-        toast({ title: "Deleted", description: "Employee removed from database." });
-      })
-      .catch(async (error) => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: docRef.path,
-          operation: 'delete'
-        }));
-        toast({ variant: "destructive", title: "Error", description: "Delete failed." });
-      });
+    deleteDocumentNonBlocking(docRef);
   };
 
   const openEdit = (emp: Employee) => {
     setEditingId(emp.id);
     setFormData({
-      name: emp.name,
-      employeeCode: emp.employeeCode,
+      firstName: emp.firstName,
+      lastName: emp.lastName,
+      employeeNumber: emp.employeeNumber,
       department: emp.department,
-      baseSalary: emp.baseSalary
+      jobTitle: emp.jobTitle || "",
+      email: emp.email || "",
+      hireDate: emp.hireDate ? emp.hireDate.split('T')[0] : new Date().toISOString().split('T')[0]
     });
     setIsModalOpen(true);
   };
 
-  const handleSalaryFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    if (e.target.value === "0") {
-      e.target.select();
-    }
-  };
-
   const filteredEmployees = (employees || []).filter(emp => 
-    emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.employeeCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    `${emp.firstName} ${emp.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    emp.employeeNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
     emp.department.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -182,36 +175,45 @@ export default function EmployeesPage() {
                 <Plus size={18} /> Add Employee
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingId ? "Edit Employee" : "Add New Employee"}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input id="name" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">First Name</Label>
+                    <Input id="firstName" required value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Last Name</Label>
+                    <Input id="lastName" required value={formData.lastName} onChange={e => setFormData({...formData, lastName: e.target.value})} />
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="code">Employee Code</Label>
-                  <Input id="code" required value={formData.employeeCode} onChange={e => setFormData({...formData, employeeCode: e.target.value})} />
+                  <Label htmlFor="code">Employee Number</Label>
+                  <Input id="code" required value={formData.employeeNumber} onChange={e => setFormData({...formData, employeeNumber: e.target.value})} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="dept">Department</Label>
-                  <Input id="dept" required value={formData.department} onChange={e => setFormData({...formData, department: e.target.value})} />
+                  <Label htmlFor="email">Email</Label>
+                  <Input id="email" type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="dept">Department</Label>
+                    <Input id="dept" required value={formData.department} onChange={e => setFormData({...formData, department: e.target.value})} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="job">Job Title</Label>
+                    <Input id="job" value={formData.jobTitle} onChange={e => setFormData({...formData, jobTitle: e.target.value})} />
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="salary">Base Salary ({country === "Japan" ? "JPY" : "MMK"})</Label>
-                  <Input 
-                    id="salary" 
-                    type="number" 
-                    required 
-                    value={formData.baseSalary} 
-                    onFocus={handleSalaryFocus}
-                    onChange={e => setFormData({...formData, baseSalary: e.target.value === "" ? 0 : Number(e.target.value)})} 
-                  />
+                  <Label htmlFor="hireDate">Hire Date</Label>
+                  <Input id="hireDate" type="date" required value={formData.hireDate} onChange={e => setFormData({...formData, hireDate: e.target.value})} />
                 </div>
                 <DialogFooter>
-                  <Button type="submit" className="w-full">{editingId ? "Update" : "Save"}</Button>
+                  <Button type="submit" className="w-full">{editingId ? "Update Employee" : "Save Employee"}</Button>
                 </DialogFooter>
               </form>
             </DialogContent>
@@ -234,10 +236,10 @@ export default function EmployeesPage() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/30">
-                  <TableHead>Code</TableHead>
+                  <TableHead>Number</TableHead>
                   <TableHead>Employee</TableHead>
                   <TableHead className="hidden sm:table-cell">Department</TableHead>
-                  <TableHead>Base Salary</TableHead>
+                  <TableHead className="hidden md:table-cell">Job Title</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -249,17 +251,17 @@ export default function EmployeesPage() {
                 ) : (
                   filteredEmployees.map((emp) => (
                     <TableRow key={emp.id} className="hover:bg-muted/20">
-                      <TableCell className="font-mono text-xs font-semibold">{emp.employeeCode}</TableCell>
+                      <TableCell className="font-mono text-xs font-semibold">{emp.employeeNumber}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <div className="h-8 w-8 rounded-full bg-accent/10 flex items-center justify-center text-accent hidden sm:flex">
                             <UserCircle size={20} />
                           </div>
-                          <span className="font-medium">{emp.name}</span>
+                          <span className="font-medium">{emp.firstName} {emp.lastName}</span>
                         </div>
                       </TableCell>
                       <TableCell className="hidden sm:table-cell">{emp.department}</TableCell>
-                      <TableCell>{emp.baseSalary.toLocaleString()}</TableCell>
+                      <TableCell className="hidden md:table-cell">{emp.jobTitle}</TableCell>
                       <TableCell className="text-right space-x-1 md:space-x-2">
                         <Button variant="ghost" size="icon" onClick={() => openEdit(emp)} className="h-8 w-8">
                           <Pencil size={14} className="text-blue-600" />

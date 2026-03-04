@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useRef } from "react";
@@ -36,7 +35,6 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
 import { JapanPayrollForm } from "@/components/payroll/JapanPayrollForm";
 import { MyanmarPayrollForm } from "@/components/payroll/MyanmarPayrollForm";
 import { PayslipDocument } from "@/components/payroll/PayslipDocument";
@@ -52,7 +50,6 @@ import {
 export default function PayrollPage() {
   const { country } = useCountry();
   const { firestore } = useFirestore();
-  const { toast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedEmpId, setSelectedEmpId] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("2024-01");
@@ -82,7 +79,7 @@ export default function PayrollPage() {
 
   const payrollQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collection(firestore, "payroll_records"), where("country", "==", country));
+    return query(collection(firestore, "payrollRecords"), where("country", "==", country));
   }, [firestore, country]);
 
   const employeesQuery = useMemoFirebase(() => {
@@ -91,40 +88,62 @@ export default function PayrollPage() {
   }, [firestore, country]);
 
   const { data: payrollRecords, isLoading: payrollLoading } = useCollection(payrollQuery);
-  const { data: employees, isLoading: employeesLoading } = useCollection(employeesQuery);
+  const { data: employees } = useCollection(employeesQuery);
 
   const handleGenerate = () => {
     if (!selectedEmpId || !firestore) return;
     
     const emp = (employees || []).find(e => e.id === selectedEmpId);
-    const colRef = collection(firestore, "payroll_records");
+    if (!emp) return;
+
+    // Calculate basic totals based on form data for schema compliance
+    let grossPay = 0;
+    let deductions = 0;
+
+    if (country === "Japan") {
+      const hourlyRate = (emp.baseSalary || 200000) / 160;
+      grossPay = (emp.baseSalary || 200000) + (japanData.ot125Hours * hourlyRate * 1.25) + (japanData.nightShiftHours * hourlyRate * 0.25) + (japanData.lateNightOTHours * hourlyRate * 1.5);
+      deductions = japanData.healthInsurance + japanData.pension + japanData.incomeTax + japanData.hostelFee;
+    } else {
+      const hourlyRate = ((emp.baseSalary || 400000) / 30 / 8);
+      grossPay = (emp.baseSalary || 400000) + (myanmarData.otHours * hourlyRate * 2) + myanmarData.attendanceBonus + myanmarData.mealAllowance;
+      deductions = myanmarData.ssbAmount + myanmarData.incomeTax;
+    }
+
     const payload = {
       employeeId: selectedEmpId,
-      employeeName: emp?.name || "Unknown",
-      month: selectedMonth,
+      payPeriodStartDate: `${selectedMonth}-01`,
+      payPeriodEndDate: `${selectedMonth}-30`,
+      payoutDate: new Date().toISOString(),
       country,
-      data: country === "Japan" ? japanData : myanmarData,
-      createdAt: serverTimestamp()
+      basicSalary: emp.baseSalary || 0,
+      status: "Calculated",
+      totalGrossPay: grossPay,
+      totalDeductions: deductions,
+      netPay: grossPay - deductions,
+      japanData: country === "Japan" ? japanData : null,
+      myanmarData: country === "Myanmar" ? myanmarData : null,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
     };
 
+    // Optimistic: Close and reset
+    setIsModalOpen(false);
+
+    const colRef = collection(firestore, "payrollRecords");
     addDoc(colRef, payload)
-      .then(() => {
-        toast({ title: "Success", description: "Payroll record generated." });
-        setIsModalOpen(false);
-      })
       .catch(async (error) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
           path: colRef.path,
           operation: 'create',
           requestResourceData: payload
         }));
-        toast({ variant: "destructive", title: "Error", description: "Failed to generate record." });
       });
   };
 
   const handlePreview = (record: any) => {
     const emp = (employees || []).find(e => e.id === record.employeeId);
-    setPreviewData({ ...record, employee: emp });
+    setPreviewData({ ...record, employee: emp, data: record.japanData || record.myanmarData, month: record.payPeriodStartDate.substring(0, 7) });
     setIsPreviewOpen(true);
   };
 
@@ -136,7 +155,7 @@ export default function PayrollPage() {
       printWindow.document.write(`
         <html>
           <head>
-            <title>Payslip - ${previewData.employee?.name || 'Employee'}</title>
+            <title>Payslip - ${previewData.employee?.firstName || 'Employee'}</title>
             <script src="https://cdn.tailwindcss.com"></script>
           </head>
           <body>${content}</body>
@@ -180,7 +199,7 @@ export default function PayrollPage() {
                       </SelectTrigger>
                       <SelectContent>
                         {(employees || []).map(emp => (
-                          <SelectItem key={emp.id} value={emp.id}>{emp.name} ({emp.employeeCode})</SelectItem>
+                          <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName} ({emp.employeeNumber})</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -202,8 +221,8 @@ export default function PayrollPage() {
 
                 {selectedEmpId && (
                   <div className="mt-4 p-4 border rounded-lg bg-primary/5">
-                    <p className="text-sm font-bold text-primary">Employee: {(employees || []).find(e => e.id === selectedEmpId)?.name}</p>
-                    <p className="text-xs text-muted-foreground">Base Salary: {(employees || []).find(e => e.id === selectedEmpId)?.baseSalary.toLocaleString()} {country === "Japan" ? "JPY" : "MMK"}</p>
+                    <p className="text-sm font-bold text-primary">Employee: {(employees || []).find(e => e.id === selectedEmpId)?.firstName} {(employees || []).find(e => e.id === selectedEmpId)?.lastName}</p>
+                    <p className="text-xs text-muted-foreground">Base Salary: {(employees || []).find(e => e.id === selectedEmpId)?.baseSalary?.toLocaleString()} {country === "Japan" ? "JPY" : "MMK"}</p>
                   </div>
                 )}
 
@@ -236,7 +255,7 @@ export default function PayrollPage() {
                 <TableRow className="bg-muted/30">
                   <TableHead>Month</TableHead>
                   <TableHead>Employee</TableHead>
-                  <TableHead className="hidden sm:table-cell">Country</TableHead>
+                  <TableHead className="hidden sm:table-cell">Net Pay</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -249,11 +268,11 @@ export default function PayrollPage() {
                 ) : (
                   (payrollRecords || []).map((rec: any) => (
                     <TableRow key={rec.id} className="hover:bg-muted/20">
-                      <TableCell className="font-medium">{rec.month}</TableCell>
-                      <TableCell>{rec.employeeName}</TableCell>
-                      <TableCell className="hidden sm:table-cell">{rec.country}</TableCell>
+                      <TableCell className="font-medium">{rec.payPeriodStartDate.substring(0, 7)}</TableCell>
+                      <TableCell>{(employees || []).find(e => e.id === rec.employeeId)?.firstName || 'Unknown'} {(employees || []).find(e => e.id === rec.employeeId)?.lastName || ''}</TableCell>
+                      <TableCell className="hidden sm:table-cell font-mono">{rec.netPay.toLocaleString()}</TableCell>
                       <TableCell>
-                        <span className="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">Processed</span>
+                        <span className="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">{rec.status}</span>
                       </TableCell>
                       <TableCell className="text-right space-x-2">
                         <Button variant="ghost" size="sm" onClick={() => handlePreview(rec)} className="gap-2">
