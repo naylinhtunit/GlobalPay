@@ -1,0 +1,277 @@
+{
+  "entities": {
+    "Employee": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Employee",
+      "type": "object",
+      "description": "Represents an individual employee with their core personal and employment details within the GlobalPay system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Employee entity."
+        },
+        "employeeNumber": {
+          "type": "string",
+          "description": "A unique identifier assigned to the employee within the organization, often distinct from the primary key."
+        },
+        "firstName": {
+          "type": "string",
+          "description": "The employee's given first name."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "The employee's family or last name."
+        },
+        "email": {
+          "type": "string",
+          "description": "The employee's professional email address.",
+          "format": "email"
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "The employee's primary contact phone number."
+        },
+        "address": {
+          "type": "string",
+          "description": "The employee's full residential address."
+        },
+        "country": {
+          "type": "string",
+          "description": "The primary country of employment for the employee (e.g., 'Japan', 'Myanmar'), which dictates the specific payroll calculation logic."
+        },
+        "hireDate": {
+          "type": "string",
+          "description": "The official date when the employee commenced employment.",
+          "format": "date-time"
+        },
+        "jobTitle": {
+          "type": "string",
+          "description": "The employee's designated job title or role within the company."
+        },
+        "department": {
+          "type": "string",
+          "description": "The department or organizational unit to which the employee is assigned."
+        }
+      },
+      "required": [
+        "id",
+        "employeeNumber",
+        "firstName",
+        "lastName",
+        "country",
+        "hireDate"
+      ]
+    },
+    "PayrollRecord": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PayrollRecord",
+      "type": "object",
+      "description": "Represents a single monthly payroll record for a specific employee, encompassing all earnings, deductions, and the final net pay for a given period, adapted for different countries.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the PayrollRecord entity."
+        },
+        "employeeId": {
+          "type": "string",
+          "description": "Reference to the Employee entity for whom this payroll record is generated. (Relationship: Employee 1:N PayrollRecord)"
+        },
+        "payPeriodStartDate": {
+          "type": "string",
+          "description": "The calendar start date of the payroll period this record covers.",
+          "format": "date-time"
+        },
+        "payPeriodEndDate": {
+          "type": "string",
+          "description": "The calendar end date of the payroll period this record covers.",
+          "format": "date-time"
+        },
+        "payoutDate": {
+          "type": "string",
+          "description": "The scheduled or actual date when the net pay for this period was or will be disbursed to the employee.",
+          "format": "date-time"
+        },
+        "country": {
+          "type": "string",
+          "description": "The country context for this specific payroll record (e.g., 'Japan', 'Myanmar'), which determines the relevant fields and calculation rules."
+        },
+        "basicSalary": {
+          "type": "number",
+          "description": "The fundamental base salary amount for the payroll period before any additional earnings or deductions. Currency is implied by the 'country' field."
+        },
+        "status": {
+          "type": "string",
+          "description": "The current processing status of the payroll record (e.g., 'Draft', 'Calculated', 'Approved', 'Paid')."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Any additional internal notes or comments pertaining to this specific payroll record."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when this payroll record was initially created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when this payroll record was last modified or updated.",
+          "format": "date-time"
+        },
+        "japanOt125xHours": {
+          "type": "number",
+          "description": "Input hours worked under the 1.25x ordinary overtime rate for Japan payroll calculations."
+        },
+        "japanOt125xAmount": {
+          "type": "number",
+          "description": "Calculated amount for 1.25x ordinary overtime (普通残業) for Japan payroll."
+        },
+        "japanNightShift025xHours": {
+          "type": "number",
+          "description": "Input hours worked qualifying for the 0.25x night shift allowance rate for Japan payroll calculations."
+        },
+        "japanNightShift025xAmount": {
+          "type": "number",
+          "description": "Calculated amount for 0.25x night shift allowance (深夜手当) for Japan payroll."
+        },
+        "japanLateNightOt15xHours": {
+          "type": "number",
+          "description": "Input hours worked under the 1.5x late-night overtime rate for Japan payroll calculations."
+        },
+        "japanLateNightOt15xAmount": {
+          "type": "number",
+          "description": "Calculated amount for 1.5x late-night overtime (深夜残業) for Japan payroll."
+        },
+        "japanHealthInsuranceDeduction": {
+          "type": "number",
+          "description": "Amount deducted for Health Insurance premiums for Japan payroll calculations."
+        },
+        "japanPensionDeduction": {
+          "type": "number",
+          "description": "Amount deducted for Pension contributions for Japan payroll calculations."
+        },
+        "japanIncomeTaxDeduction": {
+          "type": "number",
+          "description": "Amount deducted for national Income Tax for Japan payroll calculations."
+        },
+        "japanHostelFeeDeduction": {
+          "type": "number",
+          "description": "Amount deducted for Hostel Fee (寮費) for Japan payroll calculations."
+        },
+        "myanmarOtHours": {
+          "type": "number",
+          "description": "Input hours worked under the 2x overtime rate for Myanmar payroll calculations."
+        },
+        "myanmarOt2xAmount": {
+          "type": "number",
+          "description": "Calculated amount for 2x overtime for Myanmar payroll."
+        },
+        "myanmarAttendanceBonus": {
+          "type": "number",
+          "description": "Amount for attendance bonus for Myanmar payroll calculations."
+        },
+        "myanmarMealAllowance": {
+          "type": "number",
+          "description": "Amount for meal allowance for Myanmar payroll calculations."
+        },
+        "myanmarSocialSecurityDeduction": {
+          "type": "number",
+          "description": "Amount deducted for Social Security Board (SSB 2%) for Myanmar payroll calculations."
+        },
+        "myanmarIncomeTaxDeduction": {
+          "type": "number",
+          "description": "Amount deducted for Income Tax (if applicable) for Myanmar payroll calculations."
+        },
+        "totalGrossPay": {
+          "type": "number",
+          "description": "The final calculated sum of all earnings (basic salary, allowances, overtime) before any deductions."
+        },
+        "totalDeductions": {
+          "type": "number",
+          "description": "The final calculated sum of all deductions applied to the payroll record."
+        },
+        "netPay": {
+          "type": "number",
+          "description": "The final calculated amount (take-home pay) received by the employee after all deductions are applied."
+        }
+      },
+      "required": [
+        "id",
+        "employeeId",
+        "payPeriodStartDate",
+        "payPeriodEndDate",
+        "payoutDate",
+        "country",
+        "basicSalary",
+        "status",
+        "createdAt",
+        "updatedAt",
+        "totalGrossPay",
+        "totalDeductions",
+        "netPay"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/employees/{employeeId}",
+        "definition": {
+          "entityName": "Employee",
+          "schema": {
+            "$ref": "#/backend/entities/Employee"
+          },
+          "description": "Stores individual employee profiles. The '{employeeId}' document ID should correspond to the Firebase Authentication UID if employees log in to access their own data, facilitating path-based ownership for self-service. Includes essential personal and employment details. Accessible by the employee themselves (read) and by authorized administrators (CRUD).",
+          "params": [
+            {
+              "name": "employeeId",
+              "description": "The unique identifier for the employee, typically matching the Firebase Authentication UID for self-service access."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/employees/{employeeId}/payrollRecords/{payrollRecordId}",
+        "definition": {
+          "entityName": "PayrollRecord",
+          "schema": {
+            "$ref": "#/backend/entities/PayrollRecord"
+          },
+          "description": "Stores monthly payroll records for a specific employee. This is a subcollection under each employee's document. Each document includes denormalized 'employeeId' to enable Authorization Independence for security rules, allowing direct checks against 'request.auth.uid' without needing to fetch the parent document. Accessible by the owning employee (read) and by authorized administrators (CRUD).",
+          "params": [
+            {
+              "name": "employeeId",
+              "description": "The unique identifier of the parent employee, matching the Firebase Authentication UID for self-service access."
+            },
+            {
+              "name": "payrollRecordId",
+              "description": "The unique identifier for a specific monthly payroll record."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/roles_admin/{adminUid}",
+        "definition": {
+          "entityName": "roles_admin",
+          "schema": {
+            "$ref": "#/backend/entities/roles_admin"
+          },
+          "description": "A top-level collection used for Database Access Control (DBAC). The existence of a document at this path, where '{adminUid}' matches a user's Firebase Authentication UID, grants administrative privileges. This design provides Authorization Independence by denormalizing role information.",
+          "params": [
+            {
+              "name": "adminUid",
+              "description": "The Firebase Authentication UID of a user granted administrative access."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed following the core principles of Authorization Independence, Structural Segregation, and DBAC to ensure a secure, scalable, and debuggable payroll application. It supports both administrative management of all employee and payroll data and self-service access for individual employees to view their own information.\n\n**Authorization Independence:**\n1.  **For `Employee` Data (`/employees/{employeeId}`):** When an employee needs to access their own profile, the `employeeId` wildcard in the path is designed to directly correspond to `request.auth.uid`. This means an employee's access to their own document is authorized purely by matching their authenticated UID to the document's ID, eliminating the need for `get()` calls to other documents for authorization. This is a form of path-based ownership.\n2.  **For `PayrollRecord` Data (`/employees/{employeeId}/payrollRecords/{payrollRecordId}`):** Each `PayrollRecord` document explicitly includes the `employeeId` field, which effectively denormalizes the ownership context from its parent `Employee` document. Firestore security rules can directly check `resource.data.employeeId == request.auth.uid` (for employee self-access) or `request.auth.uid` against the admin roles collection (for admin access) without needing to perform a `get()` operation on the parent `Employee` document. This is critical for maintaining atomic operations and simplifying rules.\n3.  **For Global Roles (`/roles_admin/{adminUid}`):** Administrative roles are managed through a dedicated top-level collection where the existence of a document at `/roles_admin/{request.auth.uid}` grants admin privileges. This is the 'Existence over Content' DBAC pattern and is entirely independent of other application data, allowing a single, simple `get()` check for admin authorization.\n\n**Querying for Authorization Purposes (QAPs - Rules are not Filters):**\n1.  **Structural Segregation:** Data is organized into collections with homogeneous security postures. All `Employee` documents share the same access rules (employee self-read, admin CRUD). All `PayrollRecord` documents within an employee's subcollection share the same access rules (employee self-read, admin CRUD). This separation simplifies rule logic, moving complexity from rules to the data model.\n2.  **Secure `list` Operations:**\n    *   **Admin Access:** An authenticated user identified as an admin (via `roles_admin` collection) can securely `list` all documents in `/employees` and `list` all `payrollRecords` for any specific employee. The rules can grant this access based solely on the admin role check, ensuring that no filtering is required on the client side for authorization.\n    *   **Employee Self-Service Access:** An individual employee can securely `list` their *own* payroll records by querying `/employees/{request.auth.uid}/payrollRecords`. The path itself restricts the query to their own data, and security rules can further enforce `resource.data.employeeId == request.auth.uid` for each document, preventing unauthorized data exposure through `list` operations. This ensures that a `list` query from an employee context only ever returns data that the `request.auth.uid` is explicitly authorized to view.\n\nThis design prioritizes explicit authorization contexts within the documents or paths themselves, minimizing reliance on complex `get()` operations in rules and promoting straightforward, robust rule writing."
+  }
+}

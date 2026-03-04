@@ -1,0 +1,104 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * CORE PHILOSOPHY:
+     * This ruleset implements a dual-access security model designed for a global payroll system (GlobalPay). 
+     * It leverages "Authorization Independence" and "Database Access Control (DBAC)" patterns.
+     * 
+     * DATA STRUCTURE:
+     * - /employees/{employeeId}: Primary profile data where employeeId matches the Firebase Auth UID.
+     * - /employees/{employeeId}/payrollRecords/{payrollRecordId}: Monthly pay data nested under the employee.
+     * - /roles_admin/{adminUid}: A dedicated collection for administrative privilege management.
+     * 
+     * KEY SECURITY DECISIONS:
+     * 1. Path-Based Ownership: Users (employees) are granted access to their own data tree by matching 
+     *    the document's path ID to their authenticated UID.
+     * 2. DBAC (Admin Roles): Administrative access is determined by the existence of a document in the 
+     *    /roles_admin collection. This avoids complex role arrays and ensures high performance.
+     * 3. Immutability of Identity: Critical relational fields like 'id' and 'employeeId' are enforced 
+     *    to be immutable once created, ensuring the integrity of the ownership model.
+     * 4. Structural Segregation: Administrative roles are kept entirely separate from employee data 
+     *    to prevent accidental privilege escalation.
+     * 
+     * DENORMALIZATION FOR AUTHORIZATION:
+     * - The 'employeeId' is denormalized into every PayrollRecord document. This allows the security 
+     *   rules to verify ownership directly on the document without performing expensive parent-lookups.
+     */
+
+    // --- Helper Functions ---
+
+    /** @description Checks if the user is authenticated with Firebase Auth. */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /** @description Checks if the user's UID matches the provided userId. */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /** @description Checks if the user exists in the admin roles collection. */
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+    }
+
+    /** @description Combines existence and ownership check for safe updates/deletes. */
+    function isExistingOwner(userId) {
+      return resource != null && isOwner(userId);
+    }
+
+    // --- Collection Rules ---
+
+    /**
+     * @description Rules for the admin roles collection. Used primarily for internal authorization checks.
+     * @path /roles_admin/{adminUid}
+     * @allow (get) Any signed-in user checking their own admin status.
+     * @deny (list) Regular employees listing admin users.
+     * @principle Existence-over-content for database access control.
+     */
+    match /roles_admin/{adminUid} {
+      allow get: if isSignedIn();
+      allow list: if isAdmin();
+      allow create, update, delete: if false; // Managed via privileged environment or manually during prototype.
+    }
+
+    /**
+     * @description Rules for employee profiles. Allows users to manage their own profile and admins full control.
+     * @path /employees/{employeeId}
+     * @allow (create) User creating their own profile where document ID matches their UID.
+     * @allow (update) User updating their own existing profile.
+     * @deny (delete) Regular employees deleting their own record (Admin only).
+     * @principle Path-based ownership and relational integrity validation.
+     */
+    match /employees/{employeeId} {
+      allow get, list: if isAdmin() || isOwner(employeeId);
+      
+      allow create: if isAdmin() || (isOwner(employeeId) && request.resource.data.id == employeeId);
+      
+      allow update: if isAdmin() || (isExistingOwner(employeeId) && request.resource.data.id == resource.data.id);
+      
+      allow delete: if isAdmin();
+    }
+
+    /**
+     * @description Rules for payroll records. Restricted to owner-read and admin-CRUD.
+     * @path /employees/{employeeId}/payrollRecords/{payrollRecordId}
+     * @allow (get) Employee viewing their own specific pay slip.
+     * @allow (list) Employee listing all their own pay slips.
+     * @deny (create/update/delete) Employees modifying their own financial records.
+     * @principle Authorization independence via denormalized ownership fields.
+     */
+    match /employees/{employeeId}/payrollRecords/{payrollRecordId} {
+      allow get, list: if isAdmin() || isOwner(employeeId);
+      
+      // Employees should never be able to create or modify their own payroll records.
+      allow create: if isAdmin() && request.resource.data.employeeId == employeeId;
+      
+      allow update: if isAdmin() && request.resource.data.employeeId == resource.data.employeeId;
+      
+      allow delete: if isAdmin();
+    }
+  }
+}
