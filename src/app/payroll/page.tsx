@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useRef } from "react";
@@ -5,13 +6,11 @@ import { Navbar } from "@/components/layout/Navbar";
 import { 
   useFirestore, 
   useCollection, 
-  useMemoFirebase, 
-  errorEmitter, 
-  FirestorePermissionError 
+  useMemoFirebase,
+  addDocumentNonBlocking
 } from "@/firebase";
 import { 
   collection, 
-  addDoc, 
   query, 
   where, 
   serverTimestamp 
@@ -46,10 +45,12 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
+import { useToast } from "@/hooks/use-toast";
 
 export default function PayrollPage() {
   const { country, currency } = useCountry();
   const { firestore } = useFirestore();
+  const { toast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedEmpId, setSelectedEmpId] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("2024-01");
@@ -96,10 +97,8 @@ export default function PayrollPage() {
     const emp = (employees || []).find(e => e.id === selectedEmpId);
     if (!emp) return;
 
-    // Calculate basic totals based on form data for schema compliance
     let grossPay = 0;
     let deductions = 0;
-
     const baseSalary = emp.baseSalary || (country === "Japan" ? 200000 : 400000);
 
     if (country === "Japan") {
@@ -129,22 +128,25 @@ export default function PayrollPage() {
       updatedAt: serverTimestamp()
     };
 
-    setIsModalOpen(false);
-
     const colRef = collection(firestore, "payrollRecords");
-    addDoc(colRef, payload)
-      .catch(async (error) => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: colRef.path,
-          operation: 'create',
-          requestResourceData: payload
-        }));
-      });
+    addDocumentNonBlocking(colRef, payload);
+    
+    toast({
+      title: "Payroll generated",
+      description: `Payslip for month ${selectedMonth} has been created.`
+    });
+
+    setIsModalOpen(false);
   };
 
   const handlePreview = (record: any) => {
     const emp = (employees || []).find(e => e.id === record.employeeId);
-    setPreviewData({ ...record, employee: emp, data: record.japanData || record.myanmarData, month: record.payPeriodStartDate.substring(0, 7) });
+    setPreviewData({ 
+      ...record, 
+      employee: emp, 
+      data: record.japanData || record.myanmarData, 
+      month: record.payPeriodStartDate.substring(0, 7) 
+    });
     setIsPreviewOpen(true);
   };
 
@@ -215,6 +217,8 @@ export default function PayrollPage() {
                         <SelectItem value="2024-01">January 2024</SelectItem>
                         <SelectItem value="2024-02">February 2024</SelectItem>
                         <SelectItem value="2024-03">March 2024</SelectItem>
+                        <SelectItem value="2024-04">April 2024</SelectItem>
+                        <SelectItem value="2024-05">May 2024</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -271,7 +275,7 @@ export default function PayrollPage() {
                     <TableRow key={rec.id} className="hover:bg-muted/20">
                       <TableCell className="font-medium">{rec.payPeriodStartDate.substring(0, 7)}</TableCell>
                       <TableCell>{(employees || []).find(e => e.id === rec.employeeId)?.fullName || 'Unknown'}</TableCell>
-                      <TableCell className="hidden sm:table-cell font-mono">{rec.netPay.toLocaleString()}</TableCell>
+                      <TableCell className="hidden sm:table-cell font-mono">{rec.netPay?.toLocaleString()}</TableCell>
                       <TableCell>
                         <span className="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">{rec.status}</span>
                       </TableCell>

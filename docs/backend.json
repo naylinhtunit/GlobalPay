@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "Employee": {
@@ -103,6 +104,14 @@
           "type": "number",
           "description": "Final take-home pay."
         },
+        "japanData": {
+          "type": "object",
+          "description": "Regional payroll fields for Japan."
+        },
+        "myanmarData": {
+          "type": "object",
+          "description": "Regional payroll fields for Myanmar."
+        },
         "createdAt": {
           "type": "string",
           "format": "date-time"
@@ -113,10 +122,8 @@
         }
       },
       "required": [
-        "id",
         "employeeId",
         "payPeriodStartDate",
-        "payPeriodEndDate",
         "payoutDate",
         "country",
         "basicSalary",
@@ -152,7 +159,17 @@
           "schema": {
             "$ref": "#/backend/entities/PayrollRecord"
           },
-          "description": "Monthly payroll records."
+          "description": "Monthly payroll records nested under employees."
+        }
+      },
+      {
+        "path": "/payrollRecords/{payrollRecordId}",
+        "definition": {
+          "entityName": "PayrollRecord",
+          "schema": {
+            "$ref": "#/backend/entities/PayrollRecord"
+          },
+          "description": "Flat collection of payroll records for dashboard indexing."
         }
       }
     ]
