@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Globe, LayoutDashboard, Users, FileText, LogOut, Menu, User } from "lucide-react";
+import { Shield, LayoutDashboard, Users, FileText, LogOut, Menu, User, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCountry } from "@/context/CountryContext";
 import { useAuth, useUser } from "@/firebase";
@@ -94,7 +94,7 @@ export function Navbar() {
       <nav className="hidden md:flex fixed left-0 top-0 h-full w-64 bg-card border-r flex flex-col z-50">
         <div className="p-6">
           <div className="flex items-center gap-2 text-primary">
-            <Globe size={24} />
+            <Shield size={24} />
             <h1 className="text-xl font-bold tracking-tight">GlobalPay</h1>
           </div>
           <p className="text-[10px] text-muted-foreground font-semibold uppercase mt-1">Enterprise Edition</p>
@@ -131,7 +131,7 @@ export function Navbar() {
       <header className="md:hidden fixed top-0 left-0 right-0 h-16 bg-card border-b flex items-center justify-between px-4 z-50">
         <Link href="/">
           <div className="flex items-center gap-2 text-primary">
-            <Globe size={24} />
+            <Shield size={24} />
             <h1 className="text-xl font-bold tracking-tight">GlobalPay</h1>
           </div>
         </Link>
@@ -145,7 +145,7 @@ export function Navbar() {
           <SheetContent side="left" className="w-64 p-0 flex flex-col">
             <SheetHeader className="p-6 text-left border-b">
               <SheetTitle className="flex items-center gap-2 text-primary">
-                <Globe size={24} />
+                <Shield size={24} />
                 <span>GlobalPay</span>
               </SheetTitle>
             </SheetHeader>

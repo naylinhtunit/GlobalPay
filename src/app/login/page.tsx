@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LogIn, Globe } from "lucide-react";
+import { LogIn, Shield } from "lucide-react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -23,6 +23,7 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
     
+    // Auto-append domain if not present for convenience
     const loginEmail = email.includes("@") ? email : `${email}@globalpay.com`;
 
     try {
@@ -46,7 +47,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-2">
-            <Globe className="w-10 h-10 text-primary" />
+            <Shield className="w-10 h-10 text-primary" />
           </div>
           <CardTitle className="text-2xl font-bold">GlobalPay</CardTitle>
           <CardDescription>International Payroll Management System</CardDescription>
