@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from "react";
@@ -48,10 +49,10 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
           <div className="space-y-1">
             <h1 className="text-2xl font-black tracking-widest border-b-2 border-black inline-block pb-1">給与明細書</h1>
             <p className="text-[9px] text-gray-500 uppercase">Payroll Statement</p>
-            <p className="text-sm mt-4 font-bold">(有) 百舌鳥鉄工所</p>
+            <p className="text-sm mt-4 font-bold">GlobalPay Enterprise System</p>
           </div>
           <div className="text-right space-y-2">
-            <p className="text-xl font-bold border-b border-black pb-1">令和 {new Date(month).getFullYear() - 2018}年 {new Date(month).getMonth() + 1}月分 給与</p>
+            <p className="text-xl font-bold border-b border-black pb-1">{new Date(month).getFullYear()}年 {new Date(month).getMonth() + 1}月分 給与</p>
             <div className="flex gap-4 text-xs justify-end mt-4">
               <div className="border border-black p-2 w-24 text-center">
                 <p className="text-[8px] text-gray-500">支給日 (Pay Date)</p>
@@ -78,7 +79,7 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
         <div className="grid grid-cols-4 gap-0 border-t border-l border-black text-[10px]">
           {/* Attendance Column */}
           <div className="border-r border-b border-black flex flex-col">
-            <div className="bg-gray-200 p-1 font-bold text-center border-b border-black">勤怠 (Attendance)</div>
+            <div className="bg-gray-100 p-1 font-bold text-center border-b border-black">勤怠 (Attendance)</div>
             <div className="flex-1 p-1 space-y-0.5">
               {[
                 { l: "所定就労日", e: "Work Days", v: data.scheduledDays },
@@ -99,16 +100,12 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
                   <span className="font-mono self-center">{(item.v || 0).toLocaleString()}</span>
                 </div>
               ))}
-              <div className="flex justify-between font-bold pt-1">
-                <span>有休残 (Rem. Leave)</span>
-                <span className="font-mono">{(data.remainingPaidLeave || 0).toLocaleString()}</span>
-              </div>
             </div>
           </div>
 
           {/* Earnings Column */}
           <div className="border-r border-b border-black flex flex-col">
-            <div className="bg-gray-200 p-1 font-bold text-center border-b border-black">支給 (Earnings)</div>
+            <div className="bg-gray-100 p-1 font-bold text-center border-b border-black">支給 (Earnings)</div>
             <div className="flex-1 p-1 space-y-0.5">
               <div className="flex justify-between border-b border-gray-100">
                 <span className="flex flex-col"><span>基本給</span><span className="text-[7px] text-gray-400">Basic Salary</span></span>
@@ -142,13 +139,12 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
 
           {/* Deductions Column */}
           <div className="border-r border-b border-black flex flex-col">
-            <div className="bg-gray-200 p-1 font-bold text-center border-b border-black">控除 (Deductions)</div>
+            <div className="bg-gray-100 p-1 font-bold text-center border-b border-black">控除 (Deductions)</div>
             <div className="flex-1 p-1 space-y-0.5">
               {[
                 { l: "健康保険料", e: "Health Ins", v: data.healthInsurance },
                 { l: "介護保険料", e: "Nursing Care", v: data.nursingCareInsurance },
                 { l: "厚生年金保険", e: "Welfare Pension", v: data.pension },
-                { l: "社保料調整", e: "Soc Ins Adj", v: data.socInsAdj },
                 { l: "雇用保険料", e: "Employment Ins", v: data.employmentInsurance },
                 { l: "所得税", e: "Income Tax", v: data.incomeTax },
                 { l: "住民税", e: "Resident Tax", v: data.residentTax },
@@ -168,53 +164,36 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
             </div>
           </div>
 
-          {/* Others Column */}
+          {/* Summary Column */}
           <div className="border-r border-b border-black flex flex-col">
-            <div className="bg-gray-200 p-1 font-bold text-center border-b border-black">その他 (Others)</div>
-            <div className="flex-1 p-1 space-y-1">
-              {[
-                { l: "年末調整徴収", e: "Year-end Adj", v: data.yearEndAdj },
-                { l: "その他調整", e: "Adjustment 1", v: data.otherAdj1 },
-                { l: "その他調整2", e: "Adjustment 2", v: data.otherAdj2 },
-                { l: "有給買取", e: "Leave Buyback", v: data.paidLeaveBuyback },
-              ].map((item, idx) => (
-                <div key={idx} className="flex justify-between border-b border-gray-100 pb-1">
-                  <span className="flex flex-col"><span>{item.l}</span><span className="text-[7px] text-gray-400">{item.e}</span></span>
-                  <span className="font-mono self-center">{(item.v || 0).toLocaleString()}</span>
-                </div>
-              ))}
+            <div className="bg-gray-100 p-1 font-bold text-center border-b border-black">差引支給額 (Net Pay)</div>
+            <div className="flex-1 p-1 space-y-4">
+              <div className="bg-gray-50 p-2 border border-black rounded shadow-inner">
+                <p className="text-[8px] text-gray-500 font-bold uppercase">Net Payment</p>
+                <p className="text-xl font-black text-right">{Math.round(netPay).toLocaleString()} <span className="text-[10px]">JPY</span></p>
+              </div>
               
-              <div className="mt-4 space-y-2 border-t border-black pt-2">
-                <div className="flex justify-between font-bold bg-gray-100 p-1">
-                  <span className="flex flex-col"><span>差引支給額</span><span className="text-[7px]">Net Pay</span></span>
-                  <span className="text-sm self-center">{Math.round(netPay).toLocaleString()}</span>
+              <div className="space-y-1">
+                <div className="flex justify-between text-[8px] border-b pb-0.5">
+                  <span>振込支給額 (Bank)</span>
+                  <span className="font-bold">{Math.round(netPay - (data.cashPayment || 0)).toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between font-bold border-b border-black pb-1">
-                  <span className="flex flex-col"><span>振込支給額</span><span className="text-[7px]">Bank Transfer</span></span>
-                  <span className="self-center">{Math.round(netPay - (data.cashPayment || 0)).toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="flex flex-col"><span>現金支給額</span><span className="text-[7px]">Cash Payment</span></span>
-                  <span className="self-center font-mono">{(data.cashPayment || 0).toLocaleString()}</span>
+                <div className="flex justify-between text-[8px]">
+                  <span>現金支給額 (Cash)</span>
+                  <span className="font-bold">{(data.cashPayment || 0).toLocaleString()}</span>
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
 
-        <div className="mt-8 grid grid-cols-2 gap-8 text-xs">
-          <div className="space-y-1 border-l-4 border-black pl-2">
-            <p className="font-bold">GlobalPay Enterprise Verified Statement</p>
-            <p className="text-gray-500">本明細書の内容に疑義がある場合は、速やかに管理部へお申し出ください。</p>
-          </div>
-          <div className="text-right flex flex-col justify-end">
-            <p className="font-mono text-[8px] text-gray-400">System ID: {employee.id.substring(0,8)} | Generated: {new Date().toLocaleDateString()}</p>
+              <div className="mt-auto text-[7px] text-gray-400 leading-tight">
+                * This document is generated by GlobalPay Enterprise System. For any discrepancies, please contact your HR department immediately.
+              </div>
+            </div>
           </div>
         </div>
       </div>
     );
   } else {
-    // Myanmar Payslip (Keep original as user requested Japan only changes)
+    // Myanmar Payslip (Keep original)
     const hourlyRate = ((employee.baseSalary || 400000) / 30 / 8);
     const otPay = data.otHours * hourlyRate * 2;
     const grossPay = (employee.baseSalary || 400000) + otPay + data.attendanceBonus + data.mealAllowance;
@@ -232,11 +211,9 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
             <p className="text-sm font-bold">Employee Information</p>
             <p>ID: {employee.employeeNumber}</p>
             <p>Name: {employee.fullName}</p>
-            <p>Department: {employee.department}</p>
           </div>
           <div className="text-right space-y-1">
             <p className="text-sm font-bold">Payment Details</p>
-            <p>Date: {new Date().toLocaleDateString()}</p>
             <p>Currency: MMK</p>
           </div>
         </div>
@@ -245,33 +222,17 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
           <thead>
             <tr className="bg-gray-100">
               <th className="border border-black p-2 text-left">Earnings</th>
-              <th className="border border-black p-2 text-right">Amount (MMK)</th>
+              <th className="border border-black p-2 text-right">Amount</th>
             </tr>
           </thead>
           <tbody>
-            <tr><td className="border border-black p-2">Basic Salary</td><td className="border border-black p-2 text-right">{(employee.baseSalary || 400000).toLocaleString()}</td></tr>
-            <tr><td className="border border-black p-2">OT Hours ({data.otHours} hrs)</td><td className="border border-black p-2 text-right">{Math.round(otPay).toLocaleString()}</td></tr>
-            <tr><td className="border border-black p-2">Attendance Bonus</td><td className="border border-black p-2 text-right">{data.attendanceBonus.toLocaleString()}</td></tr>
-            <tr><td className="border border-black p-2">Meal Allowance</td><td className="border border-black p-2 text-right">{data.mealAllowance.toLocaleString()}</td></tr>
+            <tr><td className="border border-black p-2">Basic Salary</td><td className="border border-black p-2 text-right">{(employee.baseSalary || 0).toLocaleString()}</td></tr>
+            <tr><td className="border border-black p-2">OT & Allowances</td><td className="border border-black p-2 text-right">{Math.round(otPay + data.attendanceBonus + data.mealAllowance).toLocaleString()}</td></tr>
             <tr className="font-bold"><td className="border border-black p-2">Gross Total</td><td className="border border-black p-2 text-right">{Math.round(grossPay).toLocaleString()}</td></tr>
           </tbody>
         </table>
 
-        <table className="w-full border-collapse border border-black mb-8 text-sm">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="border border-black p-2 text-left">Deductions</th>
-              <th className="border border-black p-2 text-right">Amount (MMK)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td className="border border-black p-2">Social Security (SSB)</td><td className="border border-black p-2 text-right">{data.ssbAmount.toLocaleString()}</td></tr>
-            <tr><td className="border border-black p-2">Income Tax</td><td className="border border-black p-2 text-right">{data.incomeTax.toLocaleString()}</td></tr>
-            <tr className="font-bold"><td className="border border-black p-2">Total Deduction</td><td className="border border-black p-2 text-right">{totalDeductions.toLocaleString()}</td></tr>
-          </tbody>
-        </table>
-
-        <div className="bg-gray-800 text-white p-6 flex justify-between items-center rounded-sm">
+        <div className="bg-gray-800 text-white p-6 flex justify-between items-center">
           <span className="text-xl font-bold">Net Salary</span>
           <span className="text-3xl font-black">{Math.round(grossPay - totalDeductions).toLocaleString()} MMK</span>
         </div>
