@@ -67,14 +67,15 @@ interface Props {
 export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
   
   useEffect(() => {
-    // Determine denominator for hourly rate (Average 170.5 if not specified)
-    const denominator = data.scheduledHours > 0 ? data.scheduledHours : 170.5;
-    const hourlyRate = baseSalary / denominator;
+    // 1. Auto-calculate Scheduled Hours based on Days (e.g. 8 hours per day)
+    const autoScheduledHours = data.scheduledDays * 8;
+    
+    // 2. Denominator for Overtime Calculation in Japan 
+    // Usually fixed at company's average (e.g. 170.5) to get consistent OT results
+    const otDenominator = 170.5;
+    const hourlyRate = baseSalary / otDenominator;
 
-    // 1. Calculate Earnings (支給) using exact multipliers from payslip context
-    // Regular OT = 1.25
-    // Late Night OT = 1.50 (1.25 + 0.25)
-    // Night Shift Premium = 0.25
+    // 3. Precise OT Multipliers based on User Payslip
     const calculatedOT = Math.round(hourlyRate * 1.25 * data.regularOTHours);
     const calculatedLateNightOT = Math.round(hourlyRate * 1.50 * data.lateNightOTHours);
     const calculatedHolidayWork = Math.round(hourlyRate * 1.35 * data.holidayWorkHours);
@@ -84,35 +85,31 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
     const calculatedNightAlw1 = Math.round(hourlyRate * 0.25 * data.nightShiftHours);
     const calculatedNightAlw2 = Math.round(hourlyRate * 0.25 * data.nightShiftHoursExtra);
 
-    // Deductions from earnings (Absence/Late)
+    // Deductions from earnings
     const calculatedAbsenceDed = Math.round(hourlyRate * data.absenceHours);
     const calculatedLateEarlyDed = Math.round(hourlyRate * data.lateEarlyHours);
 
-    // 2. Default Values as requested
+    // 4. Default Values
     const defaultHousing = data.housingAllowance === 0 ? 10000 : data.housingAllowance;
     const defaultHostelFee = data.hostelFee === 0 ? 20000 : data.hostelFee;
 
-    // 3. Calculate Social Insurances (Deductions - 控除)
-    // Health Insurance (Approx 5% for employee)
+    // 5. Social Insurance & Tax
     const calculatedHealthIns = data.healthInsurance === 0 ? Math.round(baseSalary * 0.05) : data.healthInsurance; 
-    // Pension (Approx 9.15% for employee)
     const calculatedPension = data.pension === 0 ? Math.round(baseSalary * 0.0915) : data.pension;
     
-    // Employment Insurance (Standard 0.006)
     const taxableEarnings = baseSalary + calculatedOT + calculatedLateNightOT + calculatedHolidayWork + (data.housingAllowance || 10000);
     const calculatedEmpIns = Math.round(taxableEarnings * 0.006);
 
-    // 4. Calculate Income Tax (Simplified withholding)
     const totalSocIns = calculatedHealthIns + calculatedPension + calculatedEmpIns + (data.nursingCareInsurance || 0);
     const grossForTax = taxableEarnings - totalSocIns;
     let calculatedIncomeTax = 0;
     if (grossForTax > 0) {
-      // Simplified bracket for demonstration
       calculatedIncomeTax = grossForTax < 150000 ? Math.round(grossForTax * 0.05) : Math.round(7500 + (grossForTax - 150000) * 0.1);
     }
 
-    // Update form if calculated values change
+    // Apply updates if logic produces different values
     if (
+      data.scheduledHours !== autoScheduledHours ||
       data.otAllowance !== calculatedOT ||
       data.lateNightOTAllowance !== calculatedLateNightOT ||
       data.nightShiftAllowance !== calculatedNightAlw1 ||
@@ -127,6 +124,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
     ) {
       onChange({
         ...data,
+        scheduledHours: autoScheduledHours,
         otAllowance: calculatedOT,
         lateNightOTAllowance: calculatedLateNightOT,
         nightShiftAllowance: calculatedNightAlw1,
@@ -143,7 +141,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
         hostelFee: defaultHostelFee,
       });
     }
-  }, [baseSalary, data.regularOTHours, data.lateNightOTHours, data.holidayWorkHours, data.holidayNightHours, data.absenceHours, data.lateEarlyHours, data.nightShiftHours, data.nightShiftHoursExtra, data.scheduledHours]);
+  }, [baseSalary, data.scheduledDays, data.regularOTHours, data.lateNightOTHours, data.holidayWorkHours, data.holidayNightHours, data.absenceHours, data.lateEarlyHours, data.nightShiftHours, data.nightShiftHoursExtra]);
 
   const updateField = (field: keyof JapanData, value: string) => {
     const numValue = value === "" ? 0 : Number(value);
@@ -196,22 +194,28 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
             { label: "所定就労日", en: "Sch. Work Days", field: "scheduledDays" },
-            { label: "欠勤日時間", en: "Absence Hrs", field: "absenceHours" },
-            { label: "遅刻早退時間", en: "Late/Early Hrs", field: "lateEarlyHours" },
-            { label: "普通残業時間", en: "Regular OT Hrs", field: "regularOTHours" },
-            { label: "深夜残業時間", en: "Late Night OT Hrs", field: "lateNightOTHours" },
-            { label: "休日勤務時間", en: "Holiday Work Hrs", field: "holidayWorkHours" },
-            { label: "休日深夜時間", en: "Holiday Night Hrs", field: "holidayNightHours" },
+            { label: "欠勤日時間", en: "Absence", field: "absenceHours" },
+            { label: "遅刻早退", en: "Late/Early", field: "lateEarlyHours" },
+            { label: "普通残業", en: "Regular OT", field: "regularOTHours" },
+            { label: "深夜残業", en: "Late Night OT", field: "lateNightOTHours" },
+            { label: "休日勤務", en: "Holiday Work", field: "holidayWorkHours" },
+            { label: "休日深夜", en: "Holiday Night", field: "holidayNightHours" },
             { label: "~22", en: "Night Shift 1", field: "nightShiftHours" },
             { label: "22~", en: "Night Shift 2", field: "nightShiftHoursExtra" },
             { label: "有休日数", en: "Paid Leave Days", field: "paidLeaveDays" },
             { label: "昼食回数", en: "Lunch Count", field: "lunchCount" },
-            { label: "所定労働時間", en: "Sch. Work Hours", field: "scheduledHours" },
+            { label: "所定労働時間", en: "Sch. Work Hours", field: "scheduledHours", color: "text-primary font-bold" },
             { label: "有休残日数", en: "Rem. Leave Days", field: "remainingPaidLeave" },
           ].map((item) => (
             <div key={item.field} className="space-y-1">
-              <Label className="text-[10px] leading-tight block font-semibold">{item.label}<br/><span className="text-slate-500 font-normal">{item.en}</span></Label>
-              <Input type="number" className="h-8 text-xs border-slate-300 focus:border-primary" value={(data as any)[item.field]} onFocus={handleFocus} onChange={e => updateField(item.field as keyof JapanData, e.target.value)} />
+              <Label className={`text-[10px] leading-tight block font-semibold ${item.color || ""}`}>{item.label}<br/><span className="text-slate-500 font-normal">{item.en}</span></Label>
+              <Input 
+                type="number" 
+                className="h-8 text-xs border-slate-300 focus:border-primary" 
+                value={(data as any)[item.field]} 
+                onFocus={handleFocus} 
+                onChange={e => updateField(item.field as keyof JapanData, e.target.value)} 
+              />
             </div>
           ))}
         </div>
@@ -236,7 +240,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
               { label: "22~ (0.25)", en: "Night Alw 2 (0.25)", field: "nightShiftAllowanceExtra" },
               { label: "休日勤務手当 (1.35)", en: "Holiday Work (1.35)", field: "holidayWorkAllowance" },
               { label: "休日深夜手当 (0.25)", en: "Holiday Night (0.25)", field: "holidayNightAllowance" },
-              { label: "家族手当", en: "Family Alw", field: "familyAllowance", readOnly: false },
+              { label: "家族手당", en: "Family Alw", field: "familyAllowance", readOnly: false },
               { label: "住宅手当", en: "Housing Alw", field: "housingAllowance", readOnly: false },
               { label: "非課税通勤費", en: "Non-tax Commuting", field: "nonTaxableCommuting", readOnly: false },
               { label: "課税通勤費", en: "Taxable Commuting", field: "taxableCommuting", readOnly: false },
