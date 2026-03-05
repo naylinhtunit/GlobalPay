@@ -84,9 +84,12 @@ export default function PayrollPage() {
     ot125Hours: 0,
     nightShiftHours: 0,
     lateNightOTHours: 0,
+    nightShiftAllowance: 0,
+    housingAllowance: 0,
     healthInsurance: 0,
     pension: 0,
     incomeTax: 0,
+    employmentInsurance: 0,
     hostelFee: 0
   });
 
@@ -129,9 +132,12 @@ export default function PayrollPage() {
       ot125Hours: 0,
       nightShiftHours: 0,
       lateNightOTHours: 0,
+      nightShiftAllowance: 0,
+      housingAllowance: 0,
       healthInsurance: 0,
       pension: 0,
       incomeTax: 0,
+      employmentInsurance: 0,
       hostelFee: 0
     });
     setMyanmarData({
@@ -155,8 +161,12 @@ export default function PayrollPage() {
 
     if (country === "Japan") {
       const hourlyRate = baseSalary / 160;
-      grossPay = baseSalary + (japanData.ot125Hours * hourlyRate * 1.25) + (japanData.nightShiftHours * hourlyRate * 0.25) + (japanData.lateNightOTHours * hourlyRate * 1.5);
-      deductions = (japanData.healthInsurance || 0) + (japanData.pension || 0) + (japanData.incomeTax || 0) + (japanData.hostelFee || 0);
+      const otPay = (japanData.ot125Hours * hourlyRate * 1.25) + 
+                    (japanData.nightShiftHours * hourlyRate * 0.25) + 
+                    (japanData.lateNightOTHours * hourlyRate * 1.5);
+      
+      grossPay = baseSalary + otPay + (japanData.nightShiftAllowance || 0) + (japanData.housingAllowance || 0);
+      deductions = (japanData.healthInsurance || 0) + (japanData.pension || 0) + (japanData.incomeTax || 0) + (japanData.employmentInsurance || 0) + (japanData.hostelFee || 0);
     } else {
       const hourlyRate = (baseSalary / 30 / 8);
       grossPay = baseSalary + (myanmarData.otHours * hourlyRate * 2) + (myanmarData.attendanceBonus || 0) + (myanmarData.mealAllowance || 0);

@@ -13,76 +13,87 @@ interface Props {
 export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ country, employee, month, data }, ref) => {
   if (country === "Japan") {
     const hourlyRate = (employee.baseSalary || 200000) / 160;
-    const otPay = data.ot125Hours * hourlyRate * 1.25;
-    const nightPay = data.nightShiftHours * hourlyRate * 0.25;
+    const otPay125 = data.ot125Hours * hourlyRate * 1.25;
+    const nightShiftDiff = data.nightShiftHours * hourlyRate * 0.25;
     const lateNightOTPay = data.lateNightOTHours * hourlyRate * 1.5;
-    const grossPay = (employee.baseSalary || 200000) + otPay + nightPay + lateNightOTPay;
-    const deductions = data.healthInsurance + data.pension + data.incomeTax + data.hostelFee;
+    
+    const grossPay = (employee.baseSalary || 200000) + otPay125 + nightShiftDiff + lateNightOTPay + (data.nightShiftAllowance || 0) + (data.housingAllowance || 0);
+    const deductions = (data.healthInsurance || 0) + (data.pension || 0) + (data.incomeTax || 0) + (data.employmentInsurance || 0) + (data.hostelFee || 0);
 
     return (
-      <div ref={ref} className="p-12 max-w-[800px] mx-auto bg-white text-black font-sans border border-gray-300">
+      <div ref={ref} className="p-8 md:p-12 max-w-[850px] mx-auto bg-white text-black font-sans border border-gray-300 shadow-sm">
         <div className="border-b-2 border-black pb-4 mb-6 flex justify-between items-end">
-          <h1 className="text-3xl font-bold">給与明細書</h1>
+          <div className="space-y-1">
+            <h1 className="text-3xl font-black tracking-tighter">給与明細書</h1>
+            <p className="text-xs text-gray-500">PAYROLL STATEMENT</p>
+          </div>
           <div className="text-right">
-            <p className="font-bold">{month} 分</p>
+            <p className="font-bold text-lg">{month} 分</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-8 mb-8">
-          <div className="border border-black p-4">
-            <p className="text-xs text-gray-500 mb-1">社員番号 / 氏名</p>
+        <div className="grid grid-cols-2 gap-4 mb-8">
+          <div className="border border-black p-4 bg-gray-50/50">
+            <p className="text-[10px] uppercase text-gray-500 mb-1">社員番号 / 氏名 (Emp ID / Name)</p>
             <p className="font-bold text-lg">{employee.employeeNumber} - {employee.fullName} 様</p>
           </div>
-          <div className="border border-black p-4 text-right">
-            <p className="text-xs text-gray-500 mb-1">支払日</p>
-            <p className="font-bold">2024/XX/XX</p>
+          <div className="border border-black p-4 text-right bg-gray-50/50">
+            <p className="text-[10px] uppercase text-gray-500 mb-1">所属 (Department)</p>
+            <p className="font-bold">{employee.department || '-'}</p>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <div className="border border-black">
-            <div className="bg-gray-100 p-2 border-b border-black font-bold">勤怠 (Attendance)</div>
-            <div className="p-4 space-y-2 text-sm">
-              <div className="flex justify-between"><span>普通残業</span> <span>{data.ot125Hours} H</span></div>
-              <div className="flex justify-between"><span>深夜手当</span> <span>{data.nightShiftHours} H</span></div>
-              <div className="flex justify-between"><span>深夜残業</span> <span>{data.lateNightOTHours} H</span></div>
+          {/* Earnings Column */}
+          <div className="border border-black flex flex-col">
+            <div className="bg-gray-800 text-white p-2 border-b border-black font-bold text-center text-sm">支給 (Earnings)</div>
+            <div className="p-4 space-y-3 text-sm flex-1">
+              <div className="flex justify-between"><span>基本給 (Basic Salary)</span> <span className="font-mono">{(employee.baseSalary || 200000).toLocaleString()}</span></div>
+              <div className="flex justify-between"><span>普通残業 (Standard OT)</span> <span className="font-mono">{Math.round(otPay125).toLocaleString()}</span></div>
+              <div className="flex justify-between"><span>深夜残業 (Late Night OT)</span> <span className="font-mono">{Math.round(lateNightOTPay).toLocaleString()}</span></div>
+              <div className="flex justify-between"><span>深夜手当 (Night Shift Alw)</span> <span className="font-mono">{(data.nightShiftAllowance || 0).toLocaleString()}</span></div>
+              <div className="flex justify-between"><span>住宅手当 (Housing Alw)</span> <span className="font-mono">{(data.housingAllowance || 0).toLocaleString()}</span></div>
+            </div>
+            <div className="bg-gray-100 p-2 border-t border-black flex justify-between font-bold">
+              <span>総支給額 (Gross Total)</span> <span>{Math.round(grossPay).toLocaleString()}</span>
             </div>
           </div>
-          <div className="border border-black">
-            <div className="bg-gray-100 p-2 border-b border-black font-bold">支給 (Payments)</div>
-            <div className="p-4 space-y-2 text-sm">
-              <div className="flex justify-between"><span>基本給</span> <span>{(employee.baseSalary || 200000).toLocaleString()}</span></div>
-              <div className="flex justify-between"><span>普通残業手当</span> <span>{Math.round(otPay).toLocaleString()}</span></div>
-              <div className="flex justify-between"><span>深夜手当金</span> <span>{Math.round(nightPay).toLocaleString()}</span></div>
-              <div className="flex justify-between"><span>深夜残業手当</span> <span>{Math.round(lateNightOTPay).toLocaleString()}</span></div>
-              <div className="flex justify-between border-t border-gray-300 pt-2 font-bold">
-                <span>総支給額</span> <span>{Math.round(grossPay).toLocaleString()}</span>
-              </div>
+
+          {/* Deductions Column */}
+          <div className="border border-black flex flex-col">
+            <div className="bg-gray-800 text-white p-2 border-b border-black font-bold text-center text-sm">控除 (Deductions)</div>
+            <div className="p-4 space-y-3 text-sm flex-1">
+              <div className="flex justify-between"><span>健康保険 (Health Ins)</span> <span className="font-mono">{(data.healthInsurance || 0).toLocaleString()}</span></div>
+              <div className="flex justify-between"><span>厚生年金 (Pension)</span> <span className="font-mono">{(data.pension || 0).toLocaleString()}</span></div>
+              <div className="flex justify-between"><span>雇用保険 (Employment Ins)</span> <span className="font-mono">{(data.employmentInsurance || 0).toLocaleString()}</span></div>
+              <div className="flex justify-between"><span>所得税 (Income Tax)</span> <span className="font-mono">{(data.incomeTax || 0).toLocaleString()}</span></div>
+              <div className="flex justify-between"><span>寮費 (Hostel/Dorm Fee)</span> <span className="font-mono">{(data.hostelFee || 0).toLocaleString()}</span></div>
+            </div>
+            <div className="bg-gray-100 p-2 border-t border-black flex justify-between font-bold">
+              <span>控除合計 (Total Ded)</span> <span>{deductions.toLocaleString()}</span>
             </div>
           </div>
         </div>
 
-        <div className="mt-4 border border-black">
-          <div className="bg-gray-100 p-2 border-b border-black font-bold">控除 (Deductions)</div>
-          <div className="p-4 grid grid-cols-2 gap-x-12 gap-y-2 text-sm">
-            <div className="flex justify-between"><span>健康保険</span> <span>{data.healthInsurance.toLocaleString()}</span></div>
-            <div className="flex justify-between"><span>厚生年金</span> <span>{data.pension.toLocaleString()}</span></div>
-            <div className="flex justify-between"><span>所得税</span> <span>{data.incomeTax.toLocaleString()}</span></div>
-            <div className="flex justify-between"><span>寮費</span> <span>{data.hostelFee.toLocaleString()}</span></div>
-            <div className="flex justify-between border-t border-black pt-2 font-bold col-span-2">
-              <span>控除合計額</span> <span>{deductions.toLocaleString()}</span>
-            </div>
+        <div className="mt-8 bg-gray-900 text-white p-6 flex justify-between items-center rounded-sm">
+          <div className="space-y-1">
+            <span className="text-xl font-bold block">差引支給額</span>
+            <span className="text-[10px] uppercase text-gray-400">Net Pay (Take-home)</span>
+          </div>
+          <div className="text-right">
+            <span className="text-4xl font-black">{Math.round(grossPay - deductions).toLocaleString()}</span>
+            <span className="ml-2 text-xl font-bold">JPY</span>
           </div>
         </div>
 
-        <div className="mt-8 bg-gray-200 p-6 flex justify-between items-center border border-black">
-          <span className="text-xl font-bold">差引支給額 (Net Pay)</span>
-          <span className="text-3xl font-black">{Math.round(grossPay - deductions).toLocaleString()} JPY</span>
+        <div className="mt-12 text-[10px] text-gray-400 border-t pt-4 flex justify-between">
+          <p>GlobalPay Enterprise System - Verified Statement</p>
+          <p>Generated: {new Date().toLocaleDateString()}</p>
         </div>
       </div>
     );
   } else {
-    // Myanmar Payslip
+    // Myanmar Payslip (Existing Logic)
     const hourlyRate = ((employee.baseSalary || 400000) / 30 / 8);
     const otPay = data.otHours * hourlyRate * 2;
     const grossPay = (employee.baseSalary || 400000) + otPay + data.attendanceBonus + data.mealAllowance;
