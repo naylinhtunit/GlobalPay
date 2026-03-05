@@ -1,0 +1,28 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+
+  <!-- Background -->
+    <rect width="512" height="512" rx="100" fill="black"/>
+
+      <!-- Shield -->
+        <path d="M256 110 
+                   L340 150 
+                              L340 240 
+                                         C340 300 300 340 256 360 
+                                                    C212 340 172 300 172 240 
+                                                               L172 150 
+                                                                          Z"
+                                                                                  fill="#e6e6e6"
+                                                                                          stroke="#2f6df6"
+                                                                                                  stroke-width="14"/>
+
+                                                                                                    <!-- Text -->
+                                                                                                      <text x="256" y="430"
+                                                                                                              font-family="Arial, Helvetica, sans-serif"
+                                                                                                                      font-size="60"
+                                                                                                                              fill="white"
+                                                                                                                                      text-anchor="middle"
+                                                                                                                                              font-weight="bold">
+                                                                                                                                                      GlobalPay
+                                                                                                                                                        </text>
+
+                                                                                                                                                        </svg>
