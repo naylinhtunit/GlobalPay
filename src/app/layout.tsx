@@ -10,6 +10,7 @@ export const metadata: Metadata = {
   description: 'Streamline your international workforce management. Specialized payroll processing for Japan and Myanmar with full compliance and high security.',
   keywords: ['payroll', 'international payroll', 'Japan payroll', 'Myanmar payroll', 'HR management', 'compliance'],
   authors: [{ name: 'GlobalPay Enterprise' }],
+  manifest: '/manifest.json',
   openGraph: {
     title: 'GlobalPay: Expert International Payroll Solutions',
     description: 'Manage your global team with ease. Automated payslip generation and compliance for Japan (JPY) and Myanmar (MMK). Secure and reliable.',
@@ -55,9 +56,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-        <meta property="og:image:type" content="image/png" />
-        <meta property="og:image:width" content="512" />
-        <meta property="og:image:height" content="512" />
+        <meta name="theme-color" content="#3b82f6" />
       </head>
       <body className="font-body antialiased bg-background min-h-screen">
         <FirebaseClientProvider>
