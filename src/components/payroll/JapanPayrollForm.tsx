@@ -6,23 +6,56 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 
 export interface JapanData {
-  ot125Hours: number;
-  nightShiftHours: number;
+  // Attendance (勤怠)
+  scheduledDays: number;
+  absenceHours: number;
+  lateEarlyHours: number;
+  regularOTHours: number;
   lateNightOTHours: number;
+  holidayWorkHours: number;
+  holidayNightHours: number;
+  nightShiftHours: number;
+  nightShiftHoursExtra: number;
+  paidLeaveDays: number;
+  lunchCount: number;
+  scheduledHours: number;
+  remainingPaidLeave: number;
+
+  // Earnings (支給)
+  otAllowance: number;
+  lateNightOTAllowance: number;
   nightShiftAllowance: number;
-  housingAllowance: number;
+  nightShiftAllowanceExtra: number;
+  holidayWorkAllowance: number;
+  holidayNightAllowance: number;
   familyAllowance: number;
-  commutingAllowance: number;
+  housingAllowance: number;
+  nonTaxableCommuting: number;
+  taxableCommuting: number;
   absenceDeduction: number;
   lateEarlyDeduction: number;
+  prevMonthAdj: number;
+  leaveAllowance: number;
+
+  // Deductions (控除)
   healthInsurance: number;
   nursingCareInsurance: number;
   pension: number;
-  incomeTax: number;
+  socInsAdj: number;
   employmentInsurance: number;
+  incomeTax: number;
   residentTax: number;
+  lunchFee: number;
   hostelFee: number;
   beddingFee: number;
+
+  // Others (その他)
+  yearEndAdj: number;
+  otherAdj1: number;
+  otherAdj2: number;
+  paidLeaveBuyback: number;
+  cashPayment: number;
+  kindPayment: number;
 }
 
 interface Props {
@@ -43,127 +76,152 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
     }
   };
 
-  const hourlyRate = baseSalary / 160;
-  const otPay125 = data.ot125Hours * hourlyRate * 1.25;
-  const nightShiftDiff = data.nightShiftHours * hourlyRate * 0.25;
-  const lateNightOTPay = data.lateNightOTHours * hourlyRate * 1.5;
-  
+  // Calculations
   const totalEarnings = baseSalary + 
-                        otPay125 + 
-                        nightShiftDiff + 
-                        lateNightOTPay + 
+                        (data.otAllowance || 0) + 
+                        (data.lateNightOTAllowance || 0) + 
                         (data.nightShiftAllowance || 0) + 
-                        (data.housingAllowance || 0) + 
+                        (data.nightShiftAllowanceExtra || 0) + 
+                        (data.holidayWorkAllowance || 0) + 
+                        (data.holidayNightAllowance || 0) + 
                         (data.familyAllowance || 0) + 
-                        (data.commutingAllowance || 0) -
+                        (data.housingAllowance || 0) + 
+                        (data.nonTaxableCommuting || 0) + 
+                        (data.taxableCommuting || 0) + 
+                        (data.prevMonthAdj || 0) + 
+                        (data.leaveAllowance || 0) -
                         (data.absenceDeduction || 0) -
                         (data.lateEarlyDeduction || 0);
 
   const totalDeductions = (data.healthInsurance || 0) + 
                           (data.nursingCareInsurance || 0) +
                           (data.pension || 0) + 
-                          (data.incomeTax || 0) + 
+                          (data.socInsAdj || 0) + 
                           (data.employmentInsurance || 0) + 
+                          (data.incomeTax || 0) + 
                           (data.residentTax || 0) +
+                          (data.lunchFee || 0) +
                           (data.hostelFee || 0) +
                           (data.beddingFee || 0);
   
-  const netPay = totalEarnings - totalDeductions;
+  const netPay = totalEarnings - totalDeductions + (data.yearEndAdj || 0) + (data.otherAdj1 || 0) + (data.otherAdj2 || 0) + (data.paidLeaveBuyback || 0);
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-4">
-        <h4 className="text-sm font-bold text-primary uppercase tracking-wider border-b pb-1">Earnings (支給)</h4>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <Label className="text-[11px]">普通残業 1.25x (Hours)</Label>
-            <Input type="number" value={data.ot125Hours} onFocus={handleFocus} onChange={e => updateField("ot125Hours", e.target.value)} />
+    <div className="space-y-8">
+      {/* Attendance Section */}
+      <div className="space-y-4 bg-slate-50 p-4 rounded-lg border">
+        <h4 className="text-sm font-bold text-slate-700 uppercase tracking-wider border-b pb-1">勤怠 (Attendance)</h4>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: "所定就労日", en: "Sch. Work Days", field: "scheduledDays" },
+            { label: "欠勤日時間", en: "Absence Days/Hrs", field: "absenceHours" },
+            { label: "遅刻早退時間", en: "Late/Early Hrs", field: "lateEarlyHours" },
+            { label: "普通残業時間", en: "Regular OT Hrs", field: "regularOTHours" },
+            { label: "深夜残業時間", en: "Late Night OT Hrs", field: "lateNightOTHours" },
+            { label: "休日勤務時間", en: "Holiday Work Hrs", field: "holidayWorkHours" },
+            { label: "休日深夜時間", en: "Holiday Night Hrs", field: "holidayNightHours" },
+            { label: "~22 (Night Hrs)", en: "Night Shift 1", field: "nightShiftHours" },
+            { label: "22~ (Night Hrs)", en: "Night Shift 2", field: "nightShiftHoursExtra" },
+            { label: "有休日数", en: "Paid Leave Days", field: "paidLeaveDays" },
+            { label: "昼食回数", en: "Lunch Count", field: "lunchCount" },
+            { label: "所定労働時間", en: "Sch. Work Hours", field: "scheduledHours" },
+            { label: "有休残日数", en: "Rem. Leave Days", field: "remainingPaidLeave" },
+          ].map((item) => (
+            <div key={item.field} className="space-y-1">
+              <Label className="text-[10px] leading-tight block">{item.label}<br/><span className="text-muted-foreground">{item.en}</span></Label>
+              <Input type="number" className="h-8 text-xs" value={(data as any)[item.field]} onFocus={handleFocus} onChange={e => updateField(item.field as keyof JapanData, e.target.value)} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Earnings Section */}
+        <div className="space-y-4">
+          <h4 className="text-sm font-bold text-blue-700 uppercase tracking-wider border-b pb-1">支給 (Earnings)</h4>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { label: "普通残業手当", en: "Regular OT Alw", field: "otAllowance" },
+              { label: "深夜残業手当", en: "Late Night OT Alw", field: "lateNightOTAllowance" },
+              { label: "~22 深夜手当", en: "Night Alw 1", field: "nightShiftAllowance" },
+              { label: "22~ 深夜手当", en: "Night Alw 2", field: "nightShiftAllowanceExtra" },
+              { label: "休日勤務手当", en: "Holiday Work Alw", field: "holidayWorkAllowance" },
+              { label: "休日深夜手当", en: "Holiday Night Alw", field: "holidayNightAllowance" },
+              { label: "家族手当", en: "Family Alw", field: "familyAllowance" },
+              { label: "住宅手当", en: "Housing Alw", field: "housingAllowance" },
+              { label: "非課税通勤費", en: "Non-tax Commuting", field: "nonTaxableCommuting" },
+              { label: "課税通勤費", en: "Taxable Commuting", field: "taxableCommuting" },
+              { label: "欠勤時間控除", en: "Absence Ded", field: "absenceDeduction", color: "text-red-600" },
+              { label: "遅刻早退控除", en: "Late/Early Ded", field: "lateEarlyDeduction", color: "text-red-600" },
+              { label: "前月修正", en: "Prev Month Adj", field: "prevMonthAdj" },
+              { label: "休業手当", en: "Leave Alw", field: "leaveAllowance" },
+            ].map((item) => (
+              <div key={item.field} className="space-y-1">
+                <Label className={`text-[10px] leading-tight block ${item.color || ""}`}>{item.label}<br/><span className="text-muted-foreground">{item.en}</span></Label>
+                <Input type="number" className="h-8 text-xs" value={(data as any)[item.field]} onFocus={handleFocus} onChange={e => updateField(item.field as keyof JapanData, e.target.value)} />
+              </div>
+            ))}
           </div>
-          <div className="space-y-2">
-            <Label className="text-[11px]">深夜残業 1.5x (Hours)</Label>
-            <Input type="number" value={data.lateNightOTHours} onFocus={handleFocus} onChange={e => updateField("lateNightOTHours", e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-[11px]">深夜勤務 (Night Hrs)</Label>
-            <Input type="number" value={data.nightShiftHours} onFocus={handleFocus} onChange={e => updateField("nightShiftHours", e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-[11px]">深夜手当 (Night Alw)</Label>
-            <Input type="number" value={data.nightShiftAllowance} onFocus={handleFocus} onChange={e => updateField("nightShiftAllowance", e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-[11px]">住宅手당 (Housing)</Label>
-            <Input type="number" value={data.housingAllowance} onFocus={handleFocus} onChange={e => updateField("housingAllowance", e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-[11px]">家族手当 (Family)</Label>
-            <Input type="number" value={data.familyAllowance} onFocus={handleFocus} onChange={e => updateField("familyAllowance", e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-[11px]">通勤費 (Commuting)</Label>
-            <Input type="number" value={data.commutingAllowance} onFocus={handleFocus} onChange={e => updateField("commutingAllowance", e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-[11px] text-destructive">欠勤控除 (Absence Ded)</Label>
-            <Input type="number" className="border-destructive/30" value={data.absenceDeduction} onFocus={handleFocus} onChange={e => updateField("absenceDeduction", e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-[11px] text-destructive">遅刻早退 (Late/Early Ded)</Label>
-            <Input type="number" className="border-destructive/30" value={data.lateEarlyDeduction} onFocus={handleFocus} onChange={e => updateField("lateEarlyDeduction", e.target.value)} />
+        </div>
+
+        {/* Deductions Section */}
+        <div className="space-y-4">
+          <h4 className="text-sm font-bold text-red-700 uppercase tracking-wider border-b pb-1">控除 (Deductions)</h4>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { label: "健康保険料", en: "Health Insurance", field: "healthInsurance" },
+              { label: "介護保険料", en: "Nursing Care Ins", field: "nursingCareInsurance" },
+              { label: "厚生年金保険", en: "Welfare Pension", field: "pension" },
+              { label: "社保料調整", en: "Soc Ins Adj", field: "socInsAdj" },
+              { label: "雇用保険料", en: "Employment Ins", field: "employmentInsurance" },
+              { label: "所得税", en: "Income Tax", field: "incomeTax" },
+              { label: "住民税", en: "Resident Tax", field: "residentTax" },
+              { label: "昼食代", en: "Lunch Fee", field: "lunchFee" },
+              { label: "寮費", en: "Hostel Fee", field: "hostelFee" },
+              { label: "布団代", en: "Bedding Fee", field: "beddingFee" },
+            ].map((item) => (
+              <div key={item.field} className="space-y-1">
+                <Label className="text-[10px] leading-tight block">{item.label}<br/><span className="text-muted-foreground">{item.en}</span></Label>
+                <Input type="number" className="h-8 text-xs" value={(data as any)[item.field]} onFocus={handleFocus} onChange={e => updateField(item.field as keyof JapanData, e.target.value)} />
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
-      <div className="space-y-4">
-        <h4 className="text-sm font-bold text-destructive uppercase tracking-wider border-b pb-1">Deductions (控除)</h4>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <Label className="text-[11px]">健康保険 (Health Ins)</Label>
-            <Input type="number" value={data.healthInsurance} onFocus={handleFocus} onChange={e => updateField("healthInsurance", e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-[11px]">介護保険 (Nursing Care)</Label>
-            <Input type="number" value={data.nursingCareInsurance} onFocus={handleFocus} onChange={e => updateField("nursingCareInsurance", e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-[11px]">厚生年金 (Pension)</Label>
-            <Input type="number" value={data.pension} onFocus={handleFocus} onChange={e => updateField("pension", e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-[11px]">所得税 (Income Tax)</Label>
-            <Input type="number" value={data.incomeTax} onFocus={handleFocus} onChange={e => updateField("incomeTax", e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-[11px]">住民税 (Resident Tax)</Label>
-            <Input type="number" value={data.residentTax} onFocus={handleFocus} onChange={e => updateField("residentTax", e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-[11px]">雇用保険 (Employment)</Label>
-            <Input type="number" value={data.employmentInsurance} onFocus={handleFocus} onChange={e => updateField("employmentInsurance", e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-[11px]">寮費 (Hostel Fee)</Label>
-            <Input type="number" value={data.hostelFee} onFocus={handleFocus} onChange={e => updateField("hostelFee", e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-[11px]">布団代 (Bedding Fee)</Label>
-            <Input type="number" value={data.beddingFee} onFocus={handleFocus} onChange={e => updateField("beddingFee", e.target.value)} />
-          </div>
+      {/* Others Section */}
+      <div className="space-y-4 bg-slate-50 p-4 rounded-lg border">
+        <h4 className="text-sm font-bold text-slate-700 uppercase tracking-wider border-b pb-1">その他 (Others & Adjustments)</h4>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: "年末調整徴収", en: "Year-end Adj", field: "yearEndAdj" },
+            { label: "その他調整", en: "Other Adj 1", field: "otherAdj1" },
+            { label: "その他調整2", en: "Other Adj 2", field: "otherAdj2" },
+            { label: "有給買取", en: "Leave Buyback", field: "paidLeaveBuyback" },
+            { label: "現金支給額", en: "Cash Payment", field: "cashPayment" },
+            { label: "現物支給額", en: "Kind Payment", field: "kindPayment" },
+          ].map((item) => (
+            <div key={item.field} className="space-y-1">
+              <Label className="text-[10px] leading-tight block">{item.label}<br/><span className="text-muted-foreground">{item.en}</span></Label>
+              <Input type="number" className="h-8 text-xs" value={(data as any)[item.field]} onFocus={handleFocus} onChange={e => updateField(item.field as keyof JapanData, e.target.value)} />
+            </div>
+          ))}
         </div>
       </div>
 
-      <div className="p-4 bg-primary/5 rounded-xl border border-primary/20 space-y-2">
-        <div className="flex justify-between font-medium">
-          <span className="text-muted-foreground text-sm">Gross Total (支給計):</span>
-          <span>{Math.round(totalEarnings).toLocaleString()} JPY</span>
+      {/* Summary Footer */}
+      <div className="p-4 bg-primary/10 rounded-xl border-2 border-primary/20 grid grid-cols-3 gap-4">
+        <div className="text-center border-r border-primary/20">
+          <p className="text-[10px] text-muted-foreground uppercase">Gross Total (支給計)</p>
+          <p className="text-lg font-bold">{Math.round(totalEarnings).toLocaleString()} JPY</p>
         </div>
-        <div className="flex justify-between text-destructive">
-          <span className="text-muted-foreground text-sm">Total Deductions (控除計):</span>
-          <span>-{Math.round(totalDeductions).toLocaleString()} JPY</span>
+        <div className="text-center border-r border-primary/20 text-red-600">
+          <p className="text-[10px] text-muted-foreground uppercase">Total Deductions (控除計)</p>
+          <p className="text-lg font-bold">-{Math.round(totalDeductions).toLocaleString()} JPY</p>
         </div>
-        <div className="flex justify-between text-xl font-bold border-t border-primary/20 pt-2 mt-2">
-          <span>Net Salary (差引支給額):</span>
-          <span className="text-primary">{Math.round(netPay).toLocaleString()} JPY</span>
+        <div className="text-center text-primary">
+          <p className="text-[10px] text-muted-foreground uppercase">Net Pay (差引支給額)</p>
+          <p className="text-xl font-black">{Math.round(netPay).toLocaleString()} JPY</p>
         </div>
       </div>
     </div>

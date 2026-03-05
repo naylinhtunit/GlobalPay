@@ -81,23 +81,49 @@ export default function PayrollPage() {
   }, []);
 
   const [japanData, setJapanData] = useState<JapanData>({
-    ot125Hours: 0,
-    nightShiftHours: 0,
+    scheduledDays: 0,
+    absenceHours: 0,
+    lateEarlyHours: 0,
+    regularOTHours: 0,
     lateNightOTHours: 0,
+    holidayWorkHours: 0,
+    holidayNightHours: 0,
+    nightShiftHours: 0,
+    nightShiftHoursExtra: 0,
+    paidLeaveDays: 0,
+    lunchCount: 0,
+    scheduledHours: 0,
+    remainingPaidLeave: 0,
+    otAllowance: 0,
+    lateNightOTAllowance: 0,
     nightShiftAllowance: 0,
-    housingAllowance: 0,
+    nightShiftAllowanceExtra: 0,
+    holidayWorkAllowance: 0,
+    holidayNightAllowance: 0,
     familyAllowance: 0,
-    commutingAllowance: 0,
+    housingAllowance: 0,
+    nonTaxableCommuting: 0,
+    taxableCommuting: 0,
     absenceDeduction: 0,
     lateEarlyDeduction: 0,
+    prevMonthAdj: 0,
+    leaveAllowance: 0,
     healthInsurance: 0,
     nursingCareInsurance: 0,
     pension: 0,
-    incomeTax: 0,
+    socInsAdj: 0,
     employmentInsurance: 0,
+    incomeTax: 0,
     residentTax: 0,
+    lunchFee: 0,
     hostelFee: 0,
-    beddingFee: 0
+    beddingFee: 0,
+    yearEndAdj: 0,
+    otherAdj1: 0,
+    otherAdj2: 0,
+    paidLeaveBuyback: 0,
+    cashPayment: 0,
+    kindPayment: 0,
   });
 
   const [myanmarData, setMyanmarData] = useState({
@@ -136,23 +162,49 @@ export default function PayrollPage() {
     setSelectedEmpId("");
     if (monthOptions.length > 0) setSelectedMonth(monthOptions[0].value);
     setJapanData({
-      ot125Hours: 0,
-      nightShiftHours: 0,
+      scheduledDays: 0,
+      absenceHours: 0,
+      lateEarlyHours: 0,
+      regularOTHours: 0,
       lateNightOTHours: 0,
+      holidayWorkHours: 0,
+      holidayNightHours: 0,
+      nightShiftHours: 0,
+      nightShiftHoursExtra: 0,
+      paidLeaveDays: 0,
+      lunchCount: 0,
+      scheduledHours: 0,
+      remainingPaidLeave: 0,
+      otAllowance: 0,
+      lateNightOTAllowance: 0,
       nightShiftAllowance: 0,
-      housingAllowance: 0,
+      nightShiftAllowanceExtra: 0,
+      holidayWorkAllowance: 0,
+      holidayNightAllowance: 0,
       familyAllowance: 0,
-      commutingAllowance: 0,
+      housingAllowance: 0,
+      nonTaxableCommuting: 0,
+      taxableCommuting: 0,
       absenceDeduction: 0,
       lateEarlyDeduction: 0,
+      prevMonthAdj: 0,
+      leaveAllowance: 0,
       healthInsurance: 0,
       nursingCareInsurance: 0,
       pension: 0,
-      incomeTax: 0,
+      socInsAdj: 0,
       employmentInsurance: 0,
+      incomeTax: 0,
       residentTax: 0,
+      lunchFee: 0,
       hostelFee: 0,
-      beddingFee: 0
+      beddingFee: 0,
+      yearEndAdj: 0,
+      otherAdj1: 0,
+      otherAdj2: 0,
+      paidLeaveBuyback: 0,
+      cashPayment: 0,
+      kindPayment: 0,
     });
     setMyanmarData({
       otHours: 0,
@@ -171,34 +223,44 @@ export default function PayrollPage() {
 
     let grossPay = 0;
     let deductions = 0;
+    let netPay = 0;
     const baseSalary = emp.baseSalary || 0;
 
     if (country === "Japan") {
-      const hourlyRate = baseSalary / 160;
-      const otPay = (japanData.ot125Hours * hourlyRate * 1.25) + 
-                    (japanData.nightShiftHours * hourlyRate * 0.25) + 
-                    (japanData.lateNightOTHours * hourlyRate * 1.5);
-      
-      grossPay = baseSalary + otPay + 
+      grossPay = baseSalary + 
+                (japanData.otAllowance || 0) + 
+                (japanData.lateNightOTAllowance || 0) + 
                 (japanData.nightShiftAllowance || 0) + 
-                (japanData.housingAllowance || 0) + 
+                (japanData.nightShiftAllowanceExtra || 0) + 
+                (japanData.holidayWorkAllowance || 0) + 
+                (japanData.holidayNightAllowance || 0) + 
                 (japanData.familyAllowance || 0) + 
-                (japanData.commutingAllowance || 0) -
+                (japanData.housingAllowance || 0) + 
+                (japanData.nonTaxableCommuting || 0) + 
+                (japanData.taxableCommuting || 0) + 
+                (japanData.prevMonthAdj || 0) + 
+                (japanData.leaveAllowance || 0) -
                 (japanData.absenceDeduction || 0) -
                 (japanData.lateEarlyDeduction || 0);
 
       deductions = (japanData.healthInsurance || 0) + 
                    (japanData.nursingCareInsurance || 0) +
                    (japanData.pension || 0) + 
-                   (japanData.incomeTax || 0) + 
+                   (japanData.socInsAdj || 0) + 
                    (japanData.employmentInsurance || 0) + 
+                   (japanData.incomeTax || 0) + 
                    (japanData.residentTax || 0) +
+                   (japanData.lunchFee || 0) +
                    (japanData.hostelFee || 0) +
                    (japanData.beddingFee || 0);
+      
+      const others = (japanData.yearEndAdj || 0) + (japanData.otherAdj1 || 0) + (japanData.otherAdj2 || 0) + (japanData.paidLeaveBuyback || 0);
+      netPay = grossPay - deductions + others;
     } else {
       const hourlyRate = (baseSalary / 30 / 8);
       grossPay = baseSalary + (myanmarData.otHours * hourlyRate * 2) + (myanmarData.attendanceBonus || 0) + (myanmarData.mealAllowance || 0);
       deductions = (myanmarData.ssbAmount || 0) + (myanmarData.incomeTax || 0);
+      netPay = grossPay - deductions;
     }
 
     const payload = {
@@ -212,7 +274,7 @@ export default function PayrollPage() {
       status: "Calculated",
       totalGrossPay: grossPay,
       totalDeductions: deductions,
-      netPay: grossPay - deductions,
+      netPay: netPay,
       japanData: country === "Japan" ? japanData : null,
       myanmarData: country === "Myanmar" ? myanmarData : null,
       updatedAt: serverTimestamp()
@@ -309,7 +371,7 @@ export default function PayrollPage() {
                 <Calculator size={18} /> New Payroll Entry
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-[800px] max-h-[95vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingRecordId ? "Edit Payroll" : "Process Payroll"} - {country}</DialogTitle>
               </DialogHeader>
@@ -424,7 +486,7 @@ export default function PayrollPage() {
         </div>
 
         <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-          <DialogContent className="max-w-[900px] w-[95vw] h-[90vh] overflow-y-auto p-4 md:p-6">
+          <DialogContent className="max-w-[1000px] w-[95vw] h-[95vh] overflow-y-auto p-4 md:p-6">
             <DialogHeader>
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pr-12 gap-4">
                 <DialogTitle>Payslip Preview</DialogTitle>
