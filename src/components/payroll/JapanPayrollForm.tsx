@@ -14,8 +14,8 @@ export interface JapanData {
   lateNightOTHours: number;
   holidayWorkHours: number;
   holidayNightHours: number;
-  nightShiftHours: number;
-  nightShiftHoursExtra: number;
+  nightShiftHours: number; // ~22
+  nightShiftHoursExtra: number; // 22~
   paidLeaveDays: number;
   lunchCount: number;
   scheduledHours: number;
@@ -24,8 +24,8 @@ export interface JapanData {
   // Earnings (支給)
   otAllowance: number;
   lateNightOTAllowance: number;
-  nightShiftAllowance: number;
-  nightShiftAllowanceExtra: number;
+  nightShiftAllowance: number; // ~22
+  nightShiftAllowanceExtra: number; // 22~
   holidayWorkAllowance: number;
   holidayNightAllowance: number;
   familyAllowance: number;
@@ -66,19 +66,19 @@ interface Props {
 
 export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
   
-  // Logic to auto-calculate values based on attendance and base salary
   useEffect(() => {
-    // Use scheduledHours if provided, otherwise default to 160
-    const denominator = data.scheduledHours > 0 ? data.scheduledHours : 160;
+    // Standard Japanese Monthly Hours average is around 170.5
+    // But we use the user-provided scheduledHours as denominator.
+    const denominator = data.scheduledHours > 0 ? data.scheduledHours : 170.5;
     const hourlyRate = baseSalary / denominator;
 
-    // 1. Calculate Earnings (支給) automatically
+    // 1. Calculate Earnings (支給) using exact multipliers from image context
     const calculatedOT = Math.round(hourlyRate * 1.25 * data.regularOTHours);
     const calculatedLateNightOT = Math.round(hourlyRate * 1.50 * data.lateNightOTHours);
     const calculatedHolidayWork = Math.round(hourlyRate * 1.35 * data.holidayWorkHours);
     const calculatedHolidayNight = Math.round(hourlyRate * 0.25 * data.holidayNightHours);
     
-    // Night Shift Allowances (Standard Premium portion 0.25)
+    // Night Shift Allowances (Premium portion 0.25)
     const calculatedNightAlw1 = Math.round(hourlyRate * 0.25 * data.nightShiftHours);
     const calculatedNightAlw2 = Math.round(hourlyRate * 0.25 * data.nightShiftHoursExtra);
 
@@ -93,18 +93,18 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
     const taxableEarnings = baseSalary + calculatedOT + calculatedLateNightOT + calculatedHolidayWork + (data.housingAllowance || 10000);
     const calculatedEmpIns = Math.round(taxableEarnings * 0.006);
 
-    // Default Housing Allowance to 10000 if not set
+    // Default values as requested
     const defaultHousing = data.housingAllowance === 0 ? 10000 : data.housingAllowance;
+    const defaultHostelFee = data.hostelFee === 0 ? 20000 : data.hostelFee;
 
     // 3. Calculate Income Tax (Simplified Japan withholding calculation)
-    const grossForTax = taxableEarnings - (calculatedHealthIns + calculatedPension + calculatedEmpIns);
+    const totalSocIns = calculatedHealthIns + calculatedPension + calculatedEmpIns + (data.nursingCareInsurance || 0);
+    const grossForTax = taxableEarnings - totalSocIns;
     let calculatedIncomeTax = 0;
     if (grossForTax > 0) {
+      // Simplified bracket: under 150k -> 5%, over -> 10%
       calculatedIncomeTax = grossForTax < 150000 ? Math.round(grossForTax * 0.05) : Math.round(7500 + (grossForTax - 150000) * 0.1);
     }
-
-    const defaultHostelFee = data.hostelFee === 0 ? 15000 : data.hostelFee;
-    const defaultBeddingFee = data.beddingFee === 0 ? 1500 : data.beddingFee;
 
     // Apply auto-updates only if values have changed to avoid loops
     if (
@@ -136,7 +136,6 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
         employmentInsurance: calculatedEmpIns,
         incomeTax: calculatedIncomeTax,
         hostelFee: defaultHostelFee,
-        beddingFee: defaultBeddingFee
       });
     }
   }, [baseSalary, data.regularOTHours, data.lateNightOTHours, data.holidayWorkHours, data.holidayNightHours, data.absenceHours, data.lateEarlyHours, data.nightShiftHours, data.nightShiftHoursExtra, data.scheduledHours]);
@@ -187,7 +186,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
       <div className="space-y-4 bg-slate-50 p-4 rounded-lg border-2 border-slate-200">
         <div className="flex justify-between items-center border-b pb-2">
           <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider">勤怠 (ATTENDANCE)</h4>
-          <span className="text-[10px] bg-slate-200 px-2 py-0.5 rounded text-slate-600 font-bold">MANUAL ENTRY</span>
+          <span className="text-[10px] bg-slate-200 px-2 py-0.5 rounded text-slate-600 font-bold uppercase tracking-tight">Manual Entry</span>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
@@ -198,8 +197,8 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
             { label: "深夜残業時間", en: "Late Night OT Hrs", field: "lateNightOTHours" },
             { label: "休日勤務時間", en: "Holiday Work Hrs", field: "holidayWorkHours" },
             { label: "休日深夜時間", en: "Holiday Night Hrs", field: "holidayNightHours" },
-            { label: "深夜就労時間1", en: "Night Shift 1", field: "nightShiftHours" },
-            { label: "深夜就労時間2", en: "Night Shift 2", field: "nightShiftHoursExtra" },
+            { label: "~22", en: "Night Shift 1", field: "nightShiftHours" },
+            { label: "22~", en: "Night Shift 2", field: "nightShiftHoursExtra" },
             { label: "有休日数", en: "Paid Leave Days", field: "paidLeaveDays" },
             { label: "昼食回数", en: "Lunch Count", field: "lunchCount" },
             { label: "所定労働時間", en: "Sch. Work Hours", field: "scheduledHours" },
@@ -218,22 +217,22 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
         <div className="space-y-4 bg-blue-50/30 p-4 rounded-lg border border-blue-100">
           <div className="flex justify-between items-center border-b border-blue-200 pb-2 mb-4">
             <h4 className="text-sm font-bold text-blue-800 uppercase tracking-wider">支給 (EARNINGS)</h4>
-            <span className="text-[9px] text-blue-600 font-bold italic">AUTO-CALCULATED</span>
+            <span className="text-[9px] text-blue-600 font-bold italic uppercase tracking-tight">Auto-Calculated</span>
           </div>
           <div className="grid grid-cols-2 gap-3">
             {[
               { label: "普通残業手当 (1.25)", en: "Regular OT Alw (1.25)", field: "otAllowance" },
-              { label: "深夜残業手当 (1.50)", en: "Late Night OT Alw (1.50)", field: "lateNightOTAllowance" },
-              { label: "深夜手当1 (0.25)", en: "Night Alw 1 (0.25)", field: "nightShiftAllowance" },
-              { label: "深夜手当2 (0.25)", en: "Night Alw 2 (0.25)", field: "nightShiftAllowanceExtra" },
-              { label: "休日勤務手当 (1.35)", en: "Holiday Work Alw (1.35)", field: "holidayWorkAllowance" },
-              { label: "休日深夜手당 (0.25)", en: "Holiday Night Alw (0.25)", field: "holidayNightAllowance" },
-              { label: "家族手当", en: "Family Alw", field: "familyAllowance" },
-              { label: "住宅手当", en: "Housing Alw", field: "housingAllowance", readOnly: false },
+              { label: "深夜残業手当 (1.50)", en: "Late Night OT (1.50)", field: "lateNightOTAllowance" },
+              { label: "~22 (0.25)", en: "Night Alw 1 (0.25)", field: "nightShiftAllowance" },
+              { label: "22~ (0.25)", en: "Night Alw 2 (0.25)", field: "nightShiftAllowanceExtra" },
+              { label: "休日勤務手当 (1.35)", en: "Holiday Work (1.35)", field: "holidayWorkAllowance" },
+              { label: "休日深夜手当 (0.25)", en: "Holiday Night (0.25)", field: "holidayNightAllowance" },
+              { label: "家族手当", en: "Family Alw", field: "familyAllowance", readOnly: false },
+              { label: "住宅手당", en: "Housing Alw", field: "housingAllowance", readOnly: false },
               { label: "非課税通勤費", en: "Non-tax Commuting", field: "nonTaxableCommuting", readOnly: false },
               { label: "課税通勤費", en: "Taxable Commuting", field: "taxableCommuting", readOnly: false },
-              { label: "欠勤時間控除 (1.00)", en: "Absence Ded (1.00)", field: "absenceDeduction", color: "text-red-600" },
-              { label: "遅刻早退控除 (1.00)", en: "Late/Early Ded (1.00)", field: "lateEarlyDeduction", color: "text-red-600" },
+              { label: "欠勤時間控除", en: "Absence Ded", field: "absenceDeduction", color: "text-red-600" },
+              { label: "遅刻早退控除", en: "Late/Early Ded", field: "lateEarlyDeduction", color: "text-red-600" },
               { label: "前月修正", en: "Prev Month Adj", field: "prevMonthAdj", readOnly: false },
               { label: "休業手当", en: "Leave Alw", field: "leaveAllowance", readOnly: false },
             ].map((item) => (
@@ -255,7 +254,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
         <div className="space-y-4 bg-red-50/30 p-4 rounded-lg border border-red-100">
           <div className="flex justify-between items-center border-b border-red-200 pb-2 mb-4">
             <h4 className="text-sm font-bold text-red-800 uppercase tracking-wider">控除 (DEDUCTIONS)</h4>
-            <span className="text-[9px] text-red-600 font-bold italic">DEFAULTS APPLIED</span>
+            <span className="text-[9px] text-red-600 font-bold italic uppercase tracking-tight">Defaults Applied</span>
           </div>
           <div className="grid grid-cols-2 gap-3">
             {[

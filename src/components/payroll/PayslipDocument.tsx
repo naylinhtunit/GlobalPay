@@ -89,11 +89,12 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
                 { l: "深夜残業", e: "Late Night OT", v: data.lateNightOTHours },
                 { l: "休日勤務", e: "Holiday Work", v: data.holidayWorkHours },
                 { l: "休日深夜", e: "Holiday Night", v: data.holidayNightHours },
-                { l: "~22 (Night)", e: "Night 1", v: data.nightShiftHours },
-                { l: "22~ (Night)", e: "Night 2", v: data.nightShiftHoursExtra },
+                { l: "~22", e: "Night 1", v: data.nightShiftHours },
+                { l: "22~", e: "Night 2", v: data.nightShiftHoursExtra },
                 { l: "有休日数", e: "Paid Leave", v: data.paidLeaveDays },
                 { l: "昼食回数", e: "Lunch", v: data.lunchCount },
                 { l: "所定労働", e: "Total Hrs", v: data.scheduledHours },
+                { l: "有休残日数", e: "Rem. Leave", v: data.remainingPaidLeave },
               ].map((item, idx) => (
                 <div key={idx} className="flex justify-between border-b border-gray-100 pb-0.5">
                   <span className="flex flex-col"><span>{item.l}</span><span className="text-[7px] text-gray-400">{item.e}</span></span>
@@ -114,8 +115,8 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
               {[
                 { l: "普通残業手当", e: "Reg OT Alw", v: data.otAllowance },
                 { l: "深夜残業手当", e: "Late Night OT", v: data.lateNightOTAllowance },
-                { l: "~22 深夜手当", e: "Night Alw 1", v: data.nightShiftAllowance },
-                { l: "22~ 深夜手当", e: "Night Alw 2", v: data.nightShiftAllowanceExtra },
+                { l: "~22", e: "Night Alw 1", v: data.nightShiftAllowance },
+                { l: "22~", e: "Night Alw 2", v: data.nightShiftAllowanceExtra },
                 { l: "休日勤務手当", e: "Holiday Alw", v: data.holidayWorkAllowance },
                 { l: "休日深夜手当", e: "Hol. Night Alw", v: data.holidayNightAllowance },
                 { l: "家族手当", e: "Family Alw", v: data.familyAllowance },
@@ -193,7 +194,7 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
       </div>
     );
   } else {
-    // Myanmar Payslip
+    // Myanmar Payslip remains as is
     const hourlyRate = ((employee.baseSalary || 400000) / 30 / 8);
     const otPay = data.otHours * hourlyRate * 2;
     const grossPay = (employee.baseSalary || 400000) + otPay + data.attendanceBonus + data.mealAllowance;
