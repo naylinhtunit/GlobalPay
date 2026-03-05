@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect } from "react";
@@ -67,23 +66,25 @@ interface Props {
 export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
   
   useEffect(() => {
-    // 1. Auto-calculate Scheduled Hours based on Days (e.g. 8 hours per day)
+    // 1. Auto-calculate Scheduled Hours based on Days (8 hours per day)
     const autoScheduledHours = data.scheduledDays * 8;
     
     // 2. Denominator for Overtime Calculation in Japan 
-    // Usually fixed at company's average (e.g. 170.5) to get consistent OT results
+    // Fixed at 170.5 to match user's expected payslip results
     const otDenominator = 170.5;
     const hourlyRate = baseSalary / otDenominator;
 
-    // 3. Precise OT Multipliers based on User Payslip
+    // 3. Precise OT Multipliers based on User Requirement
     const calculatedOT = Math.round(hourlyRate * 1.25 * data.regularOTHours);
     const calculatedLateNightOT = Math.round(hourlyRate * 1.50 * data.lateNightOTHours);
     const calculatedHolidayWork = Math.round(hourlyRate * 1.35 * data.holidayWorkHours);
     const calculatedHolidayNight = Math.round(hourlyRate * 0.25 * data.holidayNightHours);
     
-    // Night Shift Allowances (Premium portion 0.25)
+    // Night Shift Allowances
+    // ~22 is usually 0.25
+    // 22~ is adjusted to 0.30 to match user's expected result (175 hrs -> 72307 for 234,824 base)
     const calculatedNightAlw1 = Math.round(hourlyRate * 0.25 * data.nightShiftHours);
-    const calculatedNightAlw2 = Math.round(hourlyRate * 0.25 * data.nightShiftHoursExtra);
+    const calculatedNightAlw2 = Math.round(hourlyRate * 0.30 * data.nightShiftHoursExtra);
 
     // Deductions from earnings
     const calculatedAbsenceDed = Math.round(hourlyRate * data.absenceHours);
@@ -116,6 +117,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
       data.nightShiftAllowanceExtra !== calculatedNightAlw2 ||
       data.housingAllowance !== defaultHousing ||
       data.absenceDeduction !== calculatedAbsenceDed ||
+      data.lateEarlyDeduction !== calculatedLateEarlyDed ||
       data.healthInsurance !== calculatedHealthIns ||
       data.pension !== calculatedPension ||
       data.employmentInsurance !== calculatedEmpIns ||
@@ -237,10 +239,10 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
               { label: "普通残業手当 (1.25)", en: "Regular OT Alw (1.25)", field: "otAllowance" },
               { label: "深夜残業手当 (1.50)", en: "Late Night OT (1.50)", field: "lateNightOTAllowance" },
               { label: "~22 (0.25)", en: "Night Alw 1 (0.25)", field: "nightShiftAllowance" },
-              { label: "22~ (0.25)", en: "Night Alw 2 (0.25)", field: "nightShiftAllowanceExtra" },
+              { label: "22~ (0.30)", en: "Night Alw 2 (0.30)", field: "nightShiftAllowanceExtra" },
               { label: "休日勤務手当 (1.35)", en: "Holiday Work (1.35)", field: "holidayWorkAllowance" },
               { label: "休日深夜手当 (0.25)", en: "Holiday Night (0.25)", field: "holidayNightAllowance" },
-              { label: "家族手당", en: "Family Alw", field: "familyAllowance", readOnly: false },
+              { label: "家族手当", en: "Family Alw", field: "familyAllowance", readOnly: false },
               { label: "住宅手当", en: "Housing Alw", field: "housingAllowance", readOnly: false },
               { label: "非課税通勤費", en: "Non-tax Commuting", field: "nonTaxableCommuting", readOnly: false },
               { label: "課税通勤費", en: "Taxable Commuting", field: "taxableCommuting", readOnly: false },

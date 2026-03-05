@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from "react";
@@ -117,7 +116,7 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
                 { l: "普通残業手当", e: "Reg OT (1.25)", v: data.otAllowance },
                 { l: "深夜残業手当", e: "Late Night (1.50)", v: data.lateNightOTAllowance },
                 { l: "~22", e: "Night Alw 1 (0.25)", v: data.nightShiftAllowance },
-                { l: "22~", e: "Night Alw 2 (0.25)", v: data.nightShiftAllowanceExtra },
+                { l: "22~", e: "Night Alw 2 (0.30)", v: data.nightShiftAllowanceExtra },
                 { l: "休日勤務手当", e: "Holiday (1.35)", v: data.holidayWorkAllowance },
                 { l: "休日深夜手당", e: "Hol. Night (0.25)", v: data.holidayNightAllowance },
                 { l: "家族手当", e: "Family Alw", v: data.familyAllowance },
