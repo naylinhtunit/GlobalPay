@@ -44,7 +44,7 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
     const netPay = totalEarnings - totalDeductions + othersSum;
 
     return (
-      <div ref={ref} className="p-8 md:p-12 max-w-[1000px] mx-auto bg-white text-black font-sans border border-gray-400 shadow-sm print:shadow-none print:border-none">
+      <div ref={ref} className="p-8 md:p-12 max-w-[1000px] mx-auto bg-white text-black font-sans border border-gray-400 shadow-sm print:shadow-none print:border-none print:p-4">
         <div className="mb-6 flex justify-between items-start">
           <div className="space-y-1">
             <h1 className="text-2xl font-black tracking-widest border-b-2 border-black inline-block pb-1">給与明細書</h1>
@@ -193,7 +193,7 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
       </div>
     );
   } else {
-    // Myanmar Payslip (Keep original)
+    // Myanmar Payslip
     const hourlyRate = ((employee.baseSalary || 400000) / 30 / 8);
     const otPay = data.otHours * hourlyRate * 2;
     const grossPay = (employee.baseSalary || 400000) + otPay + data.attendanceBonus + data.mealAllowance;
