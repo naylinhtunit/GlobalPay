@@ -11,6 +11,11 @@ interface Props {
 }
 
 export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ country, employee, month, data }, ref) => {
+  // Use manual parsing for month to avoid timezone shifts from new Date()
+  const [yearPart, monthPart] = (month || "").split('-');
+  const displayYear = yearPart || new Date().getFullYear().toString();
+  const displayMonthNum = monthPart ? parseInt(monthPart, 10) : new Date().getMonth() + 1;
+
   if (country === "Japan") {
     const baseSalary = employee.baseSalary || 200000;
     const totalEarnings = baseSalary + 
@@ -52,11 +57,11 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
             <p className="text-sm mt-4 font-bold">GlobalPay Enterprise System</p>
           </div>
           <div className="text-right space-y-2">
-            <p className="text-xl font-bold border-b border-black pb-1">{new Date(month).getFullYear()}年 {new Date(month).getMonth() + 1}月分 給与</p>
+            <p className="text-xl font-bold border-b border-black pb-1">{displayYear}年 {displayMonthNum}月分 給与</p>
             <div className="flex gap-4 text-xs justify-end mt-4">
               <div className="border border-black p-2 w-24 text-center">
                 <p className="text-[8px] text-gray-500">支給日 (Pay Date)</p>
-                <p className="font-bold">{month}-30</p>
+                <p className="font-bold">{displayYear}-{String(displayMonthNum).padStart(2, '0')}-30</p>
               </div>
               <div className="border border-black p-2 w-24 h-24 text-center">
                 <p className="text-[8px] text-gray-500">受領印 (Seal)</p>
@@ -113,8 +118,8 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
                 <span className="font-mono self-center">{(employee.baseSalary || 0).toLocaleString()}</span>
               </div>
               {[
-                { l: "普通残業手当", e: "Reg OT (1.25)", v: data.otAllowance },
-                { l: "深夜残業手当", e: "Late Night (1.50)", v: data.lateNightOTAllowance },
+                { l: "普通残業手당", e: "Reg OT (1.25)", v: data.otAllowance },
+                { l: "深夜残業手당", e: "Late Night (1.50)", v: data.lateNightOTAllowance },
                 { l: "~22", e: "Night Alw 1 (0.25)", v: data.nightShiftAllowance },
                 { l: "22~", e: "Night Alw 2 (0.30)", v: data.nightShiftAllowanceExtra },
                 { l: "休日勤務手当", e: "Holiday (1.35)", v: data.holidayWorkAllowance },

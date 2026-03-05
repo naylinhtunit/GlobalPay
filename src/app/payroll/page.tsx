@@ -70,7 +70,10 @@ export default function PayrollPage() {
     const now = new Date();
     for (let i = 0; i < 12; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const value = d.toISOString().substring(0, 7);
+      // Use local year and month to avoid timezone shifts from toISOString()
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const value = `${year}-${month}`;
       const label = d.toLocaleString('default', { month: 'long', year: 'numeric' });
       options.push({ value, label });
     }
