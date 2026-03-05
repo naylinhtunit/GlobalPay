@@ -1,8 +1,16 @@
+
 "use client";
 
 import React, { useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Info } from "lucide-react";
 
 export interface JapanData {
   // Attendance (勤怠)
@@ -70,7 +78,6 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
     const autoScheduledHours = data.scheduledDays * 8;
     
     // 2. Denominator for Overtime Calculation in Japan 
-    // Fixed at 170.5 to match user's expected payslip results (20660 for 1.25 OT)
     const otDenominator = 170.5;
     const hourlyRate = baseSalary / otDenominator;
 
@@ -92,7 +99,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
     const defaultHousing = data.housingAllowance === 0 ? 10000 : data.housingAllowance;
     const defaultHostelFee = data.hostelFee === 0 ? 20000 : data.hostelFee;
 
-    // 5. Social Insurance & Tax (Values requested by user)
+    // 5. Social Insurance & Tax
     const calculatedHealthIns = data.healthInsurance === 0 ? 13312 : data.healthInsurance; 
     const calculatedPension = data.pension === 0 ? 23790 : data.pension;
     
@@ -193,6 +200,34 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
   
   const netPay = totalEarnings - totalDeductions + (data.yearEndAdj || 0) + (data.otherAdj1 || 0) + (data.otherAdj2 || 0) + (data.paidLeaveBuyback || 0);
 
+  const TooltipLabel = ({ label, en, jpExpl, mmExpl }: { label: string, en: string, jpExpl?: string, mmExpl?: string }) => (
+    <div className="flex items-center gap-1">
+      <Label className="text-[10px] leading-tight block font-semibold">
+        {label}<br/><span className="text-slate-500 font-normal">{en}</span>
+      </Label>
+      {jpExpl && (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Info size={12} className="text-primary cursor-help" />
+            </TooltipTrigger>
+            <TooltipContent className="max-w-[250px] space-y-2 p-3">
+              <p className="text-xs font-bold border-b pb-1">Calculation Logic (တွက်ချက်ပုံ)</p>
+              <div className="space-y-1">
+                <p className="text-[10px] font-bold text-slate-500 uppercase">Japanese</p>
+                <p className="text-[11px] leading-relaxed">{jpExpl}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-bold text-slate-500 uppercase">Burmese</p>
+                <p className="text-[11px] leading-relaxed">{mmExpl}</p>
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
+    </div>
+  );
+
   return (
     <div className="space-y-8">
       {/* 勤怠 (ATTENDANCE) */}
@@ -206,12 +241,12 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
             { label: "所定就労日", en: "Sch. Work Days", field: "scheduledDays" },
             { label: "欠勤日時間", en: "Absence", field: "absenceHours" },
             { label: "遅刻早退", en: "Late/Early", field: "lateEarlyHours" },
-            { label: "普通残業", en: "Regular OT", field: "regularOTHours" },
-            { label: "深夜残業", en: "Late Night OT", field: "lateNightOTHours" },
-            { label: "休日勤務", en: "Holiday Work", field: "holidayWorkHours" },
-            { label: "休日深夜", en: "Holiday Night", field: "holidayNightHours" },
-            { label: "~22", en: "Night Shift 1", field: "nightShiftHours" },
-            { label: "22~", en: "Night Shift 2", field: "nightShiftHoursExtra" },
+            { label: "普通残業 (1.25)", en: "Regular OT (1.25)", field: "regularOTHours" },
+            { label: "深夜残業 (1.50)", en: "Late Night OT (1.50)", field: "lateNightOTHours" },
+            { label: "休日勤務 (1.35)", en: "Holiday Work (1.35)", field: "holidayWorkHours" },
+            { label: "休日深夜 (0.25)", en: "Holiday Night (0.25)", field: "holidayNightHours" },
+            { label: "~22 (0.25)", en: "Night Shift 1 (0.25)", field: "nightShiftHours" },
+            { label: "22~ (0.30)", en: "Night Shift 2 (0.30)", field: "nightShiftHoursExtra" },
             { label: "有休日数", en: "Paid Leave Days", field: "paidLeaveDays" },
             { label: "昼食回数", en: "Lunch Count", field: "lunchCount" },
             { label: "所定労働時間", en: "Sch. Work Hours", field: "scheduledHours", color: "text-primary font-bold" },
@@ -244,7 +279,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
                <p className="text-lg font-black text-blue-700">{baseSalary?.toLocaleString()} <span className="text-xs font-normal">JPY</span></p>
             </div>
             {[
-              { label: "普通残業手당 (1.25)", en: "Regular OT Alw (1.25)", field: "otAllowance" },
+              { label: "普通残業手当 (1.25)", en: "Regular OT Alw (1.25)", field: "otAllowance" },
               { label: "深夜残業手当 (1.50)", en: "Late Night OT (1.50)", field: "lateNightOTAllowance" },
               { label: "~22 (0.25)", en: "Night Alw 1 (0.25)", field: "nightShiftAllowance" },
               { label: "22~ (0.30)", en: "Night Alw 2 (0.30)", field: "nightShiftAllowanceExtra" },
@@ -280,29 +315,66 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
             <span className="text-[9px] text-red-600 font-bold italic uppercase tracking-tight">MANUAL ADJUST AVAILABLE</span>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            {[
-              { label: "健康保険料", en: "Health Insurance", field: "healthInsurance" },
-              { label: "介護保険料", en: "Nursing Care Ins", field: "nursingCareInsurance" },
-              { label: "厚生年金保険", en: "Welfare Pension", field: "pension" },
-              { label: "社保料調整", en: "Soc Ins Adj", field: "socInsAdj" },
-              { label: "雇用保険料", en: "Employment Ins", field: "employmentInsurance" },
-              { label: "所得税", en: "Income Tax", field: "incomeTax", highlight: true },
-              { label: "住民税", en: "Resident Tax", field: "residentTax" },
-              { label: "昼食代", en: "Lunch Fee", field: "lunchFee" },
-              { label: "寮費", en: "Hostel Fee", field: "hostelFee" },
-              { label: "布団代", en: "Bedding Fee", field: "beddingFee" },
-            ].map((item) => (
-              <div key={item.field} className="space-y-1">
-                <Label className="text-[10px] leading-tight block font-semibold">{item.label}<br/><span className="text-slate-500 font-normal">{item.en}</span></Label>
-                <Input 
-                  type="number" 
-                  className={`h-8 text-xs ${item.highlight ? 'border-primary ring-1 ring-primary/20 font-bold' : 'border-red-200'}`} 
-                  value={(data as any)[item.field]} 
-                  onFocus={handleFocus} 
-                  onChange={e => updateField(item.field as keyof JapanData, e.target.value)} 
-                />
-              </div>
-            ))}
+            <div className="space-y-1">
+              <TooltipLabel 
+                label="健康保険料" en="Health Insurance" 
+                jpExpl="標準報酬月額に基づいて算出されます。会社と従業員で折半します。"
+                mmExpl="Standard Remuneration လစဉ်ပမာဏအပေါ် အခြေခံ၍ တွက်ချက်သည်။ ကုမ္ပဏီနှင့် ဝန်ထမ်း တစ်ဝက်စီ ကျခံရသည်။"
+              />
+              <Input type="number" className="h-8 text-xs border-red-200" value={data.healthInsurance} onFocus={handleFocus} onChange={e => updateField("healthInsurance", e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <TooltipLabel 
+                label="介護保険料" en="Nursing Care Ins" 
+                jpExpl="40歳から64歳までの被保険者が対象となります。"
+                mmExpl="အသက် ၄၀ မှ ၆၄ နှစ်ကြား အာမခံထားသူများအတွက်သာ သက်ဆိုင်ပါသည်။"
+              />
+              <Input type="number" className="h-8 text-xs border-red-200" value={data.nursingCareInsurance} onFocus={handleFocus} onChange={e => updateField("nursingCareInsurance", e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <TooltipLabel 
+                label="厚生年金保険" en="Welfare Pension" 
+                jpExpl="標準報酬月額に基づいて算出され、将来の年金受給額に反映されます。"
+                mmExpl="Standard Remuneration လစဉ်ပမာဏအပေါ် အခြေခံ၍ တွက်ချက်သည်။ အနာဂတ်ပင်စင်အတွက် ဖြစ်သည်။"
+              />
+              <Input type="number" className="h-8 text-xs border-red-200" value={data.pension} onFocus={handleFocus} onChange={e => updateField("pension", e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[10px] leading-tight block font-semibold">社保料調整<br/><span className="text-slate-500 font-normal">Soc Ins Adj</span></Label>
+              <Input type="number" className="h-8 text-xs border-red-200" value={data.socInsAdj} onFocus={handleFocus} onChange={e => updateField("socInsAdj", e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[10px] leading-tight block font-semibold">雇用保険料 (0.0055)<br/><span className="text-slate-500 font-normal">Employment Ins (0.0055)</span></Label>
+              <Input type="number" className="h-8 text-xs border-red-200" value={data.employmentInsurance} onFocus={handleFocus} onChange={e => updateField("employmentInsurance", e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <TooltipLabel 
+                label="所得税" en="Income Tax" 
+                jpExpl="給与所得の源泉徴収税額表に基づいて算出されます。課税対象額に応じて変動します。"
+                mmExpl="လစာဝင်ငွေအတွက် အခွန်နုတ်ယူခြင်းဆိုင်ရာ ဇယားအပေါ် အခြေခံ၍ တွက်ချက်သည်။ ဝင်ငွေအပေါ် မူတည်၍ ပြောင်းလဲသည်။"
+              />
+              <Input type="number" className="h-8 text-xs border-primary ring-1 ring-primary/20 font-bold" value={data.incomeTax} onFocus={handleFocus} onChange={e => updateField("incomeTax", e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <TooltipLabel 
+                label="住民税" en="Resident Tax" 
+                jpExpl="前年の所得に基づいてお住まいの市区町村が決定した税額です。"
+                mmExpl="ယခင်နှစ်ဝင်ငွေအပေါ် မူတည်၍ နေထိုင်ရာ မြို့နယ်စည်ပင်မှ သတ်မှတ်ထားသော အခွန်ဖြစ်သည်။"
+              />
+              <Input type="number" className="h-8 text-xs border-red-200" value={data.residentTax} onFocus={handleFocus} onChange={e => updateField("residentTax", e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[10px] leading-tight block font-semibold">昼食代<br/><span className="text-slate-500 font-normal">Lunch Fee</span></Label>
+              <Input type="number" className="h-8 text-xs border-red-200" value={data.lunchFee} onFocus={handleFocus} onChange={e => updateField("lunchFee", e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[10px] leading-tight block font-semibold">寮費<br/><span className="text-slate-500 font-normal">Hostel Fee</span></Label>
+              <Input type="number" className="h-8 text-xs border-red-200" value={data.hostelFee} onFocus={handleFocus} onChange={e => updateField("hostelFee", e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[10px] leading-tight block font-semibold">布団代<br/><span className="text-slate-500 font-normal">Bedding Fee</span></Label>
+              <Input type="number" className="h-8 text-xs border-red-200" value={data.beddingFee} onFocus={handleFocus} onChange={e => updateField("beddingFee", e.target.value)} />
+            </div>
           </div>
         </div>
       </div>
