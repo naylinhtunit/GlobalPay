@@ -5,11 +5,10 @@ import React, { useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Info } from "lucide-react";
 
 export interface JapanData {
@@ -77,11 +76,11 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
     // 1. Auto-calculate Scheduled Hours based on Days (8 hours per day)
     const autoScheduledHours = data.scheduledDays * 8;
     
-    // 2. Denominator for Overtime Calculation in Japan 
+    // 2. Denominator for Overtime Calculation (Standard monthly hours)
     const otDenominator = 170.5;
     const hourlyRate = baseSalary / otDenominator;
 
-    // 3. Precise OT Multipliers based on User Requirement
+    // 3. Multipliers based on User Requirement
     const calculatedOT = Math.round(hourlyRate * 1.25 * data.regularOTHours);
     const calculatedLateNightOT = Math.round(hourlyRate * 1.50 * data.lateNightOTHours);
     const calculatedHolidayWork = Math.round(hourlyRate * 1.35 * data.holidayWorkHours);
@@ -112,14 +111,15 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
                              (data.prevMonthAdj || 0) + (data.leaveAllowance || 0) -
                              calculatedAbsenceDed - calculatedLateEarlyDed;
 
-    // Employment Insurance Calculation (To match 2064 for ~375k gross)
+    // Employment Insurance Calculation (To match payslip values like 2064 for 375k)
     const calculatedEmpIns = Math.round(totalEarningsCalc * 0.0055);
 
-    // Income Tax Calculation (To match 7790 for ~336k taxable base)
+    // Income Tax Calculation (To match 7790 for 336k taxable base)
     const totalSocIns = calculatedHealthIns + calculatedPension + calculatedEmpIns + (data.nursingCareInsurance || 0);
     const grossForTax = totalEarningsCalc - totalSocIns - (data.nonTaxableCommuting || 0);
     let calculatedIncomeTax = 0;
     if (grossForTax > 0) {
+      // Simplified withholding tax logic to match the target payslip
       calculatedIncomeTax = Math.round(grossForTax * 0.0232);
     }
 
@@ -200,30 +200,30 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
   
   const netPay = totalEarnings - totalDeductions + (data.yearEndAdj || 0) + (data.otherAdj1 || 0) + (data.otherAdj2 || 0) + (data.paidLeaveBuyback || 0);
 
-  const TooltipLabel = ({ label, en, jpExpl, mmExpl }: { label: string, en: string, jpExpl?: string, mmExpl?: string }) => (
+  const ExplanationLabel = ({ label, en, jpExpl, mmExpl }: { label: string, en: string, jpExpl?: string, mmExpl?: string }) => (
     <div className="flex items-center gap-1">
       <Label className="text-[10px] leading-tight block font-semibold">
         {label}<br/><span className="text-slate-500 font-normal">{en}</span>
       </Label>
       {jpExpl && (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Info size={12} className="text-primary cursor-help" />
-            </TooltipTrigger>
-            <TooltipContent className="max-w-[250px] space-y-2 p-3">
-              <p className="text-xs font-bold border-b pb-1">Calculation Logic (တွက်ချက်ပုံ)</p>
-              <div className="space-y-1">
-                <p className="text-[10px] font-bold text-slate-500 uppercase">Japanese</p>
-                <p className="text-[11px] leading-relaxed">{jpExpl}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-[10px] font-bold text-slate-500 uppercase">Burmese</p>
-                <p className="text-[11px] leading-relaxed">{mmExpl}</p>
-              </div>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button type="button" className="inline-flex items-center justify-center rounded-full hover:bg-slate-200 transition-colors p-0.5">
+              <Info size={14} className="text-primary cursor-pointer" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="max-w-[280px] space-y-3 p-4 shadow-xl border-2">
+            <p className="text-xs font-bold border-b pb-2">Calculation Logic (တွက်ချက်ပုံ)</p>
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-bold text-slate-500 uppercase">Japanese</p>
+              <p className="text-[11px] leading-relaxed text-slate-800">{jpExpl}</p>
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-bold text-slate-500 uppercase">Burmese</p>
+              <p className="text-[11px] leading-relaxed text-slate-800">{mmExpl}</p>
+            </div>
+          </PopoverContent>
+        </Popover>
       )}
     </div>
   );
@@ -316,7 +316,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <TooltipLabel 
+              <ExplanationLabel 
                 label="健康保険料" en="Health Insurance" 
                 jpExpl="標準報酬月額に基づいて算出されます。会社と従業員で折半します。"
                 mmExpl="Standard Remuneration လစဉ်ပမာဏအပေါ် အခြေခံ၍ တွက်ချက်သည်။ ကုမ္ပဏီနှင့် ဝန်ထမ်း တစ်ဝက်စီ ကျခံရသည်။"
@@ -324,7 +324,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
               <Input type="number" className="h-8 text-xs border-red-200" value={data.healthInsurance} onFocus={handleFocus} onChange={e => updateField("healthInsurance", e.target.value)} />
             </div>
             <div className="space-y-1">
-              <TooltipLabel 
+              <ExplanationLabel 
                 label="介護保険料" en="Nursing Care Ins" 
                 jpExpl="40歳から64歳までの被保険者が対象となります。"
                 mmExpl="အသက် ၄၀ မှ ၆၄ နှစ်ကြား အာမခံထားသူများအတွက်သာ သက်ဆိုင်ပါသည်။"
@@ -332,7 +332,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
               <Input type="number" className="h-8 text-xs border-red-200" value={data.nursingCareInsurance} onFocus={handleFocus} onChange={e => updateField("nursingCareInsurance", e.target.value)} />
             </div>
             <div className="space-y-1">
-              <TooltipLabel 
+              <ExplanationLabel 
                 label="厚生年金保険" en="Welfare Pension" 
                 jpExpl="標準報酬月額に基づいて算出され、将来の年金受給額に反映されます。"
                 mmExpl="Standard Remuneration လစဉ်ပမာဏအပေါ် အခြေခံ၍ တွက်ချက်သည်။ အနာဂတ်ပင်စင်အတွက် ဖြစ်သည်။"
@@ -348,7 +348,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
               <Input type="number" className="h-8 text-xs border-red-200" value={data.employmentInsurance} onFocus={handleFocus} onChange={e => updateField("employmentInsurance", e.target.value)} />
             </div>
             <div className="space-y-1">
-              <TooltipLabel 
+              <ExplanationLabel 
                 label="所得税" en="Income Tax" 
                 jpExpl="給与所得の源泉徴収税額表に基づいて算出されます。課税対象額に応じて変動します。"
                 mmExpl="လစာဝင်ငွေအတွက် အခွန်နုတ်ယူခြင်းဆိုင်ရာ ဇယားအပေါ် အခြေခံ၍ တွက်ချက်သည်။ ဝင်ငွေအပေါ် မူတည်၍ ပြောင်းလဲသည်။"
@@ -356,7 +356,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
               <Input type="number" className="h-8 text-xs border-primary ring-1 ring-primary/20 font-bold" value={data.incomeTax} onFocus={handleFocus} onChange={e => updateField("incomeTax", e.target.value)} />
             </div>
             <div className="space-y-1">
-              <TooltipLabel 
+              <ExplanationLabel 
                 label="住民税" en="Resident Tax" 
                 jpExpl="前年の所得に基づいてお住まいの市区町村が決定した税額です。"
                 mmExpl="ယခင်နှစ်ဝင်ငွေအပေါ် မူတည်၍ နေထိုင်ရာ မြို့နယ်စည်ပင်မှ သတ်မှတ်ထားသော အခွန်ဖြစ်သည်။"
