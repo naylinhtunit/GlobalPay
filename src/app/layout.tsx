@@ -11,6 +11,14 @@ export const metadata: Metadata = {
   keywords: ['payroll', 'international payroll', 'Japan payroll', 'Myanmar payroll', 'HR management', 'compliance'],
   authors: [{ name: 'GlobalPay Enterprise' }],
   manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'GlobalPay',
+  },
+  formatDetection: {
+    telephone: false,
+  },
   openGraph: {
     title: 'GlobalPay: Expert International Payroll Solutions',
     description: 'Manage your global team with ease. Automated payslip generation and compliance for Japan (JPY) and Myanmar (MMK). Secure and reliable.',
@@ -57,6 +65,8 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
         <meta name="theme-color" content="#2563eb" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
       </head>
       <body className="font-body antialiased bg-background min-h-screen">
         <FirebaseClientProvider>
