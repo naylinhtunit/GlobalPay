@@ -67,12 +67,14 @@ interface Props {
 export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
   
   useEffect(() => {
-    // Standard Japanese Monthly Hours average is around 170.5
-    // But we use the user-provided scheduledHours as denominator.
+    // Determine denominator for hourly rate (Average 170.5 if not specified)
     const denominator = data.scheduledHours > 0 ? data.scheduledHours : 170.5;
     const hourlyRate = baseSalary / denominator;
 
-    // 1. Calculate Earnings (支給) using exact multipliers from image context
+    // 1. Calculate Earnings (支給) using exact multipliers from payslip context
+    // Regular OT = 1.25
+    // Late Night OT = 1.50 (1.25 + 0.25)
+    // Night Shift Premium = 0.25
     const calculatedOT = Math.round(hourlyRate * 1.25 * data.regularOTHours);
     const calculatedLateNightOT = Math.round(hourlyRate * 1.50 * data.lateNightOTHours);
     const calculatedHolidayWork = Math.round(hourlyRate * 1.35 * data.holidayWorkHours);
@@ -82,31 +84,34 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
     const calculatedNightAlw1 = Math.round(hourlyRate * 0.25 * data.nightShiftHours);
     const calculatedNightAlw2 = Math.round(hourlyRate * 0.25 * data.nightShiftHoursExtra);
 
+    // Deductions from earnings (Absence/Late)
     const calculatedAbsenceDed = Math.round(hourlyRate * data.absenceHours);
     const calculatedLateEarlyDed = Math.round(hourlyRate * data.lateEarlyHours);
 
-    // 2. Calculate Social Insurances (Deductions - 控除) with default percentages
-    const calculatedHealthIns = data.healthInsurance === 0 ? Math.round(baseSalary * 0.05) : data.healthInsurance; 
-    const calculatedPension = data.pension === 0 ? Math.round(baseSalary * 0.0915) : data.pension;
-    
-    // Employment Insurance calculation (Standard 0.006)
-    const taxableEarnings = baseSalary + calculatedOT + calculatedLateNightOT + calculatedHolidayWork + (data.housingAllowance || 10000);
-    const calculatedEmpIns = Math.round(taxableEarnings * 0.006);
-
-    // Default values as requested
+    // 2. Default Values as requested
     const defaultHousing = data.housingAllowance === 0 ? 10000 : data.housingAllowance;
     const defaultHostelFee = data.hostelFee === 0 ? 20000 : data.hostelFee;
 
-    // 3. Calculate Income Tax (Simplified Japan withholding calculation)
+    // 3. Calculate Social Insurances (Deductions - 控除)
+    // Health Insurance (Approx 5% for employee)
+    const calculatedHealthIns = data.healthInsurance === 0 ? Math.round(baseSalary * 0.05) : data.healthInsurance; 
+    // Pension (Approx 9.15% for employee)
+    const calculatedPension = data.pension === 0 ? Math.round(baseSalary * 0.0915) : data.pension;
+    
+    // Employment Insurance (Standard 0.006)
+    const taxableEarnings = baseSalary + calculatedOT + calculatedLateNightOT + calculatedHolidayWork + (data.housingAllowance || 10000);
+    const calculatedEmpIns = Math.round(taxableEarnings * 0.006);
+
+    // 4. Calculate Income Tax (Simplified withholding)
     const totalSocIns = calculatedHealthIns + calculatedPension + calculatedEmpIns + (data.nursingCareInsurance || 0);
     const grossForTax = taxableEarnings - totalSocIns;
     let calculatedIncomeTax = 0;
     if (grossForTax > 0) {
-      // Simplified bracket: under 150k -> 5%, over -> 10%
+      // Simplified bracket for demonstration
       calculatedIncomeTax = grossForTax < 150000 ? Math.round(grossForTax * 0.05) : Math.round(7500 + (grossForTax - 150000) * 0.1);
     }
 
-    // Apply auto-updates only if values have changed to avoid loops
+    // Update form if calculated values change
     if (
       data.otAllowance !== calculatedOT ||
       data.lateNightOTAllowance !== calculatedLateNightOT ||
@@ -186,7 +191,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
       <div className="space-y-4 bg-slate-50 p-4 rounded-lg border-2 border-slate-200">
         <div className="flex justify-between items-center border-b pb-2">
           <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider">勤怠 (ATTENDANCE)</h4>
-          <span className="text-[10px] bg-slate-200 px-2 py-0.5 rounded text-slate-600 font-bold uppercase tracking-tight">Manual Entry</span>
+          <span className="text-[10px] bg-slate-200 px-2 py-0.5 rounded text-slate-600 font-bold uppercase tracking-tight">Input Required</span>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
@@ -220,6 +225,10 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
             <span className="text-[9px] text-blue-600 font-bold italic uppercase tracking-tight">Auto-Calculated</span>
           </div>
           <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1 col-span-2 bg-white/60 p-2 rounded border border-blue-200">
+               <Label className="text-[10px] leading-tight block font-bold text-blue-900">基本給<br/><span className="text-slate-500 font-normal">Basic Salary (From Profile)</span></Label>
+               <p className="text-lg font-black text-blue-700">{baseSalary?.toLocaleString()} <span className="text-xs font-normal">JPY</span></p>
+            </div>
             {[
               { label: "普通残業手当 (1.25)", en: "Regular OT Alw (1.25)", field: "otAllowance" },
               { label: "深夜残業手当 (1.50)", en: "Late Night OT (1.50)", field: "lateNightOTAllowance" },
@@ -228,7 +237,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
               { label: "休日勤務手当 (1.35)", en: "Holiday Work (1.35)", field: "holidayWorkAllowance" },
               { label: "休日深夜手当 (0.25)", en: "Holiday Night (0.25)", field: "holidayNightAllowance" },
               { label: "家族手当", en: "Family Alw", field: "familyAllowance", readOnly: false },
-              { label: "住宅手당", en: "Housing Alw", field: "housingAllowance", readOnly: false },
+              { label: "住宅手当", en: "Housing Alw", field: "housingAllowance", readOnly: false },
               { label: "非課税通勤費", en: "Non-tax Commuting", field: "nonTaxableCommuting", readOnly: false },
               { label: "課税通勤費", en: "Taxable Commuting", field: "taxableCommuting", readOnly: false },
               { label: "欠勤時間控除", en: "Absence Ded", field: "absenceDeduction", color: "text-red-600" },
@@ -254,7 +263,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
         <div className="space-y-4 bg-red-50/30 p-4 rounded-lg border border-red-100">
           <div className="flex justify-between items-center border-b border-red-200 pb-2 mb-4">
             <h4 className="text-sm font-bold text-red-800 uppercase tracking-wider">控除 (DEDUCTIONS)</h4>
-            <span className="text-[9px] text-red-600 font-bold italic uppercase tracking-tight">Defaults Applied</span>
+            <span className="text-[9px] text-red-600 font-bold italic uppercase tracking-tight">Manual Adjust Available</span>
           </div>
           <div className="grid grid-cols-2 gap-3">
             {[
@@ -273,7 +282,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
                 <Label className="text-[10px] leading-tight block font-semibold">{item.label}<br/><span className="text-slate-500 font-normal">{item.en}</span></Label>
                 <Input 
                   type="number" 
-                  className={`h-8 text-xs ${item.highlight ? 'border-primary ring-1 ring-primary/20' : 'border-red-200'}`} 
+                  className={`h-8 text-xs ${item.highlight ? 'border-primary ring-1 ring-primary/20 font-bold' : 'border-red-200'}`} 
                   value={(data as any)[item.field]} 
                   onFocus={handleFocus} 
                   onChange={e => updateField(item.field as keyof JapanData, e.target.value)} 
@@ -281,26 +290,6 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
               </div>
             ))}
           </div>
-        </div>
-      </div>
-
-      {/* その他 (OTHERS) */}
-      <div className="space-y-4 bg-slate-50 p-4 rounded-lg border">
-        <h4 className="text-sm font-bold text-slate-700 uppercase tracking-wider border-b pb-1">その他 (OTHERS)</h4>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { label: "年末調整徴収", en: "Year-end Adj", field: "yearEndAdj" },
-            { label: "その他調整", en: "Other Adj 1", field: "otherAdj1" },
-            { label: "その他調整2", en: "Other Adj 2", field: "otherAdj2" },
-            { label: "有給買取", en: "Leave Buyback", field: "paidLeaveBuyback" },
-            { label: "現金支給額", en: "Cash Payment", field: "cashPayment" },
-            { label: "現物支給額", en: "Kind Payment", field: "kindPayment" },
-          ].map((item) => (
-            <div key={item.field} className="space-y-1">
-              <Label className="text-[10px] leading-tight block font-semibold">{item.label}<br/><span className="text-slate-500 font-normal">{item.en}</span></Label>
-              <Input type="number" className="h-8 text-xs" value={(data as any)[item.field]} onFocus={handleFocus} onChange={e => updateField(item.field as keyof JapanData, e.target.value)} />
-            </div>
-          ))}
         </div>
       </div>
 
