@@ -94,9 +94,9 @@ export const useFirestore = () => useFirebase().firestore;
 export const useFirebaseApp = () => useFirebase().firebaseApp;
 
 export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T & {__memo?: boolean} {
-  const memoized = useMemo(factory, deps);
-  if (memoized && typeof memoized === 'object') {
-    (memoized as any).__memo = true;
+  const factoryResult = useMemo(factory, deps);
+  if (factoryResult && typeof factoryResult === 'object') {
+    (factoryResult as any).__memo = true;
   }
-  return memoized as any;
+  return factoryResult as any;
 }

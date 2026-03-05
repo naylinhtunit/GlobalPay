@@ -56,7 +56,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-        <meta name="theme-color" content="#3b82f6" />
+        <meta name="theme-color" content="#2563eb" />
       </head>
       <body className="font-body antialiased bg-background min-h-screen">
         <FirebaseClientProvider>
