@@ -16,6 +16,9 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
   const displayYear = yearPart || new Date().getFullYear().toString();
   const displayMonthNum = monthPart ? parseInt(monthPart, 10) : new Date().getMonth() + 1;
 
+  // Calculate the actual last day of the month to avoid invalid dates like Feb 30
+  const lastDayOfMonth = new Date(parseInt(displayYear), displayMonthNum, 0).getDate();
+
   if (country === "Japan") {
     const baseSalary = employee.baseSalary || 200000;
     const totalEarnings = baseSalary + 
@@ -61,7 +64,7 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
             <div className="flex gap-4 text-xs justify-end mt-4">
               <div className="border border-black p-2 w-24 text-center">
                 <p className="text-[8px] text-gray-500">支給日 (Pay Date)</p>
-                <p className="font-bold">{displayYear}-{String(displayMonthNum).padStart(2, '0')}-30</p>
+                <p className="font-bold">{displayYear}-{String(displayMonthNum).padStart(2, '0')}-{String(lastDayOfMonth).padStart(2, '0')}</p>
               </div>
               <div className="border border-black p-2 w-24 h-24 text-center">
                 <p className="text-[8px] text-gray-500">受領印 (Seal)</p>
