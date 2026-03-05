@@ -37,7 +37,7 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { JapanPayrollForm } from "@/components/payroll/JapanPayrollForm";
+import { JapanPayrollForm, type JapanData } from "@/components/payroll/JapanPayrollForm";
 import { MyanmarPayrollForm } from "@/components/payroll/MyanmarPayrollForm";
 import { PayslipDocument } from "@/components/payroll/PayslipDocument";
 import { 
@@ -80,17 +80,24 @@ export default function PayrollPage() {
     }
   }, []);
 
-  const [japanData, setJapanData] = useState({
+  const [japanData, setJapanData] = useState<JapanData>({
     ot125Hours: 0,
     nightShiftHours: 0,
     lateNightOTHours: 0,
     nightShiftAllowance: 0,
     housingAllowance: 0,
+    familyAllowance: 0,
+    commutingAllowance: 0,
+    absenceDeduction: 0,
+    lateEarlyDeduction: 0,
     healthInsurance: 0,
+    nursingCareInsurance: 0,
     pension: 0,
     incomeTax: 0,
     employmentInsurance: 0,
-    hostelFee: 0
+    residentTax: 0,
+    hostelFee: 0,
+    beddingFee: 0
   });
 
   const [myanmarData, setMyanmarData] = useState({
@@ -134,11 +141,18 @@ export default function PayrollPage() {
       lateNightOTHours: 0,
       nightShiftAllowance: 0,
       housingAllowance: 0,
+      familyAllowance: 0,
+      commutingAllowance: 0,
+      absenceDeduction: 0,
+      lateEarlyDeduction: 0,
       healthInsurance: 0,
+      nursingCareInsurance: 0,
       pension: 0,
       incomeTax: 0,
       employmentInsurance: 0,
-      hostelFee: 0
+      residentTax: 0,
+      hostelFee: 0,
+      beddingFee: 0
     });
     setMyanmarData({
       otHours: 0,
@@ -165,8 +179,22 @@ export default function PayrollPage() {
                     (japanData.nightShiftHours * hourlyRate * 0.25) + 
                     (japanData.lateNightOTHours * hourlyRate * 1.5);
       
-      grossPay = baseSalary + otPay + (japanData.nightShiftAllowance || 0) + (japanData.housingAllowance || 0);
-      deductions = (japanData.healthInsurance || 0) + (japanData.pension || 0) + (japanData.incomeTax || 0) + (japanData.employmentInsurance || 0) + (japanData.hostelFee || 0);
+      grossPay = baseSalary + otPay + 
+                (japanData.nightShiftAllowance || 0) + 
+                (japanData.housingAllowance || 0) + 
+                (japanData.familyAllowance || 0) + 
+                (japanData.commutingAllowance || 0) -
+                (japanData.absenceDeduction || 0) -
+                (japanData.lateEarlyDeduction || 0);
+
+      deductions = (japanData.healthInsurance || 0) + 
+                   (japanData.nursingCareInsurance || 0) +
+                   (japanData.pension || 0) + 
+                   (japanData.incomeTax || 0) + 
+                   (japanData.employmentInsurance || 0) + 
+                   (japanData.residentTax || 0) +
+                   (japanData.hostelFee || 0) +
+                   (japanData.beddingFee || 0);
     } else {
       const hourlyRate = (baseSalary / 30 / 8);
       grossPay = baseSalary + (myanmarData.otHours * hourlyRate * 2) + (myanmarData.attendanceBonus || 0) + (myanmarData.mealAllowance || 0);
@@ -244,6 +272,12 @@ export default function PayrollPage() {
           <head>
             <title>Payslip - ${previewData?.employee?.fullName || 'Employee'}</title>
             <script src="https://cdn.tailwindcss.com"></script>
+            <style>
+              @media print {
+                body { padding: 0; margin: 0; }
+                .no-print { display: none; }
+              }
+            </style>
           </head>
           <body class="p-8">${content}</body>
         </html>
@@ -275,7 +309,7 @@ export default function PayrollPage() {
                 <Calculator size={18} /> New Payroll Entry
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingRecordId ? "Edit Payroll" : "Process Payroll"} - {country}</DialogTitle>
               </DialogHeader>
@@ -366,7 +400,7 @@ export default function PayrollPage() {
                     <TableRow key={rec.id} className="hover:bg-muted/20">
                       <TableCell className="font-medium">{rec.payPeriodStartDate?.substring(0, 7) || 'N/A'}</TableCell>
                       <TableCell>{(employees || []).find((e: any) => e.id === rec.employeeId)?.fullName || 'Unknown'}</TableCell>
-                      <TableCell className="hidden sm:table-cell font-mono">{rec.netPay?.toLocaleString() || 0}</TableCell>
+                      <TableCell className="hidden sm:table-cell font-mono">{Math.round(rec.netPay || 0).toLocaleString()}</TableCell>
                       <TableCell>
                         <span className="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">{rec.status}</span>
                       </TableCell>
