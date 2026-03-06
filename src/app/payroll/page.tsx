@@ -83,6 +83,8 @@ export default function PayrollPage() {
   }, []);
 
   const [japanData, setJapanData] = useState<JapanData>({
+    shiftType: "day",
+    startTime: "08:00",
     scheduledDays: 0,
     absenceHours: 0,
     lateEarlyHours: 0,
@@ -171,6 +173,8 @@ export default function PayrollPage() {
     setSelectedEmpId("");
     if (monthOptions.length > 0) setSelectedMonth(monthOptions[0].value);
     setJapanData({
+      shiftType: "day",
+      startTime: "08:00",
       scheduledDays: 0,
       absenceHours: 0,
       lateEarlyHours: 0,

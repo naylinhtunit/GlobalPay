@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -12,6 +12,10 @@ import { Info, Sun, Moon } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 export interface JapanData {
+  // Shift Context
+  shiftType?: "day" | "night";
+  startTime?: string;
+
   // Attendance (勤怠)
   scheduledDays: number;
   absenceHours: number;
@@ -71,42 +75,47 @@ interface Props {
 }
 
 export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
-  const [shiftType, setShiftType] = useState<"day" | "night">("day");
-  const [startTime, setStartTime] = useState<string>("08:00");
+  // Use persisted values from props or defaults
+  const shiftType = data.shiftType || "day";
+  const startTime = data.startTime || (shiftType === "day" ? "08:00" : "19:00");
+
+  // Track if shift parameters changed to prevent overwriting manual edits of hours unnecessarily
+  const prevParamsRef = useRef({
+    scheduledDays: data.scheduledDays,
+    shiftType,
+    startTime
+  });
 
   useEffect(() => {
+    const paramsChanged = 
+      prevParamsRef.current.scheduledDays !== data.scheduledDays ||
+      prevParamsRef.current.shiftType !== shiftType ||
+      prevParamsRef.current.startTime !== startTime;
+
+    prevParamsRef.current = { scheduledDays: data.scheduledDays, shiftType, startTime };
+
     // 1. Auto-calculate Scheduled Hours based on Days (8 hours per day)
     const autoScheduledHours = data.scheduledDays * 8;
     
     // 2. Night Shift Auto-calculation based on Start Time
     // NS1 (~22): Range 17:00 - 22:00
     // NS2 (22~): Range 22:00 - 06:00
-    // Standard shift is 9 hours duration (including 1 hour break)
     let dailyNS1 = 0;
     let dailyNS2 = 0;
 
     if (shiftType === "day") {
       if (startTime === "08:00") {
-        // 08:00 to 17:00 (1hr break) -> No Night Shifts
         dailyNS1 = 0;
         dailyNS2 = 0;
       } else if (startTime === "12:00") {
-        // 12:00 to 21:00 (1hr break)
-        // 17:00 to 21:00 is 4 hours in NS1
         dailyNS1 = 4;
         dailyNS2 = 0;
       }
     } else {
       if (startTime === "19:00") {
-        // 19:00 to 04:00 (1hr break)
-        // 19:00 to 22:00 = 3 hours in NS1
-        // 22:00 to 04:00 = 6 hours duration. Deduct 1hr break = 5 hours in NS2
         dailyNS1 = 3;
         dailyNS2 = 5;
       } else if (startTime === "21:00") {
-        // 21:00 to 06:00 (1hr break)
-        // 21:00 to 22:00 = 1 hour in NS1
-        // 22:00 to 06:00 = 8 hours duration. Deduct 1hr break = 7 hours in NS2
         dailyNS1 = 1;
         dailyNS2 = 7;
       }
@@ -119,13 +128,13 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
     const otDenominator = 170.5;
     const hourlyRate = baseSalary / otDenominator;
 
-    // 4. Multipliers based on User Requirement
+    // 4. Multipliers
     const calculatedOT = Math.round(hourlyRate * 1.25 * data.regularOTHours);
     const calculatedLateNightOT = Math.round(hourlyRate * 1.50 * data.lateNightOTHours);
     const calculatedHolidayWork = Math.round(hourlyRate * 1.35 * data.holidayWorkHours);
     const calculatedHolidayNight = Math.round(hourlyRate * 0.25 * data.holidayNightHours);
     
-    // Night Shift Allowances
+    // Night Shift Allowances (Calculated based on current hours in data)
     const calculatedNightAlw1 = Math.round(hourlyRate * 0.25 * data.nightShiftHours);
     const calculatedNightAlw2 = Math.round(hourlyRate * 0.30 * data.nightShiftHoursExtra);
 
@@ -162,10 +171,8 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
     }
 
     // Apply updates if logic produces different values
-    if (
-      data.scheduledHours !== autoScheduledHours ||
-      data.nightShiftHours !== calculatedNS1 ||
-      data.nightShiftHoursExtra !== calculatedNS2 ||
+    const needsUpdate = 
+      paramsChanged ||
       data.otAllowance !== calculatedOT ||
       data.lateNightOTAllowance !== calculatedLateNightOT ||
       data.nightShiftAllowance !== calculatedNightAlw1 ||
@@ -177,13 +184,16 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
       data.pension !== calculatedPension ||
       data.employmentInsurance !== calculatedEmpIns ||
       data.incomeTax !== calculatedIncomeTax ||
-      data.hostelFee !== defaultHostelFee
-    ) {
+      data.hostelFee !== defaultHostelFee;
+
+    if (needsUpdate) {
       onChange({
         ...data,
-        scheduledHours: autoScheduledHours,
-        nightShiftHours: calculatedNS1,
-        nightShiftHoursExtra: calculatedNS2,
+        shiftType,
+        startTime,
+        scheduledHours: paramsChanged ? autoScheduledHours : data.scheduledHours,
+        nightShiftHours: paramsChanged ? calculatedNS1 : data.nightShiftHours,
+        nightShiftHoursExtra: paramsChanged ? calculatedNS2 : data.nightShiftHoursExtra,
         otAllowance: calculatedOT,
         lateNightOTAllowance: calculatedLateNightOT,
         nightShiftAllowance: calculatedNightAlw1,
@@ -200,7 +210,20 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
         hostelFee: defaultHostelFee,
       });
     }
-  }, [baseSalary, data.scheduledDays, data.regularOTHours, data.lateNightOTHours, data.holidayWorkHours, data.holidayNightHours, data.absenceHours, data.lateEarlyHours, data.nightShiftHours, data.nightShiftHoursExtra, shiftType, startTime]);
+  }, [
+    baseSalary, 
+    data.scheduledDays, 
+    data.regularOTHours, 
+    data.lateNightOTHours, 
+    data.holidayWorkHours, 
+    data.holidayNightHours, 
+    data.absenceHours, 
+    data.lateEarlyHours, 
+    data.nightShiftHours, 
+    data.nightShiftHoursExtra,
+    shiftType,
+    startTime
+  ]);
 
   const updateField = (field: keyof JapanData, value: string) => {
     const numValue = value === "" ? 0 : Number(value);
@@ -284,8 +307,11 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
             <RadioGroup 
               value={shiftType} 
               onValueChange={(v) => {
-                setShiftType(v as "day" | "night");
-                setStartTime(v === "day" ? "08:00" : "19:00");
+                onChange({
+                  ...data,
+                  shiftType: v as "day" | "night",
+                  startTime: v === "day" ? "08:00" : "19:00"
+                });
               }}
               className="flex gap-4"
             >
@@ -308,7 +334,13 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
 
           <div className="space-y-4">
             <Label className="text-xs font-bold text-slate-500 uppercase">Start Time</Label>
-            <RadioGroup value={startTime} onValueChange={setStartTime} className="flex gap-4">
+            <RadioGroup 
+              value={startTime} 
+              onValueChange={(v) => {
+                onChange({ ...data, startTime: v });
+              }} 
+              className="flex gap-4"
+            >
               {shiftType === "day" ? (
                 <>
                   <div className="flex items-center space-x-2 bg-slate-50 px-4 py-3 rounded-lg border flex-1 cursor-pointer">
