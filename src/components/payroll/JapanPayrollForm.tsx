@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -290,16 +289,18 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
               }}
               className="flex gap-4"
             >
-              <div className="flex items-center space-x-2 bg-slate-50 px-4 py-3 rounded-lg border flex-1 cursor-pointer hover:bg-slate-100 transition-colors">
+              <div className="flex items-center space-x-3 bg-slate-50 px-4 py-4 rounded-lg border flex-1 cursor-pointer hover:bg-slate-100 transition-colors">
                 <RadioGroupItem value="day" id="day-shift" />
-                <Label htmlFor="day-shift" className="flex items-center gap-2 cursor-pointer font-bold">
-                  <Sun size={18} className="text-orange-500" /> နေ့ဆိုင်း (Day)
+                <Label htmlFor="day-shift" className="flex items-center gap-2 cursor-pointer font-bold leading-normal min-h-[2.5rem]">
+                  <Sun size={18} className="text-orange-500 flex-shrink-0" />
+                  <span>နေ့ဆိုင်း<br/><span className="text-[10px] font-normal opacity-70">(Day)</span></span>
                 </Label>
               </div>
-              <div className="flex items-center space-x-2 bg-slate-50 px-4 py-3 rounded-lg border flex-1 cursor-pointer hover:bg-slate-100 transition-colors">
+              <div className="flex items-center space-x-3 bg-slate-50 px-4 py-4 rounded-lg border flex-1 cursor-pointer hover:bg-slate-100 transition-colors">
                 <RadioGroupItem value="night" id="night-shift" />
-                <Label htmlFor="night-shift" className="flex items-center gap-2 cursor-pointer font-bold">
-                  <Moon size={18} className="text-primary" /> ညဆိုင်း (Night)
+                <Label htmlFor="night-shift" className="flex items-center gap-2 cursor-pointer font-bold leading-normal min-h-[2.5rem]">
+                  <Moon size={18} className="text-primary flex-shrink-0" />
+                  <span>ညဆိုင်း<br/><span className="text-[10px] font-normal opacity-70">(Night)</span></span>
                 </Label>
               </div>
             </RadioGroup>
