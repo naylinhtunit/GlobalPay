@@ -4,8 +4,8 @@
   "description": "International Payroll System for Japan and Myanmar",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#2563eb",
-  "theme_color": "#2563eb",
+  "background_color": "none",
+  "theme_color": "none",
   "icons": [
     {
       "src": "/icon.svg",
