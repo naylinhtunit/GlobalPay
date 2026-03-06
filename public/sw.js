@@ -4,7 +4,7 @@ const CACHE_NAME = 'globalpay-cache-v1';
 const urlsToCache = [
   '/',
   '/manifest.json',
-  '/icon.png'
+  '/icon.svg'
 ];
 
 self.addEventListener('install', (event) => {
