@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -9,7 +9,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Info } from "lucide-react";
+import { Info, Sun, Moon } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 export interface JapanData {
   // Attendance (勤怠)
@@ -71,16 +72,55 @@ interface Props {
 }
 
 export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
-  
+  const [shiftType, setShiftType] = useState<"day" | "night">("day");
+  const [startTime, setStartTime] = useState<string>("08:00");
+
   useEffect(() => {
     // 1. Auto-calculate Scheduled Hours based on Days (8 hours per day)
     const autoScheduledHours = data.scheduledDays * 8;
     
-    // 2. Denominator for Overtime Calculation (Standard monthly hours)
+    // 2. Night Shift Auto-calculation based on Start Time
+    // NS1 (~22): Range 17:00 - 22:00
+    // NS2 (22~): Range 22:00 - 06:00
+    // Standard shift is 9 hours duration (including 1 hour break)
+    let dailyNS1 = 0;
+    let dailyNS2 = 0;
+
+    if (shiftType === "day") {
+      if (startTime === "08:00") {
+        // 08:00 to 17:00 (1hr break) -> No Night Shifts
+        dailyNS1 = 0;
+        dailyNS2 = 0;
+      } else if (startTime === "12:00") {
+        // 12:00 to 21:00 (1hr break)
+        // 17:00 to 21:00 is 4 hours in NS1
+        dailyNS1 = 4;
+        dailyNS2 = 0;
+      }
+    } else {
+      if (startTime === "19:00") {
+        // 19:00 to 04:00 (1hr break)
+        // 19:00 to 22:00 = 3 hours in NS1
+        // 22:00 to 04:00 = 6 hours duration. Deduct 1hr break = 5 hours in NS2
+        dailyNS1 = 3;
+        dailyNS2 = 5;
+      } else if (startTime === "21:00") {
+        // 21:00 to 06:00 (1hr break)
+        // 21:00 to 22:00 = 1 hour in NS1
+        // 22:00 to 06:00 = 8 hours duration. Deduct 1hr break = 7 hours in NS2
+        dailyNS1 = 1;
+        dailyNS2 = 7;
+      }
+    }
+
+    const calculatedNS1 = dailyNS1 * data.scheduledDays;
+    const calculatedNS2 = dailyNS2 * data.scheduledDays;
+
+    // 3. Denominator for Overtime Calculation (Standard monthly hours)
     const otDenominator = 170.5;
     const hourlyRate = baseSalary / otDenominator;
 
-    // 3. Multipliers based on User Requirement
+    // 4. Multipliers based on User Requirement
     const calculatedOT = Math.round(hourlyRate * 1.25 * data.regularOTHours);
     const calculatedLateNightOT = Math.round(hourlyRate * 1.50 * data.lateNightOTHours);
     const calculatedHolidayWork = Math.round(hourlyRate * 1.35 * data.holidayWorkHours);
@@ -94,11 +134,11 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
     const calculatedAbsenceDed = Math.round(hourlyRate * data.absenceHours);
     const calculatedLateEarlyDed = Math.round(hourlyRate * data.lateEarlyHours);
 
-    // 4. Default Values
+    // 5. Default Values
     const defaultHousing = data.housingAllowance === 0 ? 10000 : data.housingAllowance;
     const defaultHostelFee = data.hostelFee === 0 ? 20000 : data.hostelFee;
 
-    // 5. Social Insurance & Tax
+    // 6. Social Insurance & Tax
     const calculatedHealthIns = data.healthInsurance === 0 ? 13312 : data.healthInsurance; 
     const calculatedPension = data.pension === 0 ? 23790 : data.pension;
     
@@ -111,21 +151,22 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
                              (data.prevMonthAdj || 0) + (data.leaveAllowance || 0) -
                              calculatedAbsenceDed - calculatedLateEarlyDed;
 
-    // Employment Insurance Calculation (To match payslip values like 2064 for 375k)
+    // Employment Insurance Calculation
     const calculatedEmpIns = Math.round(totalEarningsCalc * 0.0055);
 
-    // Income Tax Calculation (To match 7790 for 336k taxable base)
+    // Income Tax Calculation
     const totalSocIns = calculatedHealthIns + calculatedPension + calculatedEmpIns + (data.nursingCareInsurance || 0);
     const grossForTax = totalEarningsCalc - totalSocIns - (data.nonTaxableCommuting || 0);
     let calculatedIncomeTax = 0;
     if (grossForTax > 0) {
-      // Simplified withholding tax logic to match the target payslip
       calculatedIncomeTax = Math.round(grossForTax * 0.0232);
     }
 
     // Apply updates if logic produces different values
     if (
       data.scheduledHours !== autoScheduledHours ||
+      data.nightShiftHours !== calculatedNS1 ||
+      data.nightShiftHoursExtra !== calculatedNS2 ||
       data.otAllowance !== calculatedOT ||
       data.lateNightOTAllowance !== calculatedLateNightOT ||
       data.nightShiftAllowance !== calculatedNightAlw1 ||
@@ -142,6 +183,8 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
       onChange({
         ...data,
         scheduledHours: autoScheduledHours,
+        nightShiftHours: calculatedNS1,
+        nightShiftHoursExtra: calculatedNS2,
         otAllowance: calculatedOT,
         lateNightOTAllowance: calculatedLateNightOT,
         nightShiftAllowance: calculatedNightAlw1,
@@ -158,7 +201,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
         hostelFee: defaultHostelFee,
       });
     }
-  }, [baseSalary, data.scheduledDays, data.regularOTHours, data.lateNightOTHours, data.holidayWorkHours, data.holidayNightHours, data.absenceHours, data.lateEarlyHours, data.nightShiftHours, data.nightShiftHoursExtra]);
+  }, [baseSalary, data.scheduledDays, data.regularOTHours, data.lateNightOTHours, data.holidayWorkHours, data.holidayNightHours, data.absenceHours, data.lateEarlyHours, data.nightShiftHours, data.nightShiftHoursExtra, shiftType, startTime]);
 
   const updateField = (field: keyof JapanData, value: string) => {
     const numValue = value === "" ? 0 : Number(value);
@@ -230,6 +273,69 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
 
   return (
     <div className="space-y-8">
+      {/* Shift Selection Section */}
+      <div className="bg-card border-2 border-slate-200 p-6 rounded-xl space-y-6 shadow-sm">
+        <div className="flex items-center gap-2 border-b pb-3">
+          <Label className="text-sm font-bold uppercase tracking-wider text-slate-800">勤務シフト (SHIFT SELECTION)</Label>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="space-y-4">
+            <Label className="text-xs font-bold text-slate-500 uppercase">Shift Type</Label>
+            <RadioGroup 
+              value={shiftType} 
+              onValueChange={(v) => {
+                setShiftType(v as "day" | "night");
+                setStartTime(v === "day" ? "08:00" : "19:00");
+              }}
+              className="flex gap-4"
+            >
+              <div className="flex items-center space-x-2 bg-slate-50 px-4 py-3 rounded-lg border flex-1 cursor-pointer hover:bg-slate-100 transition-colors">
+                <RadioGroupItem value="day" id="day-shift" />
+                <Label htmlFor="day-shift" className="flex items-center gap-2 cursor-pointer font-bold">
+                  <Sun size={18} className="text-orange-500" /> နေ့ဆိုင်း (Day)
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2 bg-slate-50 px-4 py-3 rounded-lg border flex-1 cursor-pointer hover:bg-slate-100 transition-colors">
+                <RadioGroupItem value="night" id="night-shift" />
+                <Label htmlFor="night-shift" className="flex items-center gap-2 cursor-pointer font-bold">
+                  <Moon size={18} className="text-primary" /> ညဆိုင်း (Night)
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          <div className="space-y-4">
+            <Label className="text-xs font-bold text-slate-500 uppercase">Start Time</Label>
+            <RadioGroup value={startTime} onValueChange={setStartTime} className="flex gap-4">
+              {shiftType === "day" ? (
+                <>
+                  <div className="flex items-center space-x-2 bg-slate-50 px-4 py-3 rounded-lg border flex-1 cursor-pointer">
+                    <RadioGroupItem value="08:00" id="t-0800" />
+                    <Label htmlFor="t-0800" className="cursor-pointer font-bold">08:00 AM</Label>
+                  </div>
+                  <div className="flex items-center space-x-2 bg-slate-50 px-4 py-3 rounded-lg border flex-1 cursor-pointer">
+                    <RadioGroupItem value="12:00" id="t-1200" />
+                    <Label htmlFor="t-1200" className="cursor-pointer font-bold">12:00 PM</Label>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center space-x-2 bg-slate-50 px-4 py-3 rounded-lg border flex-1 cursor-pointer">
+                    <RadioGroupItem value="19:00" id="t-1900" />
+                    <Label htmlFor="t-1900" className="cursor-pointer font-bold">07:00 PM</Label>
+                  </div>
+                  <div className="flex items-center space-x-2 bg-slate-50 px-4 py-3 rounded-lg border flex-1 cursor-pointer">
+                    <RadioGroupItem value="21:00" id="t-2100" />
+                    <Label htmlFor="t-2100" className="cursor-pointer font-bold">09:00 PM</Label>
+                  </div>
+                </>
+              )}
+            </RadioGroup>
+          </div>
+        </div>
+      </div>
+
       {/* 勤怠 (ATTENDANCE) */}
       <div className="space-y-4 bg-slate-50 p-4 rounded-lg border-2 border-slate-200">
         <div className="flex justify-between items-center border-b pb-2">
@@ -280,11 +386,11 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
             </div>
             {[
               { label: "普通残業手当 (1.25)", en: "Regular OT Alw (1.25)", field: "otAllowance" },
-              { label: "深夜残業手当 (1.50)", en: "Late Night OT (1.50)", field: "lateNightOTAllowance" },
+              { label: "深夜残業手당 (1.50)", en: "Late Night OT (1.50)", field: "lateNightOTAllowance" },
               { label: "~22 (0.25)", en: "Night Alw 1 (0.25)", field: "nightShiftAllowance" },
               { label: "22~ (0.30)", en: "Night Alw 2 (0.30)", field: "nightShiftAllowanceExtra" },
               { label: "休日勤務手当 (1.35)", en: "Holiday Work (1.35)", field: "holidayWorkAllowance" },
-              { label: "休日深夜手当 (0.25)", en: "Holiday Night (0.25)", field: "holidayNightAllowance" },
+              { label: "休日深夜手당 (0.25)", en: "Holiday Night (0.25)", field: "holidayNightAllowance" },
               { label: "家族手当", en: "Family Alw", field: "familyAllowance", readOnly: false },
               { label: "住宅手当", en: "Housing Alw", field: "housingAllowance", readOnly: false },
               { label: "非課税通勤費", en: "Non-tax Commuting", field: "nonTaxableCommuting", readOnly: false },
@@ -292,7 +398,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
               { label: "欠勤時間控除", en: "Absence Ded", field: "absenceDeduction", color: "text-red-600" },
               { label: "遅刻早退控除", en: "Late/Early Ded", field: "lateEarlyDeduction", color: "text-red-600" },
               { label: "前月修正", en: "Prev Month Adj", field: "prevMonthAdj", readOnly: false },
-              { label: "休業手当", en: "Leave Alw", field: "leaveAllowance", readOnly: false },
+              { label: "休業手당", en: "Leave Alw", field: "leaveAllowance", readOnly: false },
             ].map((item) => (
               <div key={item.field} className="space-y-1">
                 <Label className={`text-[10px] leading-tight block font-semibold ${item.color || ""}`}>{item.label}<br/><span className="text-slate-500 font-normal">{item.en}</span></Label>
