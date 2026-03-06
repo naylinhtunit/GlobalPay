@@ -66,7 +66,7 @@ export function PWAInstallPrompt() {
       <Card className="max-w-md mx-auto p-4 shadow-2xl border-primary/20 bg-white/95 backdrop-blur-sm flex items-center gap-4">
         <div className="relative h-12 w-12 rounded-xl overflow-hidden border shadow-sm shrink-0">
           <Image 
-            src="/icon.png" 
+            src="/icon.svg" 
             alt="GlobalPay Logo" 
             fill 
             className="object-cover"
