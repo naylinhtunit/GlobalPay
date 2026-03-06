@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCountry } from "@/context/CountryContext";
@@ -33,6 +33,13 @@ export default function Dashboard() {
 
   const { data: employees } = useCollection(empQuery);
   const { data: payrollRecords } = useCollection(payrollQuery);
+
+  const sortedRecentRecords = useMemo(() => {
+    if (!payrollRecords) return [];
+    return [...payrollRecords].sort((a: any, b: any) => 
+      (b.payPeriodStartDate || "").localeCompare(a.payPeriodStartDate || "")
+    ).slice(0, 3);
+  }, [payrollRecords]);
 
   const employeeCount = employees?.length || 0;
   const totalPayroll = (employees || []).reduce((acc, emp: any) => acc + (emp.baseSalary || 0), 0);
@@ -98,7 +105,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {(payrollRecords || []).slice(0, 3).map((rec: any, i) => (
+                {sortedRecentRecords.map((rec: any, i) => (
                   <div key={rec.id} className="flex items-center gap-4 p-3 rounded-lg border bg-muted/30">
                     <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
                       {i + 1}
@@ -109,7 +116,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                 ))}
-                {(!payrollRecords || payrollRecords.length === 0) && (
+                {sortedRecentRecords.length === 0 && (
                    <p className="text-sm text-muted-foreground text-center py-4">No recent activity.</p>
                 )}
               </div>
