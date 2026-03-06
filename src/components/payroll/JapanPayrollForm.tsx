@@ -293,14 +293,14 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
                 <RadioGroupItem value="day" id="day-shift" />
                 <Label htmlFor="day-shift" className="flex items-center gap-2 cursor-pointer font-bold leading-normal min-h-[2.5rem]">
                   <Sun size={18} className="text-orange-500 flex-shrink-0" />
-                  <span>နေ့ဆိုင်း<br/><span className="text-[10px] font-normal opacity-70">(Day)</span></span>
+                  <span>昼勤<br/><span className="text-[10px] font-normal opacity-70">(Day)</span></span>
                 </Label>
               </div>
               <div className="flex items-center space-x-3 bg-slate-50 px-4 py-4 rounded-lg border flex-1 cursor-pointer hover:bg-slate-100 transition-colors">
                 <RadioGroupItem value="night" id="night-shift" />
                 <Label htmlFor="night-shift" className="flex items-center gap-2 cursor-pointer font-bold leading-normal min-h-[2.5rem]">
                   <Moon size={18} className="text-primary flex-shrink-0" />
-                  <span>ညဆိုင်း<br/><span className="text-[10px] font-normal opacity-70">(Night)</span></span>
+                  <span>夜勤<br/><span className="text-[10px] font-normal opacity-70">(Night)</span></span>
                 </Label>
               </div>
             </RadioGroup>
@@ -343,7 +343,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
           <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider">勤怠 (ATTENDANCE)</h4>
           <span className="text-[10px] bg-slate-200 px-2 py-0.5 rounded text-slate-600 font-bold uppercase tracking-tight">Input Required</span>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
             { label: "所定就労日", en: "Sch. Work Days", field: "scheduledDays" },
             { label: "欠勤日時間", en: "Absence", field: "absenceHours" },
@@ -390,7 +390,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
               { label: "深夜残業手당 (1.50)", en: "Late Night OT (1.50)", field: "lateNightOTAllowance" },
               { label: "~22 (0.25)", en: "Night Alw 1 (0.25)", field: "nightShiftAllowance" },
               { label: "22~ (0.30)", en: "Night Alw 2 (0.30)", field: "nightShiftAllowanceExtra" },
-              { label: "休日勤務手当 (1.35)", en: "Holiday Work (1.35)", field: "holidayWorkAllowance" },
+              { label: "休日勤務手당 (1.35)", en: "Holiday Work (1.35)", field: "holidayWorkAllowance" },
               { label: "休日深夜手당 (0.25)", en: "Holiday Night (0.25)", field: "holidayNightAllowance" },
               { label: "家族手当", en: "Family Alw", field: "familyAllowance", readOnly: false },
               { label: "住宅手当", en: "Housing Alw", field: "housingAllowance", readOnly: false },
