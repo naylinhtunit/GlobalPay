@@ -1,10 +1,11 @@
+
 {
-  "name": "GlobalPay - International Payroll System",
+  "name": "GlobalPay - International Payroll",
   "short_name": "GlobalPay",
   "description": "Streamline your international workforce management. Specialized payroll processing for Japan and Myanmar.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#F0F0F4",
+  "background_color": "#ffffff",
   "theme_color": "#2D2D86",
   "icons": [
     {
