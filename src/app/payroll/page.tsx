@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { 
   useFirestore, 
@@ -70,7 +70,6 @@ export default function PayrollPage() {
     const now = new Date();
     for (let i = 0; i < 12; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      // Use local year and month to avoid timezone shifts from toISOString()
       const year = d.getFullYear();
       const month = String(d.getMonth() + 1).padStart(2, '0');
       const value = `${year}-${month}`;
@@ -159,6 +158,13 @@ export default function PayrollPage() {
 
   const { data: payrollRecords, isLoading: payrollLoading } = useCollection(payrollQuery);
   const { data: employees } = useCollection(employeesQuery);
+
+  const sortedRecords = useMemo(() => {
+    if (!payrollRecords) return [];
+    return [...payrollRecords].sort((a: any, b: any) => 
+      (b.payPeriodStartDate || "").localeCompare(a.payPeriodStartDate || "")
+    );
+  }, [payrollRecords]);
 
   const resetForm = () => {
     setEditingRecordId(null);
@@ -458,10 +464,10 @@ export default function PayrollPage() {
               <TableBody>
                 {payrollLoading ? (
                   <TableRow><TableCell colSpan={5} className="text-center py-8">Loading records...</TableCell></TableRow>
-                ) : (payrollRecords || []).length === 0 ? (
+                ) : sortedRecords.length === 0 ? (
                   <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No records found.</TableCell></TableRow>
                 ) : (
-                  (payrollRecords || []).map((rec: any) => (
+                  sortedRecords.map((rec: any) => (
                     <TableRow key={rec.id} className="hover:bg-muted/20">
                       <TableCell className="font-medium">{rec.payPeriodStartDate?.substring(0, 7) || 'N/A'}</TableCell>
                       <TableCell>{(employees || []).find((e: any) => e.id === rec.employeeId)?.fullName || 'Unknown'}</TableCell>
