@@ -46,9 +46,11 @@ interface Employee {
   companyId: string;
   employeeNumber: string;
   fullName: string;
+  name: string; // Added for rules compliance
   department: string;
   email: string;
   baseSalary: number;
+  salary: number; // Added for rules compliance
   country: string;
   hireDate: string;
 }
@@ -107,8 +109,14 @@ export default function EmployeesPage() {
     e.preventDefault();
     if (!firestore || !user) return;
 
+    // Rules compliance: Map values to expected field names and types
     const dataToSave = {
-      ...formData,
+      name: formData.fullName, // Mapping to rules
+      email: formData.email,
+      salary: Number(formData.baseSalary), // Ensuring it is a number for rules
+      fullName: formData.fullName,
+      employeeNumber: formData.employeeNumber,
+      department: formData.department,
       baseSalary: Number(formData.baseSalary),
       country,
       companyId: user.uid,
@@ -141,10 +149,10 @@ export default function EmployeesPage() {
   const openEdit = (emp: Employee) => {
     setEditingId(emp.id);
     setFormData({
-      fullName: emp.fullName || "",
+      fullName: emp.fullName || emp.name || "",
       employeeNumber: emp.employeeNumber || "",
       department: emp.department || "",
-      baseSalary: emp.baseSalary || 0,
+      baseSalary: emp.baseSalary || emp.salary || 0,
       email: emp.email || "",
       hireDate: emp.hireDate || new Date().toISOString().split('T')[0]
     });
@@ -152,7 +160,7 @@ export default function EmployeesPage() {
   };
 
   const filteredEmployees = (employees || []).filter(emp => 
-    (emp.fullName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (emp.fullName || emp.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
     (emp.employeeNumber || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -255,9 +263,9 @@ export default function EmployeesPage() {
                 ) : filteredEmployees.map((emp) => (
                   <TableRow key={emp.id}>
                     <TableCell className="font-mono text-xs">{emp.employeeNumber}</TableCell>
-                    <TableCell className="font-medium">{emp.fullName}</TableCell>
+                    <TableCell className="font-medium">{emp.fullName || emp.name}</TableCell>
                     <TableCell>{emp.department}</TableCell>
-                    <TableCell>{emp.baseSalary?.toLocaleString() || 0} {currency}</TableCell>
+                    <TableCell>{(emp.baseSalary || emp.salary || 0).toLocaleString()} {currency}</TableCell>
                     <TableCell className="text-right space-x-2">
                       <Button variant="ghost" size="icon" onClick={() => openEdit(emp)}><Pencil size={14} /></Button>
                       <Button variant="ghost" size="icon" onClick={() => handleDelete(emp.id)}><Trash2 size={14} className="text-destructive" /></Button>

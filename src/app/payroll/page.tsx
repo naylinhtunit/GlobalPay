@@ -237,7 +237,7 @@ export default function PayrollPage() {
     let grossPay = 0;
     let deductions = 0;
     let netPay = 0;
-    const baseSalary = emp.baseSalary || 0;
+    const baseSalary = emp.baseSalary || emp.salary || 0;
 
     if (country === "Japan") {
       grossPay = baseSalary + 
@@ -276,7 +276,10 @@ export default function PayrollPage() {
       netPay = grossPay - deductions;
     }
 
+    // Rules compliance: Map values to expected field names and types
     const payload = {
+      amount: Number(netPay), // Mapping to rules
+      month: selectedMonth, // Mapping to rules
       employeeId: selectedEmpId,
       companyId: user.uid,
       payPeriodStartDate: `${selectedMonth}-01`,
@@ -310,7 +313,7 @@ export default function PayrollPage() {
   const handleEdit = (record: any) => {
     setEditingRecordId(record.id);
     setSelectedEmpId(record.employeeId);
-    setSelectedMonth(record.payPeriodStartDate?.substring(0, 7) || "");
+    setSelectedMonth(record.payPeriodStartDate?.substring(0, 7) || record.month || "");
     if (record.country === "Japan") {
       setJapanData(record.japanData || {});
     } else {
@@ -332,7 +335,7 @@ export default function PayrollPage() {
       ...record, 
       employee: emp, 
       data: record.japanData || record.myanmarData, 
-      month: record.payPeriodStartDate?.substring(0, 7) || "" 
+      month: record.payPeriodStartDate?.substring(0, 7) || record.month || "" 
     });
     setIsPreviewOpen(true);
   };
@@ -398,7 +401,7 @@ export default function PayrollPage() {
                       </SelectTrigger>
                       <SelectContent>
                         {(employees || []).map((emp: any) => (
-                          <SelectItem key={emp.id} value={emp.id}>{emp.fullName} ({emp.employeeNumber})</SelectItem>
+                          <SelectItem key={emp.id} value={emp.id}>{emp.fullName || emp.name} ({emp.employeeNumber})</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -421,10 +424,10 @@ export default function PayrollPage() {
                 {selectedEmpId && (
                   <div className="mt-4 p-4 border rounded-lg bg-primary/5">
                     <p className="text-sm font-bold text-primary">
-                      Employee: {(employees || []).find((e: any) => e.id === selectedEmpId)?.fullName}
+                      Employee: {(employees || []).find((e: any) => e.id === selectedEmpId)?.fullName || (employees || []).find((e: any) => e.id === selectedEmpId)?.name}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Base Salary: {(employees || []).find((e: any) => e.id === selectedEmpId)?.baseSalary?.toLocaleString() || 0} {currency}
+                      Base Salary: {(employees || []).find((e: any) => e.id === selectedEmpId)?.baseSalary?.toLocaleString() || (employees || []).find((e: any) => e.id === selectedEmpId)?.salary?.toLocaleString() || 0} {currency}
                     </p>
                   </div>
                 )}
@@ -433,13 +436,13 @@ export default function PayrollPage() {
                   <JapanPayrollForm 
                     data={japanData} 
                     onChange={setJapanData} 
-                    baseSalary={(employees || []).find((e: any) => e.id === selectedEmpId)?.baseSalary || 200000}
+                    baseSalary={(employees || []).find((e: any) => e.id === selectedEmpId)?.baseSalary || (employees || []).find((e: any) => e.id === selectedEmpId)?.salary || 200000}
                   />
                 ) : (
                   <MyanmarPayrollForm 
                     data={myanmarData} 
                     onChange={setMyanmarData} 
-                    baseSalary={(employees || []).find((e: any) => e.id === selectedEmpId)?.baseSalary || 400000}
+                    baseSalary={(employees || []).find((e: any) => e.id === selectedEmpId)?.baseSalary || (employees || []).find((e: any) => e.id === selectedEmpId)?.salary || 400000}
                   />
                 )}
                 
@@ -473,9 +476,9 @@ export default function PayrollPage() {
                 ) : (
                   sortedRecords.map((rec: any) => (
                     <TableRow key={rec.id} className="hover:bg-muted/20">
-                      <TableCell className="font-medium">{rec.payPeriodStartDate?.substring(0, 7) || 'N/A'}</TableCell>
-                      <TableCell>{(employees || []).find((e: any) => e.id === rec.employeeId)?.fullName || 'Unknown'}</TableCell>
-                      <TableCell className="hidden sm:table-cell font-mono">{Math.round(rec.netPay || 0).toLocaleString()}</TableCell>
+                      <TableCell className="font-medium">{rec.payPeriodStartDate?.substring(0, 7) || rec.month || 'N/A'}</TableCell>
+                      <TableCell>{(employees || []).find((e: any) => e.id === rec.employeeId)?.fullName || (employees || []).find((e: any) => e.id === rec.employeeId)?.name || 'Unknown'}</TableCell>
+                      <TableCell className="hidden sm:table-cell font-mono">{Math.round(rec.netPay || rec.amount || 0).toLocaleString()}</TableCell>
                       <TableCell>
                         <span className="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">{rec.status}</span>
                       </TableCell>
