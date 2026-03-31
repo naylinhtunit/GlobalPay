@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useRef, useEffect, useMemo } from "react";
@@ -16,7 +17,9 @@ import {
   query, 
   where, 
   doc,
-  serverTimestamp 
+  serverTimestamp,
+  writeBatch,
+  increment
 } from "firebase/firestore";
 import { useCountry } from "@/context/CountryContext";
 import { Button } from "@/components/ui/button";
@@ -49,6 +52,8 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
+import { FirestorePermissionError } from "@/firebase/errors";
+import { errorEmitter } from "@/firebase/error-emitter";
 
 export default function PayrollPage() {
   const { country, currency } = useCountry();
@@ -61,6 +66,7 @@ export default function PayrollPage() {
   const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
   const [selectedEmpId, setSelectedEmpId] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("");
+  const [oldPaidLeaveDays, setOldPaidLeaveDays] = useState(0);
   
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewData, setPreviewData] = useState<any>(null);
@@ -68,7 +74,8 @@ export default function PayrollPage() {
   useEffect(() => {
     const options = [];
     const now = new Date();
-    for (let i = 0; i < 12; i++) {
+    // Start from -1 to get the next month first
+    for (let i = -1; i < 11; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const year = d.getFullYear();
       const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -78,6 +85,7 @@ export default function PayrollPage() {
     }
     setMonthOptions(options);
     if (!selectedMonth && options.length > 0) {
+      // Default to the first option which is now the next month
       setSelectedMonth(options[0].value);
     }
   }, []);
@@ -171,6 +179,7 @@ export default function PayrollPage() {
   const resetForm = () => {
     setEditingRecordId(null);
     setSelectedEmpId("");
+    setOldPaidLeaveDays(0);
     if (monthOptions.length > 0) setSelectedMonth(monthOptions[0].value);
     setJapanData({
       shiftType: "day",
@@ -228,7 +237,7 @@ export default function PayrollPage() {
     });
   };
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!selectedEmpId || !firestore || !user) return;
     
     const emp = (employees || []).find((e: any) => e.id === selectedEmpId);
@@ -237,7 +246,7 @@ export default function PayrollPage() {
     let grossPay = 0;
     let deductions = 0;
     let netPay = 0;
-    const baseSalary = emp.baseSalary || emp.salary || 0;
+    const baseSalary = Number(emp.baseSalary || emp.salary || 0);
 
     if (country === "Japan") {
       grossPay = baseSalary + 
@@ -276,10 +285,9 @@ export default function PayrollPage() {
       netPay = grossPay - deductions;
     }
 
-    // Rules compliance: Map values to expected field names and types
     const payload = {
-      amount: Number(netPay), // Mapping to rules
-      month: selectedMonth, // Mapping to rules
+      amount: Math.round(netPay),
+      month: selectedMonth,
       employeeId: selectedEmpId,
       companyId: user.uid,
       payPeriodStartDate: `${selectedMonth}-01`,
@@ -288,26 +296,52 @@ export default function PayrollPage() {
       country,
       basicSalary: baseSalary,
       status: "Calculated",
-      totalGrossPay: grossPay,
-      totalDeductions: deductions,
-      netPay: netPay,
+      totalGrossPay: Math.round(grossPay),
+      totalDeductions: Math.round(deductions),
+      netPay: Math.round(netPay),
       japanData: country === "Japan" ? japanData : null,
       myanmarData: country === "Myanmar" ? myanmarData : null,
       updatedAt: serverTimestamp()
     };
 
+    const batch = writeBatch(firestore);
+    const payrollRef = editingRecordId 
+      ? doc(firestore, "payrollRecords", editingRecordId)
+      : doc(collection(firestore, "payrollRecords"));
+
+    // 1. Payroll Record
     if (editingRecordId) {
-      const docRef = doc(firestore, "payrollRecords", editingRecordId);
-      updateDocumentNonBlocking(docRef, payload);
-      toast({ title: "Payroll updated", description: "The payroll record has been updated." });
+      batch.update(payrollRef, payload);
     } else {
-      const colRef = collection(firestore, "payrollRecords");
-      addDocumentNonBlocking(colRef, { ...payload, createdAt: serverTimestamp() });
-      toast({ title: "Payroll generated", description: `Payslip for month ${selectedMonth} has been created.` });
+      batch.set(payrollRef, { ...payload, createdAt: serverTimestamp() });
     }
 
-    setIsModalOpen(false);
-    resetForm();
+    // 2. Employee Leave Adjustment
+    const empRef = doc(firestore, "employees", selectedEmpId);
+    if (country === "Japan") {
+      const newPaidLeave = Number(japanData.paidLeaveDays || 0);
+      const leaveDiff = newPaidLeave - oldPaidLeaveDays;
+      if (leaveDiff !== 0) {
+        batch.update(empRef, {
+          usedPaidLeave: increment(leaveDiff)
+        });
+      }
+    }
+
+    batch.commit().then(() => {
+      toast({ 
+        title: editingRecordId ? "Payroll updated" : "Payroll generated", 
+        description: `Successfully processed for ${selectedMonth}` 
+      });
+      setIsModalOpen(false);
+      resetForm();
+    }).catch(err => {
+      errorEmitter.emit('permission-error', new FirestorePermissionError({
+        path: payrollRef.path,
+        operation: 'write',
+        requestResourceData: payload
+      }));
+    });
   };
 
   const handleEdit = (record: any) => {
@@ -316,17 +350,36 @@ export default function PayrollPage() {
     setSelectedMonth(record.payPeriodStartDate?.substring(0, 7) || record.month || "");
     if (record.country === "Japan") {
       setJapanData(record.japanData || {});
+      setOldPaidLeaveDays(Number(record.japanData?.paidLeaveDays || 0));
     } else {
       setMyanmarData(record.myanmarData || {});
     }
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = (record: any) => {
     if (!firestore || !confirm("Are you sure you want to delete this payroll record?")) return;
-    const docRef = doc(firestore, "payrollRecords", id);
-    deleteDocumentNonBlocking(docRef);
-    toast({ title: "Payroll deleted", variant: "destructive" });
+    
+    const batch = writeBatch(firestore);
+    const payrollRef = doc(firestore, "payrollRecords", record.id);
+    batch.delete(payrollRef);
+
+    // Revert leave if it was Japan
+    if (record.country === "Japan" && record.japanData?.paidLeaveDays) {
+      const empRef = doc(firestore, "employees", record.employeeId);
+      batch.update(empRef, {
+        usedPaidLeave: increment(-Number(record.japanData.paidLeaveDays))
+      });
+    }
+
+    batch.commit().then(() => {
+      toast({ title: "Payroll deleted", variant: "destructive" });
+    }).catch(err => {
+      errorEmitter.emit('permission-error', new FirestorePermissionError({
+        path: payrollRef.path,
+        operation: 'delete'
+      }));
+    });
   };
 
   const handlePreview = (record: any) => {
@@ -427,7 +480,7 @@ export default function PayrollPage() {
                       Employee: {(employees || []).find((e: any) => e.id === selectedEmpId)?.fullName || (employees || []).find((e: any) => e.id === selectedEmpId)?.name}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Base Salary: {(employees || []).find((e: any) => e.id === selectedEmpId)?.baseSalary?.toLocaleString() || (employees || []).find((e: any) => e.id === selectedEmpId)?.salary?.toLocaleString() || 0} {currency}
+                      Base Salary: {((employees || []).find((e: any) => e.id === selectedEmpId)?.baseSalary || (employees || []).find((e: any) => e.id === selectedEmpId)?.salary || 0).toLocaleString()} {currency}
                     </p>
                   </div>
                 )}
@@ -436,13 +489,23 @@ export default function PayrollPage() {
                   <JapanPayrollForm 
                     data={japanData} 
                     onChange={setJapanData} 
-                    baseSalary={(employees || []).find((e: any) => e.id === selectedEmpId)?.baseSalary || (employees || []).find((e: any) => e.id === selectedEmpId)?.salary || 200000}
+                    baseSalary={(employees || []).find((e: any) => e.id === selectedEmpId)?.baseSalary || (employees || []).find((e: any) => e.id === selectedEmpId)?.salary || 0}
+                    employeeLeave={
+                      (() => {
+                        const emp = (employees || []).find((e: any) => e.id === selectedEmpId);
+                        if (!emp) return undefined;
+                        // When editing, we temporarily "restore" the leave used by this specific payroll
+                        // so the form can correctly calculate what's remaining.
+                        const effectiveUsed = Math.max(0, (emp.usedPaidLeave || 0) - (editingRecordId ? oldPaidLeaveDays : 0));
+                        return { total: emp.totalPaidLeave || 0, used: effectiveUsed };
+                      })()
+                    }
                   />
                 ) : (
                   <MyanmarPayrollForm 
                     data={myanmarData} 
                     onChange={setMyanmarData} 
-                    baseSalary={(employees || []).find((e: any) => e.id === selectedEmpId)?.baseSalary || (employees || []).find((e: any) => e.id === selectedEmpId)?.salary || 400000}
+                    baseSalary={(employees || []).find((e: any) => e.id === selectedEmpId)?.baseSalary || (employees || []).find((e: any) => e.id === selectedEmpId)?.salary || 0}
                   />
                 )}
                 
@@ -489,7 +552,7 @@ export default function PayrollPage() {
                         <Button variant="ghost" size="icon" onClick={() => handleEdit(rec)} title="Edit">
                           <Pencil size={14} />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(rec.id)} title="Delete">
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(rec)} title="Delete">
                           <Trash2 size={14} className="text-destructive" />
                         </Button>
                       </TableCell>
