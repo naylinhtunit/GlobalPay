@@ -1,44 +1,39 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Login ဝင်ထားခြင်း ရှိ၊ မရှိ စစ်ဆေးခြင်း
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // လက်ရှိ ရှိနေပြီးသား ဒေတာရဲ့ ပိုင်ရှင် ဟုတ်၊ မဟုတ် စစ်ဆေးခြင်း
     function isDataOwner(resource) {
       return isSignedIn() && resource.data.companyId == request.auth.uid;
     }
 
-    // အသစ်ထည့်မယ့် ဒေတာမှာ ပါတဲ့ companyId ဟာ ကိုယ့် UID နဲ့ တူ၊ မတူ စစ်ဆေးခြင်း
     function isNewDataOwner() {
       return isSignedIn() && request.resource.data.companyId == request.auth.uid;
     }
 
-    // Employee ဒေတာများအတွက် Rules
     match /employees/{employeeId} {
       allow read, delete: if isDataOwner(resource);
       
-      // Create လုပ်တဲ့အခါ ဒေတာအမျိုးအစား မှန်၊ မမှန်ပါ တစ်ခါတည်း စစ်ဆေးခြင်း
       allow create: if isNewDataOwner()
-        && request.resource.data.name is string
-        && request.resource.data.email is string
-        && request.resource.data.salary is number;
+        && request.resource.data.fullName is string
+        && (request.resource.data.totalPaidLeave == null || request.resource.data.totalPaidLeave is number)
+        && (request.resource.data.usedPaidLeave == null || request.resource.data.usedPaidLeave >= 0);
         
-      // Update လုပ်တဲ့အခါမှာလည်း ပိုင်ရှင်ကိုယ်တိုင်ဖြစ်ရမည့်အပြင် companyId ကို ပြောင်းလဲခွင့်မပြုခြင်း
       allow update: if isDataOwner(resource) 
-        && request.resource.data.companyId == resource.data.companyId;
+        && request.resource.data.companyId == resource.data.companyId
+        && (request.resource.data.usedPaidLeave == null || request.resource.data.usedPaidLeave >= 0);
     }
 
-    // Payroll စာရင်းများအတွက် Rules
     match /payrollRecords/{payrollRecordId} {
       allow read, delete: if isDataOwner(resource);
       
       allow create: if isNewDataOwner()
-        && request.resource.data.amount is number
-        && request.resource.data.month is string;
+        && request.resource.data.employeeId is string
+        && request.resource.data.country is string;
 
       allow update: if isDataOwner(resource)
         && request.resource.data.companyId == resource.data.companyId;

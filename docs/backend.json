@@ -36,6 +36,14 @@
         },
         "department": {
           "type": "string"
+        },
+        "totalPaidLeave": {
+          "type": "number",
+          "description": "Total number of paid leave days allowed per year."
+        },
+        "usedPaidLeave": {
+          "type": "number",
+          "description": "Total number of paid leave days used so far."
         }
       },
       "required": [
