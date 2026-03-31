@@ -7,16 +7,15 @@ import {
   useCollection, 
   useMemoFirebase,
   useUser,
-  addDocumentNonBlocking,
-  updateDocumentNonBlocking,
-  deleteDocumentNonBlocking
+  updateDocumentNonBlocking
 } from "@/firebase";
 import { 
   collection, 
   query, 
   where, 
   doc, 
-  serverTimestamp 
+  serverTimestamp,
+  writeBatch
 } from "firebase/firestore";
 import { useCountry } from "@/context/CountryContext";
 import { Button } from "@/components/ui/button";
@@ -40,19 +39,23 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
+import { FirestorePermissionError } from "@/firebase/errors";
+import { errorEmitter } from "@/firebase/error-emitter";
 
 interface Employee {
   id: string;
   companyId: string;
   employeeNumber: string;
   fullName: string;
-  name: string; // Added for rules compliance
+  name: string;
   department: string;
   email: string;
   baseSalary: number;
-  salary: number; // Added for rules compliance
+  salary: number;
   country: string;
   hireDate: string;
+  totalPaidLeave: number;
+  usedPaidLeave: number;
 }
 
 export default function EmployeesPage() {
@@ -70,7 +73,9 @@ export default function EmployeesPage() {
     department: "",
     baseSalary: 0,
     email: "",
-    hireDate: ""
+    hireDate: "",
+    totalPaidLeave: 0,
+    usedPaidLeave: 0
   });
 
   useEffect(() => {
@@ -100,7 +105,9 @@ export default function EmployeesPage() {
       department: "", 
       baseSalary: 0, 
       email: "",
-      hireDate: new Date().toISOString().split('T')[0]
+      hireDate: new Date().toISOString().split('T')[0],
+      totalPaidLeave: 0,
+      usedPaidLeave: 0
     });
     setEditingId(null);
   };
@@ -109,17 +116,18 @@ export default function EmployeesPage() {
     e.preventDefault();
     if (!firestore || !user) return;
 
-    // Rules compliance: Map values to expected field names and types
     const dataToSave = {
-      name: formData.fullName, // Mapping to rules
+      name: formData.fullName,
       email: formData.email,
-      salary: Number(formData.baseSalary), // Ensuring it is a number for rules
+      salary: Number(formData.baseSalary),
       fullName: formData.fullName,
       employeeNumber: formData.employeeNumber,
       department: formData.department,
       baseSalary: Number(formData.baseSalary),
       country,
       companyId: user.uid,
+      totalPaidLeave: Number(formData.totalPaidLeave),
+      usedPaidLeave: Math.max(0, Number(formData.usedPaidLeave)),
       updatedAt: serverTimestamp()
     };
 
@@ -129,9 +137,15 @@ export default function EmployeesPage() {
       toast({ title: "Employee updated", description: `${formData.fullName} has been updated.` });
     } else {
       const colRef = collection(firestore, "employees");
-      addDocumentNonBlocking(colRef, { 
-        ...dataToSave, 
-        createdAt: serverTimestamp() 
+      const newDocRef = doc(colRef);
+      const batch = writeBatch(firestore);
+      batch.set(newDocRef, { ...dataToSave, createdAt: serverTimestamp() });
+      batch.commit().catch(err => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: newDocRef.path,
+          operation: 'create',
+          requestResourceData: dataToSave
+        }));
       });
       toast({ title: "Employee added", description: `${formData.fullName} has been added successfully.` });
     }
@@ -141,8 +155,15 @@ export default function EmployeesPage() {
 
   const handleDelete = (id: string) => {
     if (!firestore || !confirm("Are you sure you want to delete this employee?")) return;
-    const docRef = doc(firestore, "employees", id);
-    deleteDocumentNonBlocking(docRef);
+    const batch = writeBatch(firestore);
+    const empRef = doc(firestore, "employees", id);
+    batch.delete(empRef);
+    batch.commit().catch(err => {
+      errorEmitter.emit('permission-error', new FirestorePermissionError({
+        path: empRef.path,
+        operation: 'delete'
+      }));
+    });
     toast({ title: "Employee deleted", variant: "destructive" });
   };
 
@@ -154,7 +175,9 @@ export default function EmployeesPage() {
       department: emp.department || "",
       baseSalary: emp.baseSalary || emp.salary || 0,
       email: emp.email || "",
-      hireDate: emp.hireDate || new Date().toISOString().split('T')[0]
+      hireDate: emp.hireDate || new Date().toISOString().split('T')[0],
+      totalPaidLeave: emp.totalPaidLeave || 0,
+      usedPaidLeave: emp.usedPaidLeave || 0
     });
     setIsModalOpen(true);
   };
@@ -213,9 +236,32 @@ export default function EmployeesPage() {
                     id="salary" 
                     type="number" 
                     required 
-                    value={formData.baseSalary} 
-                    onChange={e => setFormData({...formData, baseSalary: Number(e.target.value)})} 
+                    placeholder="0"
+                    value={formData.baseSalary === 0 ? "" : formData.baseSalary} 
+                    onChange={e => setFormData({...formData, baseSalary: e.target.value === "" ? 0 : Number(e.target.value)})} 
                   />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="totalLeave">Total Leave (Days)</Label>
+                    <Input 
+                      id="totalLeave" 
+                      type="number" 
+                      placeholder="0"
+                      value={formData.totalPaidLeave === 0 ? "" : formData.totalPaidLeave} 
+                      onChange={e => setFormData({...formData, totalPaidLeave: e.target.value === "" ? 0 : Number(e.target.value)})} 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="usedLeave">Used Leave (Days)</Label>
+                    <Input 
+                      id="usedLeave" 
+                      type="number" 
+                      placeholder="0"
+                      value={formData.usedPaidLeave === 0 ? "" : formData.usedPaidLeave} 
+                      onChange={e => setFormData({...formData, usedPaidLeave: e.target.value === "" ? 0 : Number(e.target.value)})} 
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email" className="flex items-center gap-2">
@@ -252,20 +298,24 @@ export default function EmployeesPage() {
                   <TableHead>Name</TableHead>
                   <TableHead>Department</TableHead>
                   <TableHead>Salary</TableHead>
+                  <TableHead>Paid Leave</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow><TableCell colSpan={5} className="text-center py-8">Loading...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center py-8">Loading...</TableCell></TableRow>
                 ) : filteredEmployees.length === 0 ? (
-                  <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No employees found.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No employees found.</TableCell></TableRow>
                 ) : filteredEmployees.map((emp) => (
                   <TableRow key={emp.id}>
                     <TableCell className="font-mono text-xs">{emp.employeeNumber}</TableCell>
                     <TableCell className="font-medium">{emp.fullName || emp.name}</TableCell>
                     <TableCell>{emp.department}</TableCell>
                     <TableCell>{(emp.baseSalary || emp.salary || 0).toLocaleString()} {currency}</TableCell>
+                    <TableCell className="text-xs">
+                      <span className="text-primary font-bold">{Math.max(0, (emp.totalPaidLeave || 0) - (emp.usedPaidLeave || 0))}</span> / {emp.totalPaidLeave || 0} Days
+                    </TableCell>
                     <TableCell className="text-right space-x-2">
                       <Button variant="ghost" size="icon" onClick={() => openEdit(emp)}><Pencil size={14} /></Button>
                       <Button variant="ghost" size="icon" onClick={() => handleDelete(emp.id)}><Trash2 size={14} className="text-destructive" /></Button>

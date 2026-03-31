@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from "react";
@@ -27,20 +26,18 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary }: Props) {
   };
 
   const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    if (e.target.value === "0") {
+    if (e.target.value === "" || e.target.value === "0") {
       e.target.select();
     }
   };
 
-  // Myanmar OT Logic: usually (Salary / 30 / 8) * 2 * OT Hours
   const hourlyRate = (baseSalary / 30 / 8);
   const otPay = data.otHours * hourlyRate * 2;
   
-  // SSB is fixed at 2% capped at 6000 MMK
   const calculatedSSB = Math.min(baseSalary * 0.02, 6000);
 
-  const grossPay = baseSalary + otPay + data.attendanceBonus + data.mealAllowance;
-  const netPay = grossPay - data.ssbAmount - data.incomeTax;
+  const grossPay = baseSalary + otPay + (data.attendanceBonus || 0) + (data.mealAllowance || 0);
+  const netPay = grossPay - (data.ssbAmount || 0) - (data.incomeTax || 0);
 
   const handleApplySSB = () => {
     onChange({ ...data, ssbAmount: calculatedSSB });
@@ -53,7 +50,8 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary }: Props) {
           <Label>OT Hours (2x Rate)</Label>
           <Input 
             type="number" 
-            value={data.otHours} 
+            placeholder="0"
+            value={data.otHours === 0 ? "" : data.otHours} 
             onFocus={handleFocus}
             onChange={e => updateField("otHours", e.target.value)} 
           />
@@ -62,7 +60,8 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary }: Props) {
           <Label>Attendance Bonus</Label>
           <Input 
             type="number" 
-            value={data.attendanceBonus} 
+            placeholder="0"
+            value={data.attendanceBonus === 0 ? "" : data.attendanceBonus} 
             onFocus={handleFocus}
             onChange={e => updateField("attendanceBonus", e.target.value)} 
           />
@@ -71,7 +70,8 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary }: Props) {
           <Label>Meal Allowance</Label>
           <Input 
             type="number" 
-            value={data.mealAllowance} 
+            placeholder="0"
+            value={data.mealAllowance === 0 ? "" : data.mealAllowance} 
             onFocus={handleFocus}
             onChange={e => updateField("mealAllowance", e.target.value)} 
           />
@@ -88,7 +88,8 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary }: Props) {
           </div>
           <Input 
             type="number" 
-            value={data.ssbAmount} 
+            placeholder="0"
+            value={data.ssbAmount === 0 ? "" : data.ssbAmount} 
             onFocus={handleFocus}
             onChange={e => updateField("ssbAmount", e.target.value)} 
           />
@@ -97,7 +98,8 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary }: Props) {
           <Label>Income Tax</Label>
           <Input 
             type="number" 
-            value={data.incomeTax} 
+            placeholder="0"
+            value={data.incomeTax === 0 ? "" : data.incomeTax} 
             onFocus={handleFocus}
             onChange={e => updateField("incomeTax", e.target.value)} 
           />
@@ -111,7 +113,7 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary }: Props) {
         </div>
         <div className="flex justify-between text-destructive">
           <span>Deductions:</span>
-          <span>-{(data.ssbAmount + data.incomeTax).toLocaleString()} MMK</span>
+          <span>-{((data.ssbAmount || 0) + (data.incomeTax || 0)).toLocaleString()} MMK</span>
         </div>
         <div className="flex justify-between text-lg font-bold border-t pt-2 mt-2">
           <span>Net Salary:</span>

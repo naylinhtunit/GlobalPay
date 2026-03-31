@@ -72,9 +72,10 @@ interface Props {
   data: JapanData;
   onChange: (data: JapanData) => void;
   baseSalary: number;
+  employeeLeave?: { total: number; used: number };
 }
 
-export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
+export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave }: Props) {
   // Use persisted values from props or defaults
   const shiftType = data.shiftType || "day";
   const startTime = data.startTime || (shiftType === "day" ? "08:00" : "19:00");
@@ -98,8 +99,6 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
     const autoScheduledHours = data.scheduledDays * 8;
     
     // 2. Night Shift Auto-calculation based on Start Time
-    // NS1 (~22): Range 17:00 - 22:00
-    // NS2 (22~): Range 22:00 - 06:00
     let dailyNS1 = 0;
     let dailyNS2 = 0;
 
@@ -134,7 +133,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
     const calculatedHolidayWork = Math.round(hourlyRate * 1.35 * data.holidayWorkHours);
     const calculatedHolidayNight = Math.round(hourlyRate * 0.25 * data.holidayNightHours);
     
-    // Night Shift Allowances (Calculated based on current hours in data)
+    // Night Shift Allowances
     const calculatedNightAlw1 = Math.round(hourlyRate * 0.25 * data.nightShiftHours);
     const calculatedNightAlw2 = Math.round(hourlyRate * 0.30 * data.nightShiftHoursExtra);
 
@@ -150,7 +149,6 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
     const calculatedHealthIns = data.healthInsurance === 0 ? 13312 : data.healthInsurance; 
     const calculatedPension = data.pension === 0 ? 23790 : data.pension;
     
-    // Total Earnings before deductions
     const totalEarningsCalc = baseSalary + calculatedOT + calculatedLateNightOT + 
                              calculatedNightAlw1 + calculatedNightAlw2 + 
                              calculatedHolidayWork + calculatedHolidayNight + 
@@ -159,16 +157,19 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
                              (data.prevMonthAdj || 0) + (data.leaveAllowance || 0) -
                              calculatedAbsenceDed - calculatedLateEarlyDed;
 
-    // Employment Insurance Calculation
     const calculatedEmpIns = Math.round(totalEarningsCalc * 0.0055);
 
-    // Income Tax Calculation
     const totalSocIns = calculatedHealthIns + calculatedPension + calculatedEmpIns + (data.nursingCareInsurance || 0);
     const grossForTax = totalEarningsCalc - totalSocIns - (data.nonTaxableCommuting || 0);
     let calculatedIncomeTax = 0;
     if (grossForTax > 0) {
       calculatedIncomeTax = Math.round(grossForTax * 0.0232);
     }
+
+    // 7. Calculate Remaining Paid Leave
+    const remainingLeave = employeeLeave 
+      ? Math.max(0, employeeLeave.total - employeeLeave.used - Number(data.paidLeaveDays))
+      : 0;
 
     // Apply updates if logic produces different values
     const needsUpdate = 
@@ -184,7 +185,8 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
       data.pension !== calculatedPension ||
       data.employmentInsurance !== calculatedEmpIns ||
       data.incomeTax !== calculatedIncomeTax ||
-      data.hostelFee !== defaultHostelFee;
+      data.hostelFee !== defaultHostelFee ||
+      data.remainingPaidLeave !== remainingLeave;
 
     if (needsUpdate) {
       onChange({
@@ -208,6 +210,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
         employmentInsurance: calculatedEmpIns,
         incomeTax: calculatedIncomeTax,
         hostelFee: defaultHostelFee,
+        remainingPaidLeave: remainingLeave
       });
     }
   }, [
@@ -221,8 +224,10 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
     data.lateEarlyHours, 
     data.nightShiftHours, 
     data.nightShiftHoursExtra,
+    data.paidLeaveDays,
     shiftType,
-    startTime
+    startTime,
+    employeeLeave
   ]);
 
   const updateField = (field: keyof JapanData, value: string) => {
@@ -231,7 +236,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
   };
 
   const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    if (e.target.value === "0") {
+    if (e.target.value === "" || e.target.value === "0") {
       e.target.select();
     }
   };
@@ -396,7 +401,8 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
               <Input 
                 type="number" 
                 className="h-8 text-xs border-slate-300 focus:border-primary" 
-                value={(data as any)[item.field]} 
+                placeholder="0"
+                value={(data as any)[item.field] === 0 ? "" : (data as any)[item.field]} 
                 onFocus={handleFocus} 
                 onChange={e => updateField(item.field as keyof JapanData, e.target.value)} 
               />
@@ -438,8 +444,10 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
                 <Input 
                   type="number" 
                   readOnly={item.readOnly !== false}
+                  placeholder="0"
                   className={`h-8 text-xs ${item.readOnly === false ? 'bg-white border-blue-400' : 'bg-white/50 border-blue-200 cursor-not-allowed'}`} 
-                  value={(data as any)[item.field]} 
+                  value={(data as any)[item.field] === 0 ? "" : (data as any)[item.field]} 
+                  onFocus={handleFocus}
                   onChange={e => item.readOnly === false && updateField(item.field as keyof JapanData, e.target.value)}
                 />
               </div>
@@ -460,7 +468,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
                 jpExpl="標準報酬月額に基づいて算出されます。会社と従業員で折半します。"
                 mmExpl="Standard Remuneration လစဉ်ပမာဏအပေါ် အခြေခံ၍ တွက်ချက်သည်။ ကုမ္ပဏီနှင့် ဝန်ထမ်း တစ်ဝက်စီ ကျခံရသည်။"
               />
-              <Input type="number" className="h-8 text-xs border-red-200" value={data.healthInsurance} onFocus={handleFocus} onChange={e => updateField("healthInsurance", e.target.value)} />
+              <Input type="number" className="h-8 text-xs border-red-200" placeholder="0" value={data.healthInsurance === 0 ? "" : data.healthInsurance} onFocus={handleFocus} onChange={e => updateField("healthInsurance", e.target.value)} />
             </div>
             <div className="space-y-1">
               <ExplanationLabel 
@@ -468,7 +476,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
                 jpExpl="40歳から64歳までの被保険者が対象となります。"
                 mmExpl="အသက် ၄၀ မှ ၆၄ နှစ်ကြား အာမခံထားသူများအတွက်သာ သက်ဆိုင်ပါသည်။"
               />
-              <Input type="number" className="h-8 text-xs border-red-200" value={data.nursingCareInsurance} onFocus={handleFocus} onChange={e => updateField("nursingCareInsurance", e.target.value)} />
+              <Input type="number" className="h-8 text-xs border-red-200" placeholder="0" value={data.nursingCareInsurance === 0 ? "" : data.nursingCareInsurance} onFocus={handleFocus} onChange={e => updateField("nursingCareInsurance", e.target.value)} />
             </div>
             <div className="space-y-1">
               <ExplanationLabel 
@@ -476,23 +484,23 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
                 jpExpl="標準報酬月額に基づいて算出され、将来の年金受給額に反映されます。"
                 mmExpl="Standard Remuneration လစဉ်ပမာဏအပေါ် အခြေခံ၍ တွက်ချက်သည်။ အနာဂတ်ပင်စင်အတွက် ဖြစ်သည်။"
               />
-              <Input type="number" className="h-8 text-xs border-red-200" value={data.pension} onFocus={handleFocus} onChange={e => updateField("pension", e.target.value)} />
+              <Input type="number" className="h-8 text-xs border-red-200" placeholder="0" value={data.pension === 0 ? "" : data.pension} onFocus={handleFocus} onChange={e => updateField("pension", e.target.value)} />
             </div>
             <div className="space-y-1">
               <Label className="text-[10px] leading-tight block font-semibold">社保料調整<br/><span className="text-slate-500 font-normal">Soc Ins Adj</span></Label>
-              <Input type="number" className="h-8 text-xs border-red-200" value={data.socInsAdj} onFocus={handleFocus} onChange={e => updateField("socInsAdj", e.target.value)} />
+              <Input type="number" className="h-8 text-xs border-red-200" placeholder="0" value={data.socInsAdj === 0 ? "" : data.socInsAdj} onFocus={handleFocus} onChange={e => updateField("socInsAdj", e.target.value)} />
             </div>
             <div className="space-y-1">
               <Label className="text-[10px] leading-tight block font-semibold">雇用保険料 (0.0055)<br/><span className="text-slate-500 font-normal">Employment Ins (0.0055)</span></Label>
-              <Input type="number" className="h-8 text-xs border-red-200" value={data.employmentInsurance} onFocus={handleFocus} onChange={e => updateField("employmentInsurance", e.target.value)} />
+              <Input type="number" className="h-8 text-xs border-red-200" placeholder="0" value={data.employmentInsurance === 0 ? "" : data.employmentInsurance} onFocus={handleFocus} onChange={e => updateField("employmentInsurance", e.target.value)} />
             </div>
             <div className="space-y-1">
               <ExplanationLabel 
                 label="所得税" en="Income Tax" 
-                jpExpl="給与所得の源泉徴収税額表に基づいて算出されます。課税対象額に応じて変動します。"
+                jpExpl="給与所得の源泉徴ု収税額表に基づいて算出されます。課税対象額に応じて変動します。"
                 mmExpl="လစာဝင်ငွေအတွက် အခွန်နုတ်ယူခြင်းဆိုင်ရာ ဇယားအပေါ် အခြေခံ၍ တွက်ချက်သည်။ ဝင်ငွေအပေါ် မူတည်၍ ပြောင်းလဲသည်။"
               />
-              <Input type="number" className="h-8 text-xs border-primary ring-1 ring-primary/20 font-bold" value={data.incomeTax} onFocus={handleFocus} onChange={e => updateField("incomeTax", e.target.value)} />
+              <Input type="number" className="h-8 text-xs border-primary ring-1 ring-primary/20 font-bold" placeholder="0" value={data.incomeTax === 0 ? "" : data.incomeTax} onFocus={handleFocus} onChange={e => updateField("incomeTax", e.target.value)} />
             </div>
             <div className="space-y-1">
               <ExplanationLabel 
@@ -500,19 +508,19 @@ export function JapanPayrollForm({ data, onChange, baseSalary }: Props) {
                 jpExpl="前年の所得に基づいてお住まいの市区町村が決定した税額です。"
                 mmExpl="ယခင်နှစ်ဝင်ငွေအပေါ် မူတည်၍ နေထိုင်ရာ မြို့နယ်စည်ပင်မှ သတ်မှတ်ထားသော အခွန်ဖြစ်သည်။"
               />
-              <Input type="number" className="h-8 text-xs border-red-200" value={data.residentTax} onFocus={handleFocus} onChange={e => updateField("residentTax", e.target.value)} />
+              <Input type="number" className="h-8 text-xs border-red-200" placeholder="0" value={data.residentTax === 0 ? "" : data.residentTax} onFocus={handleFocus} onChange={e => updateField("residentTax", e.target.value)} />
             </div>
             <div className="space-y-1">
               <Label className="text-[10px] leading-tight block font-semibold">昼食代<br/><span className="text-slate-500 font-normal">Lunch Fee</span></Label>
-              <Input type="number" className="h-8 text-xs border-red-200" value={data.lunchFee} onFocus={handleFocus} onChange={e => updateField("lunchFee", e.target.value)} />
+              <Input type="number" className="h-8 text-xs border-red-200" placeholder="0" value={data.lunchFee === 0 ? "" : data.lunchFee} onFocus={handleFocus} onChange={e => updateField("lunchFee", e.target.value)} />
             </div>
             <div className="space-y-1">
               <Label className="text-[10px] leading-tight block font-semibold">寮費<br/><span className="text-slate-500 font-normal">Hostel Fee</span></Label>
-              <Input type="number" className="h-8 text-xs border-red-200" value={data.hostelFee} onFocus={handleFocus} onChange={e => updateField("hostelFee", e.target.value)} />
+              <Input type="number" className="h-8 text-xs border-red-200" placeholder="0" value={data.hostelFee === 0 ? "" : data.hostelFee} onFocus={handleFocus} onChange={e => updateField("hostelFee", e.target.value)} />
             </div>
             <div className="space-y-1">
               <Label className="text-[10px] leading-tight block font-semibold">布団代<br/><span className="text-slate-500 font-normal">Bedding Fee</span></Label>
-              <Input type="number" className="h-8 text-xs border-red-200" value={data.beddingFee} onFocus={handleFocus} onChange={e => updateField("beddingFee", e.target.value)} />
+              <Input type="number" className="h-8 text-xs border-red-200" placeholder="0" value={data.beddingFee === 0 ? "" : data.beddingFee} onFocus={handleFocus} onChange={e => updateField("beddingFee", e.target.value)} />
             </div>
           </div>
         </div>
