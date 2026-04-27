@@ -53,14 +53,22 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary }: Props) {
     // Taxable Income
     const taxableIncome = Math.max(0, annualGross - personalAllowance);
 
-    // 3. Progressive Tax Brackets (Myanmar PIT 2024-2025 Standard)
+    // 3. Progressive Tax Brackets (Myanmar PIT 2024-2025 Standard with 30% bracket)
     let totalAnnualTax = 0;
-    if (taxableIncome > 30000000) {
+    if (taxableIncome > 70000000) {
+      // Over 700 Lakhs: 30%
+      totalAnnualTax += (taxableIncome - 70000000) * 0.30;
+      totalAnnualTax += (70000000 - 30000000) * 0.25; // 30m to 70m: 25%
+      totalAnnualTax += 10000000 * 0.20; // 20-30m: 20%
+      totalAnnualTax += 10000000 * 0.15; // 10-20m: 15%
+      totalAnnualTax += 5000000 * 0.10;  // 5-10m: 10%
+      totalAnnualTax += 3000000 * 0.05;  // 2-5m: 5%
+    } else if (taxableIncome > 30000000) {
       totalAnnualTax += (taxableIncome - 30000000) * 0.25;
-      totalAnnualTax += 10000000 * 0.20; // 20-30m
-      totalAnnualTax += 10000000 * 0.15; // 10-20m
-      totalAnnualTax += 5000000 * 0.10;  // 5-10m
-      totalAnnualTax += 3000000 * 0.05;  // 2-5m
+      totalAnnualTax += 10000000 * 0.20;
+      totalAnnualTax += 10000000 * 0.15;
+      totalAnnualTax += 5000000 * 0.10;
+      totalAnnualTax += 3000000 * 0.05;
     } else if (taxableIncome > 20000000) {
       totalAnnualTax += (taxableIncome - 20000000) * 0.20;
       totalAnnualTax += 10000000 * 0.15;
@@ -181,7 +189,7 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary }: Props) {
                 <div className="space-y-2.5 text-muted-foreground">
                   <p className="leading-relaxed">၁။ တစ်နှစ်စာ စုစုပေါင်းဝင်ငွေကို အရင်တွက်ပါသည်။</p>
                   <p className="leading-relaxed">၂။ အခြေခံသက်သာခွင့် ၂၀% (အများဆုံး ၁၀၀ သိန်း) ကို နှုတ်ပါသည်။</p>
-                  <p className="leading-relaxed">၃။ ကျန်ရှိသော ပမာဏအပေါ် ၅% မှ ၂၅% အထိ အဆင့်ဆင့်သော အခွန်နှုန်းထားများဖြင့် တွက်ချက်ထားပါသည်။</p>
+                  <p className="leading-relaxed">၃။ ကျန်ရှိသော ပမာဏအပေါ် ၅% မှ အမြင့်ဆုံး ၃၀% (သိန်း ၇၀၀ အထက်) အထိ အဆင့်ဆင့်သော အခွန်နှုန်းထားများဖြင့် တွက်ချက်ထားပါသည်။</p>
                 </div>
               </PopoverContent>
             </Popover>
