@@ -32,10 +32,6 @@ const ScanCalendarOutputSchema = z.object({
 });
 export type ScanCalendarOutput = z.infer<typeof ScanCalendarOutputSchema>;
 
-export async function scanCalendar(input: ScanCalendarInput): Promise<ScanCalendarOutput> {
-  return scanCalendarFlow(input);
-}
-
 const prompt = ai.definePrompt({
   name: 'scanCalendarPrompt',
   input: { schema: ScanCalendarInputSchema },
@@ -56,7 +52,7 @@ Photo: {{media url=photoDataUri}}`,
 
 const scanCalendarFlow = ai.defineFlow(
   {
-    name: scanCalendarFlow',
+    name: 'scanCalendarFlow',
     inputSchema: ScanCalendarInputSchema,
     outputSchema: ScanCalendarOutputSchema,
   },
@@ -65,3 +61,7 @@ const scanCalendarFlow = ai.defineFlow(
     return output!;
   }
 );
+
+export async function scanCalendar(input: ScanCalendarInput): Promise<ScanCalendarOutput> {
+  return scanCalendarFlow(input);
+}
