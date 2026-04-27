@@ -32,7 +32,7 @@ export function Navbar() {
   const auth = useAuth();
   const pathname = usePathname();
   const router = useRouter();
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
@@ -79,7 +79,7 @@ export function Navbar() {
   const CountrySwitcher = () => (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="w-full justify-start gap-2 border-primary/20 bg-background hover:bg-muted">
+        <Button variant="outline" className="w-full justify-start gap-2 border-primary/20 bg-background hover:bg-muted transition-all">
           <Globe size={16} className="text-primary" />
           <span className="flex-1 text-left font-medium">{country}</span>
         </Button>
@@ -98,27 +98,25 @@ export function Navbar() {
   const ThemeToggle = () => {
     if (!mounted) return <div className="h-10 w-10" />;
     
+    const isDark = resolvedTheme === "dark";
+    
     return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="icon" className="shrink-0 border-primary/20 bg-background">
-            <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-            <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-            <span className="sr-only">Toggle theme</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => setTheme("light")} className="gap-2">
-            <Sun size={14} /> Light
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setTheme("dark")} className="gap-2">
-            <Moon size={14} /> Dark
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setTheme("system")} className="gap-2">
-            <Monitor size={14} /> System
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <Button 
+        variant="outline" 
+        size="icon" 
+        className="shrink-0 border-primary/20 bg-background hover:bg-muted transition-all duration-300 relative group overflow-hidden"
+        onClick={() => setTheme(isDark ? "light" : "dark")}
+      >
+        <Sun className={cn(
+          "h-[1.2rem] w-[1.2rem] transition-all duration-500",
+          isDark ? "-rotate-90 scale-0 opacity-0" : "rotate-0 scale-100 opacity-100"
+        )} />
+        <Moon className={cn(
+          "absolute h-[1.2rem] w-[1.2rem] transition-all duration-500",
+          isDark ? "rotate-0 scale-100 opacity-100" : "rotate-90 scale-0 opacity-0"
+        )} />
+        <span className="sr-only">Toggle theme</span>
+      </Button>
     );
   };
 
