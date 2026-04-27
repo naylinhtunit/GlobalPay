@@ -5,6 +5,12 @@ import React, { useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Info } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface MyanmarData {
   otHours: number;
@@ -133,7 +139,20 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary }: Props) {
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label className="text-xs font-bold uppercase tracking-wider text-primary">SSB (2% Auto)</Label>
+          <div className="flex items-center gap-1.5">
+            <Label className="text-xs font-bold uppercase tracking-wider text-primary">SSB (2% Auto)</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className="text-muted-foreground hover:text-primary transition-colors">
+                  <Info size={14} />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="text-xs p-3 space-y-2 w-64 shadow-xl">
+                <p className="font-bold border-b pb-1">လူမှုဖူလုံရေးကြေး (SSB)</p>
+                <p className="leading-relaxed">အခြေခံလစာ၏ ၂% ဖြစ်ပြီး တစ်လလျှင် အများဆုံး ၆,၀၀၀ ကျပ်အထိသာ အလိုအလျောက် သတ်မှတ်တွက်ချက်ပေးပါသည်။</p>
+              </PopoverContent>
+            </Popover>
+          </div>
           <Input 
             type="number" 
             readOnly
@@ -143,7 +162,22 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary }: Props) {
           />
         </div>
         <div className="space-y-2">
-          <Label className="text-xs font-bold uppercase tracking-wider text-primary">Income Tax (Progressive)</Label>
+          <div className="flex items-center gap-1.5">
+            <Label className="text-xs font-bold uppercase tracking-wider text-primary">Income Tax (Progressive)</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className="text-muted-foreground hover:text-primary transition-colors">
+                  <Info size={14} />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="text-xs p-3 space-y-2 w-72 shadow-xl">
+                <p className="font-bold border-b pb-1">ဝင်ငွေခွန် တွက်ချက်ပုံ (PIT)</p>
+                <p className="leading-relaxed">၁။ တစ်နှစ်စာ စုစုပေါင်းဝင်ငွေကို အရင်တွက်ပါသည်။</p>
+                <p className="leading-relaxed">၂။ အခြေခံသက်သာခွင့် ၂၀% (အများဆုံး ၁၀၀ သိန်း) ကို နှုတ်ပါသည်။</p>
+                <p className="leading-relaxed">၃။ ကျန်ရှိသော ပမာဏအပေါ် ၅% မှ ၂၅% အထိ အဆင့်ဆင့်သော အခွန်နှုန်းထားများဖြင့် တွက်ချက်ထားပါသည်။</p>
+              </PopoverContent>
+            </Popover>
+          </div>
           <Input 
             type="number" 
             readOnly
