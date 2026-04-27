@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
@@ -29,7 +28,8 @@ import {
   Briefcase, 
   Globe,
   Trash2,
-  Plus
+  Plus,
+  Calendar as CalendarIcon
 } from "lucide-react";
 import { scanCalendar } from "@/ai/flows/scan-calendar-flow";
 import { useToast } from "@/hooks/use-toast";
@@ -118,7 +118,7 @@ export default function JapanCalendarPage() {
     return (
       <div className="md:pl-64 pt-16 md:pt-0 min-h-screen flex items-center justify-center p-8">
         <Navbar />
-        <Card className="max-w-md w-full text-center p-8">
+        <Card className="max-w-md w-full text-center p-8 border-primary/20 bg-card">
           <Globe className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
           <p className="text-muted-foreground">Calendar feature is only available for Japan region.</p>
         </Card>
@@ -257,7 +257,7 @@ export default function JapanCalendarPage() {
             <Button 
               variant="outline" 
               onClick={() => setLanguage(language === "JP" ? "MM" : "JP")}
-              className="gap-2 border-primary/20"
+              className="gap-2 border-primary/20 bg-card hover:bg-muted"
             >
               <Languages size={16} /> {language === "JP" ? "မြန်မာ" : "日本語"}
             </Button>
@@ -279,18 +279,18 @@ export default function JapanCalendarPage() {
               <Calendar
                 mode="multiple"
                 selected={allHolidays}
-                className="rounded-md border shadow-sm"
+                className="rounded-md border shadow-sm bg-background"
                 modifiers={{
                   holiday: JAPAN_PUBLIC_HOLIDAYS.map(h => new Date(h.date))
                 }}
                 modifiersClassNames={{
-                  holiday: "bg-red-100 text-red-600 font-bold"
+                  holiday: "bg-destructive/10 text-destructive font-bold"
                 }}
               />
               <div className="mt-6 w-full space-y-2">
                 <h4 className="text-xs font-bold text-muted-foreground uppercase mb-2">Upcoming Holidays</h4>
                 {JAPAN_PUBLIC_HOLIDAYS.slice(0, 5).map((h, i) => (
-                  <div key={i} className="flex justify-between items-center p-2 rounded-lg bg-muted/30 border text-sm">
+                  <div key={i} className="flex justify-between items-center p-2 rounded-lg bg-muted/30 border border-primary/5 text-sm">
                     <span className="font-mono text-xs">{h.date}</span>
                     <span className="font-bold">{language === "JP" ? h.title_jp : h.title}</span>
                   </div>
@@ -307,7 +307,7 @@ export default function JapanCalendarPage() {
                 </CardTitle>
                 <Dialog open={isAddingEvent} onOpenChange={setIsAddingEvent}>
                   <DialogTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 gap-1 text-orange-600">
+                    <Button variant="ghost" size="sm" className="h-8 gap-1 text-orange-600 hover:bg-orange-500/10">
                       <Plus size={14} /> {translate("addEvent")}
                     </Button>
                   </DialogTrigger>
@@ -318,15 +318,15 @@ export default function JapanCalendarPage() {
                     <div className="space-y-4 py-4">
                       <div className="space-y-2">
                         <Label>Date</Label>
-                        <Input type="date" value={newEvent.date} onChange={e => setNewEvent({...newEvent, date: e.target.value})} />
+                        <Input type="date" value={newEvent.date} onChange={e => setNewEvent({...newEvent, date: e.target.value})} className="bg-background" />
                       </div>
                       <div className="space-y-2">
                         <Label>Holiday/Event Name</Label>
-                        <Input placeholder="e.g. Summer Vacation" value={newEvent.title} onChange={e => setNewEvent({...newEvent, title: e.target.value})} />
+                        <Input placeholder="e.g. Summer Vacation" value={newEvent.title} onChange={e => setNewEvent({...newEvent, title: e.target.value})} className="bg-background" />
                       </div>
                     </div>
                     <DialogFooter>
-                      <Button onClick={handleAddManualEvent}>Save Event</Button>
+                      <Button onClick={handleAddManualEvent} className="bg-primary hover:bg-primary/90">Save Event</Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
@@ -335,15 +335,15 @@ export default function JapanCalendarPage() {
             <CardContent className="p-6">
               <div className="space-y-4">
                 {(companyEvents || []).length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground bg-muted/10 rounded-xl border border-dashed">
+                  <div className="text-center py-12 text-muted-foreground bg-muted/10 rounded-xl border border-dashed border-primary/10">
                     <CalendarDays className="mx-auto h-8 w-8 opacity-20 mb-2" />
                     <p className="text-sm">No company specific holidays found.</p>
                     <p className="text-[10px]">Scan a calendar paper to auto-fill this list.</p>
                   </div>
                 ) : (
                   (companyEvents || []).map((ev: any) => (
-                    <div key={ev.id} className="flex items-center gap-4 p-3 rounded-xl border bg-card hover:shadow-md transition-shadow">
-                      <div className="h-10 w-10 rounded-lg bg-orange-100 flex flex-col items-center justify-center text-orange-600 shrink-0">
+                    <div key={ev.id} className="flex items-center gap-4 p-3 rounded-xl border border-primary/5 bg-background hover:shadow-md transition-shadow">
+                      <div className="h-10 w-10 rounded-lg bg-orange-500/10 flex flex-col items-center justify-center text-orange-600 shrink-0">
                         <span className="text-[10px] font-bold uppercase">{new Date(ev.date).toLocaleString('default', { month: 'short' })}</span>
                         <span className="text-lg font-black leading-none">{new Date(ev.date).getDate()}</span>
                       </div>
