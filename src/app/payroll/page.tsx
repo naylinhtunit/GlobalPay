@@ -287,7 +287,7 @@ export default function PayrollPage() {
       const others = (japanData.yearEndAdj || 0) + (japanData.otherAdj1 || 0) + (japanData.otherAdj2 || 0) + (japanData.paidLeaveBuyback || 0);
       netPay = grossPay - deductions + others;
     } else {
-      const isUsd = baseSalary < 10000;
+      const isUsd = emp.salaryCurrency === "USD" || baseSalary < 10000;
       const rate = myanmarData.exchangeRate || 3600;
       const effectiveBaseMMK = isUsd ? baseSalary * rate : baseSalary;
       const hourlyRate = (effectiveBaseMMK / 30 / 8);
@@ -331,7 +331,6 @@ export default function PayrollPage() {
       const newPaidLeave = Number(japanData.paidLeaveDays || 0);
       const leaveDiff = newPaidLeave - oldPaidLeaveDays;
       if (leaveDiff !== 0) {
-        // Atomic update with usedPaidLeave >= 0 constraint (enforced by rules, but we check here too)
         const currentUsed = Number(emp.usedPaidLeave) || 0;
         const targetUsed = Math.max(0, currentUsed + leaveDiff);
         batch.update(empRef, {
@@ -524,12 +523,12 @@ export default function PayrollPage() {
                       <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
                         {(employees || []).find((e: any) => e.id === selectedEmpId)?.fullName?.[0] || 'E'}
                       </div>
-                      <div>
+                      <div className="flex-1">
                         <p className="text-sm font-bold text-primary">
                           {(employees || []).find((e: any) => e.id === selectedEmpId)?.fullName || (employees || []).find((e: any) => e.id === selectedEmpId)?.name}
                         </p>
                         <p className="text-xs text-muted-foreground font-mono">
-                          Base: {((employees || []).find((e: any) => e.id === selectedEmpId)?.baseSalary || (employees || []).find((e: any) => e.id === selectedEmpId)?.salary || 0).toLocaleString()} {((employees || []).find((e: any) => e.id === selectedEmpId)?.baseSalary || 0) < 10000 ? 'USD' : currency}
+                          Base: {((employees || []).find((e: any) => e.id === selectedEmpId)?.baseSalary || 0).toLocaleString()} {((employees || []).find((e: any) => e.id === selectedEmpId)?.salaryCurrency) || (country === "Myanmar" ? "MMK" : "JPY")}
                         </p>
                       </div>
                     </div>
@@ -554,6 +553,7 @@ export default function PayrollPage() {
                       data={myanmarData} 
                       onChange={setMyanmarData} 
                       baseSalary={(employees || []).find((e: any) => e.id === selectedEmpId)?.baseSalary || (employees || []).find((e: any) => e.id === selectedEmpId)?.salary || 0}
+                      salaryCurrency={(employees || []).find((e: any) => e.id === selectedEmpId)?.salaryCurrency}
                     />
                   )}
                   

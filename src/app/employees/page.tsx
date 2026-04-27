@@ -20,7 +20,7 @@ import {
 } from "firebase/firestore";
 import { useCountry } from "@/context/CountryContext";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, Search, UserCircle, Briefcase, Mail, Calendar, Hash } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, UserCircle, Briefcase, Mail, Calendar, Hash, Banknote } from "lucide-react";
 import { 
   Dialog, 
   DialogContent, 
@@ -39,6 +39,13 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { FirestorePermissionError } from "@/firebase/errors";
 import { errorEmitter } from "@/firebase/error-emitter";
@@ -53,6 +60,7 @@ interface Employee {
   email: string;
   baseSalary: number;
   salary: number;
+  salaryCurrency?: "USD" | "MMK" | "JPY";
   country: string;
   hireDate: string;
   totalPaidLeave: number;
@@ -73,6 +81,7 @@ export default function EmployeesPage() {
     employeeNumber: "",
     department: "",
     baseSalary: 0,
+    salaryCurrency: "" as "USD" | "MMK" | "JPY" | "",
     email: "",
     hireDate: "",
     totalPaidLeave: 0,
@@ -80,13 +89,14 @@ export default function EmployeesPage() {
   });
 
   useEffect(() => {
-    if (!formData.hireDate && isModalOpen && !editingId) {
+    if (isModalOpen && !editingId) {
       setFormData(prev => ({
         ...prev,
-        hireDate: new Date().toISOString().split('T')[0]
+        hireDate: new Date().toISOString().split('T')[0],
+        salaryCurrency: country === "Myanmar" ? "MMK" : "JPY"
       }));
     }
-  }, [isModalOpen, editingId]);
+  }, [isModalOpen, editingId, country]);
 
   const employeesQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -105,6 +115,7 @@ export default function EmployeesPage() {
       employeeNumber: "", 
       department: "", 
       baseSalary: 0, 
+      salaryCurrency: country === "Myanmar" ? "MMK" : "JPY",
       email: "",
       hireDate: new Date().toISOString().split('T')[0],
       totalPaidLeave: 0,
@@ -125,6 +136,7 @@ export default function EmployeesPage() {
       employeeNumber: formData.employeeNumber,
       department: formData.department,
       baseSalary: Number(formData.baseSalary),
+      salaryCurrency: formData.salaryCurrency || (country === "Myanmar" ? "MMK" : "JPY"),
       country,
       companyId: user.uid,
       totalPaidLeave: Number(formData.totalPaidLeave),
@@ -175,6 +187,7 @@ export default function EmployeesPage() {
       employeeNumber: emp.employeeNumber || "",
       department: emp.department || "",
       baseSalary: emp.baseSalary || emp.salary || 0,
+      salaryCurrency: emp.salaryCurrency || (country === "Myanmar" ? "MMK" : "JPY"),
       email: emp.email || "",
       hireDate: emp.hireDate || new Date().toISOString().split('T')[0],
       totalPaidLeave: emp.totalPaidLeave || 0,
@@ -231,17 +244,44 @@ export default function EmployeesPage() {
                     <Input id="dept" required value={formData.department} onChange={e => setFormData({...formData, department: e.target.value})} />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="salary">Base Salary ({currency})</Label>
-                  <Input 
-                    id="salary" 
-                    type="number" 
-                    required 
-                    placeholder="0"
-                    value={formData.baseSalary === 0 ? "" : formData.baseSalary} 
-                    onChange={e => setFormData({...formData, baseSalary: e.target.value === "" ? 0 : Number(e.target.value)})} 
-                  />
+                
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2 col-span-2">
+                    <Label htmlFor="salary" className="flex items-center gap-2">
+                       <Banknote size={14} className="text-muted-foreground" /> Base Salary
+                    </Label>
+                    <Input 
+                      id="salary" 
+                      type="number" 
+                      required 
+                      placeholder="0"
+                      value={formData.baseSalary === 0 ? "" : formData.baseSalary} 
+                      onChange={e => setFormData({...formData, baseSalary: e.target.value === "" ? 0 : Number(e.target.value)})} 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Currency</Label>
+                    <Select 
+                      value={formData.salaryCurrency} 
+                      onValueChange={(v: any) => setFormData({...formData, salaryCurrency: v})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Unit" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {country === "Myanmar" ? (
+                          <>
+                            <SelectItem value="MMK">MMK</SelectItem>
+                            <SelectItem value="USD">USD</SelectItem>
+                          </>
+                        ) : (
+                          <SelectItem value="JPY">JPY</SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="totalLeave">Total Leave (Days)</Label>
@@ -313,7 +353,7 @@ export default function EmployeesPage() {
                     <TableCell className="font-mono text-xs">{emp.employeeNumber}</TableCell>
                     <TableCell className="font-medium">{emp.fullName || emp.name}</TableCell>
                     <TableCell>{emp.department}</TableCell>
-                    <TableCell>{(emp.baseSalary || emp.salary || 0).toLocaleString()} {currency}</TableCell>
+                    <TableCell>{(emp.baseSalary || emp.salary || 0).toLocaleString()} {emp.salaryCurrency || currency}</TableCell>
                     <TableCell className="text-xs">
                       <span className="text-primary font-bold">{Math.max(0, (emp.totalPaidLeave || 0) - (emp.usedPaidLeave || 0))}</span> / {emp.totalPaidLeave || 0} Days
                     </TableCell>

@@ -26,20 +26,23 @@ interface Props {
   data: MyanmarData;
   onChange: (data: MyanmarData) => void;
   baseSalary: number;
+  salaryCurrency?: string;
 }
 
-export function MyanmarPayrollForm({ data, onChange, baseSalary }: Props) {
+export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency }: Props) {
   const [effectiveBaseMMK, setEffectiveBaseMMK] = useState(baseSalary);
   
-  // Detect if salary is USD (heuristic: small numbers like < 10000)
-  const isUsd = baseSalary > 0 && baseSalary < 10000;
+  // Explicit check for USD based on employee record or heuristic
+  const isUsd = salaryCurrency === "USD" || (baseSalary > 0 && baseSalary < 10000);
 
   useEffect(() => {
-    // Default exchange rate from CBM market weighted average
+    // Default exchange rate from CBM market weighted average if USD
     if (isUsd && !data.exchangeRate) {
       onChange({ ...data, exchangeRate: 3600, isUsdSalary: true });
+    } else if (!isUsd && data.isUsdSalary) {
+      onChange({ ...data, isUsdSalary: false, exchangeRate: 1 });
     }
-  }, [isUsd]);
+  }, [isUsd, salaryCurrency]);
 
   const updateField = (field: keyof MyanmarData, value: string) => {
     const numValue = value === "" ? 0 : Number(value);
@@ -113,7 +116,7 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary }: Props) {
         incomeTax: monthlyTax
       });
     }
-  }, [baseSalary, data.otHours, data.attendanceBonus, data.mealAllowance, data.exchangeRate, isUsd]);
+  }, [baseSalary, data.otHours, data.attendanceBonus, data.mealAllowance, data.exchangeRate, isUsd, salaryCurrency]);
 
   const hourlyRate = (effectiveBaseMMK / 30 / 8);
   const otPay = data.otHours * hourlyRate * 2;
