@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Shield, LayoutDashboard, Users, FileText, LogOut, Menu, User, Globe, Sun, Moon, Monitor } from "lucide-react";
+import { Shield, LayoutDashboard, Users, FileText, LogOut, Menu, User, Globe, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCountry } from "@/context/CountryContext";
 import { useAuth, useUser } from "@/firebase";
@@ -127,7 +127,7 @@ export function Navbar() {
         <div className="p-8">
           <div className="flex items-center gap-3 text-primary">
             <Shield size={32} strokeWidth={2} />
-            <h1 className="text-2xl font-bold tracking-tighter text-slate-900 dark:text-slate-100">GlobalPay</h1>
+            <h1 className="text-2xl font-bold tracking-tighter">GlobalPay</h1>
           </div>
           <p className="text-[10px] text-primary/70 font-bold uppercase mt-2 tracking-widest bg-primary/5 px-2 py-1 rounded inline-block">Enterprise</p>
         </div>
@@ -136,14 +136,14 @@ export function Navbar() {
           <NavLinks />
         </div>
 
-        <div className="p-6 border-t space-y-4 bg-slate-50/50 dark:bg-slate-900/50">
+        <div className="p-6 border-t space-y-4 bg-muted/20">
           {user && (
-            <div className="px-3 py-3 flex items-center gap-3 bg-white dark:bg-slate-800 border rounded-xl shadow-sm">
+            <div className="px-3 py-3 flex items-center gap-3 bg-background border rounded-xl shadow-sm">
               <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary">
                 <User size={18} />
               </div>
               <div className="flex-1 overflow-hidden">
-                <p className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate capitalize">{user.email?.split('@')[0]}</p>
+                <p className="text-sm font-bold truncate capitalize">{user.email?.split('@')[0]}</p>
                 <p className="text-[10px] text-muted-foreground truncate">Administrator</p>
               </div>
             </div>
@@ -168,7 +168,7 @@ export function Navbar() {
         <Link href="/">
           <div className="flex items-center gap-2 text-primary">
             <Shield size={28} />
-            <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">GlobalPay</h1>
+            <h1 className="text-xl font-bold tracking-tight">GlobalPay</h1>
           </div>
         </Link>
 
@@ -181,20 +181,20 @@ export function Navbar() {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-64 p-0 flex flex-col border-none">
-              <SheetHeader className="p-6 text-left border-b bg-slate-50 dark:bg-slate-900">
+              <SheetHeader className="p-6 text-left border-b bg-muted/20">
                 <SheetTitle className="flex items-center gap-2 text-primary">
                   <Shield size={28} />
-                  <span className="text-xl font-bold text-slate-900 dark:text-slate-100">GlobalPay</span>
+                  <span className="text-xl font-bold">GlobalPay</span>
                 </SheetTitle>
               </SheetHeader>
               <div className="flex-1 px-4">
                 <NavLinks onClick={() => setIsOpen(false)} />
               </div>
-              <div className="p-6 border-t space-y-4 bg-slate-50 dark:bg-slate-900">
+              <div className="p-6 border-t space-y-4 bg-muted/20">
                 {user && (
-                  <div className="flex items-center gap-3 px-3 py-3 bg-white dark:bg-slate-800 border rounded-xl shadow-sm">
+                  <div className="flex items-center gap-3 px-3 py-3 bg-background border rounded-xl shadow-sm">
                     <User size={18} className="text-primary" />
-                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">{user.email}</p>
+                    <p className="text-sm font-bold truncate">{user.email}</p>
                   </div>
                 )}
                 <CountrySwitcher />

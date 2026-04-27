@@ -233,60 +233,60 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave }: 
 
   return (
     <div className="space-y-8">
-      <div className="bg-card border-2 border-slate-200 p-6 rounded-xl space-y-6 shadow-sm">
+      <div className="bg-card border p-6 rounded-xl space-y-6 shadow-sm">
         <div className="flex justify-between items-center border-b pb-3">
-          <Label className="text-sm font-bold uppercase tracking-wider text-slate-800">勤務シフト (SHIFT SELECTION)</Label>
+          <Label className="text-sm font-bold uppercase tracking-wider">勤務シフト (SHIFT SELECTION)</Label>
           <Button variant="outline" size="sm" onClick={addShift} className="gap-2 text-xs h-8">
             <Plus size={14} /> Add Shift Block
           </Button>
         </div>
         <div className="space-y-6">
           {shifts.map((shift, idx) => (
-            <div key={idx} className="relative grid grid-cols-1 md:grid-cols-3 gap-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
+            <div key={idx} className="relative grid grid-cols-1 md:grid-cols-3 gap-6 p-4 bg-muted/30 rounded-lg border">
               {shifts.length > 1 && (
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-white border shadow-sm hover:text-destructive"
+                  className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-background border shadow-sm hover:text-destructive"
                   onClick={() => removeShift(idx)}
                 >
                   <Trash2 size={12} />
                 </Button>
               )}
               <div className="space-y-3">
-                <Label className="text-[10px] font-bold text-slate-500 uppercase">Type</Label>
+                <Label className="text-[10px] font-bold text-muted-foreground uppercase">Type</Label>
                 <RadioGroup value={shift.type} onValueChange={(v) => updateShift(idx, "type", v as any)} className="flex gap-2">
-                  <div className="flex items-center space-x-2 bg-white px-3 py-2 rounded border flex-1 cursor-pointer">
+                  <div className="flex items-center space-x-2 bg-background px-3 py-2 rounded border flex-1 cursor-pointer">
                     <RadioGroupItem value="day" id={`day-${idx}`} />
                     <Label htmlFor={`day-${idx}`} className="flex items-center gap-1 cursor-pointer text-xs font-bold"><Sun size={14} className="text-orange-500" /> Day</Label>
                   </div>
-                  <div className="flex items-center space-x-2 bg-white px-3 py-2 rounded border flex-1 cursor-pointer">
+                  <div className="flex items-center space-x-2 bg-background px-3 py-2 rounded border flex-1 cursor-pointer">
                     <RadioGroupItem value="night" id={`night-${idx}`} />
                     <Label htmlFor={`night-${idx}`} className="flex items-center gap-1 cursor-pointer text-xs font-bold"><Moon size={14} className="text-primary" /> Night</Label>
                   </div>
                 </RadioGroup>
               </div>
               <div className="space-y-3">
-                <Label className="text-[10px] font-bold text-slate-500 uppercase">Start Time</Label>
+                <Label className="text-[10px] font-bold text-muted-foreground uppercase">Start Time</Label>
                 <RadioGroup value={shift.startTime} onValueChange={(v) => updateShift(idx, "startTime", v)} className="flex gap-2">
                   {shift.type === "day" ? (
                     <>
-                      <div className="flex items-center space-x-2 bg-white px-3 py-2 rounded border flex-1 cursor-pointer">
+                      <div className="flex items-center space-x-2 bg-background px-3 py-2 rounded border flex-1 cursor-pointer">
                         <RadioGroupItem value="08:00" id={`t08-${idx}`} />
                         <Label htmlFor={`t08-${idx}`} className="text-xs">08:00</Label>
                       </div>
-                      <div className="flex items-center space-x-2 bg-white px-3 py-2 rounded border flex-1 cursor-pointer">
+                      <div className="flex items-center space-x-2 bg-background px-3 py-2 rounded border flex-1 cursor-pointer">
                         <RadioGroupItem value="12:00" id={`t12-${idx}`} />
                         <Label htmlFor={`t12-${idx}`} className="text-xs">12:00</Label>
                       </div>
                     </>
                   ) : (
                     <>
-                      <div className="flex items-center space-x-2 bg-white px-3 py-2 rounded border flex-1 cursor-pointer">
+                      <div className="flex items-center space-x-2 bg-background px-3 py-2 rounded border flex-1 cursor-pointer">
                         <RadioGroupItem value="19:00" id={`t19-${idx}`} />
                         <Label htmlFor={`t19-${idx}`} className="text-xs">19:00</Label>
                       </div>
-                      <div className="flex items-center space-x-2 bg-white px-3 py-2 rounded border flex-1 cursor-pointer">
+                      <div className="flex items-center space-x-2 bg-background px-3 py-2 rounded border flex-1 cursor-pointer">
                         <RadioGroupItem value="21:00" id={`t21-${idx}`} />
                         <Label htmlFor={`t21-${idx}`} className="text-xs">21:00</Label>
                       </div>
@@ -295,16 +295,16 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave }: 
                 </RadioGroup>
               </div>
               <div className="space-y-3">
-                <Label className="text-[10px] font-bold text-slate-500 uppercase">Days Worked</Label>
-                <Input type="number" className="h-9 text-xs bg-white" placeholder="0" value={shift.days === 0 ? "" : shift.days} onFocus={handleFocus} onChange={e => updateShift(idx, "days", e.target.value === "" ? 0 : Number(e.target.value))} />
+                <Label className="text-[10px] font-bold text-muted-foreground uppercase">Days Worked</Label>
+                <Input type="number" className="h-9 text-xs" placeholder="0" value={shift.days === 0 ? "" : shift.days} onFocus={handleFocus} onChange={e => updateShift(idx, "days", e.target.value === "" ? 0 : Number(e.target.value))} />
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="space-y-4 bg-slate-50 p-4 rounded-lg border-2 border-slate-200">
-        <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider border-b pb-2">勤怠 (ATTENDANCE TOTALS)</h4>
+      <div className="space-y-4 bg-muted/20 p-4 rounded-lg border">
+        <h4 className="text-sm font-bold uppercase tracking-wider border-b pb-2">勤怠 (ATTENDANCE TOTALS)</h4>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
             { label: "所定就労日", en: "Total Days", field: "scheduledDays", color: "text-primary font-bold", readOnly: true },
@@ -321,20 +321,20 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave }: 
             { label: "有休残日数", en: "Rem. Leave", field: "remainingPaidLeave", readOnly: true },
           ].map((item) => (
             <div key={item.field} className="space-y-1">
-              <Label className={`text-[10px] leading-tight block font-semibold ${item.color || ""}`}>{item.label}<br/><span className="text-slate-500 font-normal">{item.en}</span></Label>
-              <Input type="number" readOnly={item.readOnly} className={`h-8 text-xs ${item.readOnly ? 'bg-slate-100' : 'bg-white border-slate-300'}`} placeholder="0" value={(data as any)[item.field] === 0 ? "" : (data as any)[item.field]} onFocus={handleFocus} onChange={e => !item.readOnly && updateField(item.field as keyof JapanData, e.target.value)} />
+              <Label className={`text-[10px] leading-tight block font-semibold ${item.color || ""}`}>{item.label}<br/><span className="text-muted-foreground font-normal">{item.en}</span></Label>
+              <Input type="number" readOnly={item.readOnly} className={`h-8 text-xs ${item.readOnly ? 'bg-muted/50' : ''}`} placeholder="0" value={(data as any)[item.field] === 0 ? "" : (data as any)[item.field]} onFocus={handleFocus} onChange={e => !item.readOnly && updateField(item.field as keyof JapanData, e.target.value)} />
             </div>
           ))}
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-4 bg-blue-50/30 p-4 rounded-lg border border-blue-100">
-          <h4 className="text-sm font-bold text-blue-800 uppercase tracking-wider border-b border-blue-200 pb-2 mb-4">支給 (EARNINGS)</h4>
+        <div className="space-y-4 bg-primary/5 p-4 rounded-lg border border-primary/10">
+          <h4 className="text-sm font-bold text-primary uppercase tracking-wider border-b border-primary/20 pb-2 mb-4">支給 (EARNINGS)</h4>
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1 col-span-2 bg-white/60 p-2 rounded border border-blue-200">
+            <div className="space-y-1 col-span-2 bg-background/50 p-2 rounded border border-primary/10">
                <Label className="text-[10px] font-bold">基本給 (Basic Salary)</Label>
-               <p className="text-lg font-black text-blue-700">{Number(baseSalary || 0).toLocaleString()} JPY</p>
+               <p className="text-lg font-black text-primary">{Number(baseSalary || 0).toLocaleString()} JPY</p>
             </div>
             {[
               { label: "普通残業手当", en: "Regular OT", field: "otAllowance" },
@@ -344,17 +344,17 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave }: 
               { label: "休日勤務手当", en: "Holiday Alw", field: "holidayWorkAllowance" },
               { label: "住宅手当", en: "Housing Alw", field: "housingAllowance", readOnly: false },
               { label: "通勤費 (非課税)", en: "Non-tax Comm.", field: "nonTaxableCommuting", readOnly: false },
-              { label: "欠勤控除", en: "Absence Ded", field: "absenceDeduction", color: "text-red-600" },
+              { label: "欠勤控除", en: "Absence Ded", field: "absenceDeduction", color: "text-destructive" },
             ].map((item) => (
               <div key={item.field} className="space-y-1">
-                <Label className={`text-[10px] leading-tight block font-semibold ${item.color || ""}`}>{item.label}<br/><span className="text-slate-500 font-normal uppercase">{item.en}</span></Label>
-                <Input type="number" readOnly={item.readOnly !== false} className="h-8 text-xs bg-white" placeholder="0" value={(data as any)[item.field] === 0 ? "" : (data as any)[item.field]} onFocus={handleFocus} onChange={e => item.readOnly === false && updateField(item.field as keyof JapanData, e.target.value)} />
+                <Label className={`text-[10px] leading-tight block font-semibold ${item.color || ""}`}>{item.label}<br/><span className="text-muted-foreground font-normal uppercase">{item.en}</span></Label>
+                <Input type="number" readOnly={item.readOnly !== false} className="h-8 text-xs" placeholder="0" value={(data as any)[item.field] === 0 ? "" : (data as any)[item.field]} onFocus={handleFocus} onChange={e => item.readOnly === false && updateField(item.field as keyof JapanData, e.target.value)} />
               </div>
             ))}
           </div>
         </div>
-        <div className="space-y-4 bg-red-50/30 p-4 rounded-lg border border-red-100">
-          <h4 className="text-sm font-bold text-red-800 uppercase tracking-wider border-b border-red-200 pb-2 mb-4">控除 (DEDUCTIONS)</h4>
+        <div className="space-y-4 bg-destructive/5 p-4 rounded-lg border border-destructive/10">
+          <h4 className="text-sm font-bold text-destructive uppercase tracking-wider border-b border-destructive/20 pb-2 mb-4">控除 (DEDUCTIONS)</h4>
           <div className="grid grid-cols-2 gap-3">
             {[
               { label: "健康保険料", en: "Health Ins", field: "healthInsurance" },
@@ -365,14 +365,14 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave }: 
               { label: "寮費", en: "Hostel Fee", field: "hostelFee" },
             ].map((item) => (
               <div key={item.field} className="space-y-1">
-                <Label className="text-[10px] leading-tight block font-semibold">{item.label}<br/><span className="text-slate-500 font-normal uppercase">{item.en}</span></Label>
-                <Input type="number" className="h-8 text-xs bg-white" placeholder="0" value={(data as any)[item.field] === 0 ? "" : (data as any)[item.field]} onFocus={handleFocus} onChange={e => updateField(item.field as keyof JapanData, e.target.value)} />
+                <Label className="text-[10px] leading-tight block font-semibold">{item.label}<br/><span className="text-muted-foreground font-normal uppercase">{item.en}</span></Label>
+                <Input type="number" className="h-8 text-xs" placeholder="0" value={(data as any)[item.field] === 0 ? "" : (data as any)[item.field]} onFocus={handleFocus} onChange={e => updateField(item.field as keyof JapanData, e.target.value)} />
               </div>
             ))}
           </div>
         </div>
       </div>
-      <div className="p-6 bg-slate-900 text-white rounded-xl shadow-xl grid grid-cols-1 sm:grid-cols-3 gap-6">
+      <div className="p-6 bg-slate-900 text-white dark:bg-slate-950 dark:border dark:border-primary/20 rounded-xl shadow-xl grid grid-cols-1 sm:grid-cols-3 gap-6">
         <div className="text-center sm:border-r border-slate-700">
           <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Gross Total</p>
           <p className="text-2xl font-black">{Math.round(totalEarnings).toLocaleString()} JPY</p>

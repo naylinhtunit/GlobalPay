@@ -436,7 +436,7 @@ export default function PayrollPage() {
   };
 
   return (
-    <div className="md:pl-64 pt-16 md:pt-0 min-h-screen">
+    <div className="md:pl-64 pt-16 md:pt-0 min-h-screen bg-background">
       <Navbar />
       <main className="p-4 md:p-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
@@ -445,7 +445,7 @@ export default function PayrollPage() {
             <p className="text-muted-foreground">Process payments for {country} employees</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
-            <div className="flex items-center gap-2 bg-white border rounded-lg px-3 shadow-sm h-10 w-full sm:w-auto">
+            <div className="flex items-center gap-2 bg-card border rounded-lg px-3 shadow-sm h-10 w-full sm:w-auto">
               <Filter size={16} className="text-muted-foreground shrink-0" />
               <Select onValueChange={setFilterMonth} value={filterMonth}>
                 <SelectTrigger className="border-none shadow-none focus:ring-0 h-8 p-0 flex-1 hover:bg-transparent min-w-[120px]">
@@ -504,8 +504,8 @@ export default function PayrollPage() {
                   </div>
 
                   {selectedEmpId && (
-                    <div className="mt-4 p-4 border rounded-lg bg-primary/5 flex items-center gap-4">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                    <div className="mt-4 p-4 border rounded-lg bg-primary/10 flex items-center gap-4">
+                      <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
                         {(employees || []).find((e: any) => e.id === selectedEmpId)?.fullName?.[0] || 'E'}
                       </div>
                       <div>
@@ -586,7 +586,7 @@ export default function PayrollPage() {
                         {Math.round(rec.netPay || rec.amount || 0).toLocaleString()} <span className="text-[10px] font-normal text-muted-foreground">{currency}</span>
                       </TableCell>
                       <TableCell>
-                        <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-bold border border-green-200">{rec.status}</span>
+                        <span className="px-2 py-0.5 rounded-full bg-green-500/10 text-green-600 text-[10px] font-bold border border-green-500/20">{rec.status}</span>
                       </TableCell>
                       <TableCell className="text-right space-x-1">
                         <Button variant="ghost" size="icon" onClick={() => handlePreview(rec)} title="View Payslip" className="h-8 w-8">
@@ -619,9 +619,9 @@ export default function PayrollPage() {
                 </div>
               </div>
             </DialogHeader>
-            <div className="bg-slate-100 p-2 md:p-8 rounded-lg mt-4 shadow-inner">
+            <div className="bg-muted p-2 md:p-8 rounded-lg mt-4 shadow-inner">
               {previewData && (
-                <div className="overflow-x-auto bg-white rounded shadow-xl">
+                <div className="overflow-x-auto bg-white text-black rounded shadow-xl p-4">
                   <PayslipDocument 
                     ref={printRef}
                     country={previewData.country} 

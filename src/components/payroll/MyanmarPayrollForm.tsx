@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from "react";
@@ -84,7 +85,7 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary }: Props) {
         <div className="space-y-2">
           <div className="flex justify-between items-center">
             <Label>SSB (2%)</Label>
-            <button type="button" onClick={handleApplySSB} className="text-[10px] text-accent hover:underline">Auto Calc</button>
+            <button type="button" onClick={handleApplySSB} className="text-[10px] text-primary hover:underline">Auto Calc</button>
           </div>
           <Input 
             type="number" 
@@ -106,7 +107,7 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary }: Props) {
         </div>
       </div>
 
-      <div className="p-4 bg-muted rounded-lg space-y-2">
+      <div className="p-4 bg-muted/50 rounded-lg border space-y-2">
         <div className="flex justify-between font-medium">
           <span>Gross Total:</span>
           <span>{grossPay.toLocaleString()} MMK</span>
