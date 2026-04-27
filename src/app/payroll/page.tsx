@@ -75,7 +75,7 @@ export default function PayrollPage() {
   useEffect(() => {
     const options = [];
     const now = new Date();
-    // Generate a range of months for selection
+    // Generate a range of months for selection, including one month ahead
     for (let i = -1; i < 24; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const year = d.getFullYear();
@@ -85,6 +85,8 @@ export default function PayrollPage() {
       options.push({ value, label });
     }
     setMonthOptions(options);
+    
+    // Default to the next month option if available (it will be the first item in our list due to i=-1)
     if (!selectedMonth && options.length > 0) {
       setSelectedMonth(options[0].value);
     }
@@ -352,7 +354,6 @@ export default function PayrollPage() {
     
     if (record.country === "Japan") {
       const legacyJapanData = record.japanData || {};
-      // Robust mapping for legacy data without shifts
       const existingShifts = legacyJapanData.shifts || (legacyJapanData.scheduledDays > 0 ? [{
         type: legacyJapanData.shiftType || "day",
         startTime: legacyJapanData.startTime || "08:00",
@@ -444,10 +445,10 @@ export default function PayrollPage() {
             <p className="text-muted-foreground">Process payments for {country} employees</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
-            <div className="flex items-center gap-2 bg-white border rounded-lg px-3 shadow-sm h-10">
-              <Filter size={16} className="text-muted-foreground" />
+            <div className="flex items-center gap-2 bg-white border rounded-lg px-3 shadow-sm h-10 w-full sm:w-auto">
+              <Filter size={16} className="text-muted-foreground shrink-0" />
               <Select onValueChange={setFilterMonth} value={filterMonth}>
-                <SelectTrigger className="border-none shadow-none focus:ring-0 h-8 w-[140px]">
+                <SelectTrigger className="border-none shadow-none focus:ring-0 h-8 p-0 flex-1 hover:bg-transparent min-w-[120px]">
                   <SelectValue placeholder="All Months" />
                 </SelectTrigger>
                 <SelectContent>
@@ -465,7 +466,7 @@ export default function PayrollPage() {
             }}>
               <DialogTrigger asChild>
                 <Button onClick={resetForm} className="gap-2 bg-primary shadow-lg">
-                  <Calculator size={18} /> New Entry
+                  <Calculator size={18} /> New Payroll Entry
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[800px] max-h-[95vh] overflow-y-auto">
