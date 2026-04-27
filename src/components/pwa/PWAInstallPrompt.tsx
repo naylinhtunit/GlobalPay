@@ -2,10 +2,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Download, X } from "lucide-react";
+import { Download, X, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import Image from "next/image";
 
 export function PWAInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -15,6 +14,7 @@ export function PWAInstallPrompt() {
   useEffect(() => {
     // Check if already installed or running as standalone
     const checkStandalone = () => {
+      if (typeof window === 'undefined') return false;
       return (
         window.matchMedia("(display-mode: standalone)").matches ||
         (window.navigator as any).standalone === true
@@ -64,17 +64,12 @@ export function PWAInstallPrompt() {
 
   return (
     <div className="fixed bottom-6 left-0 right-0 z-[100] px-4 animate-in slide-in-from-bottom-10 duration-500">
-      <Card className="max-w-md mx-auto p-4 shadow-2xl border-primary/20 bg-white/95 backdrop-blur-sm flex items-center gap-4">
-        <div className="relative h-12 w-12 rounded-xl overflow-hidden border shadow-sm shrink-0">
-          <Image 
-            src="/icon.svg" 
-            alt="GlobalPay Logo" 
-            fill 
-            className="object-cover"
-          />
+      <Card className="max-w-md mx-auto p-4 shadow-2xl border-primary/20 bg-card/95 backdrop-blur-sm flex items-center gap-4">
+        <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0 border border-primary/20">
+          <Shield size={28} />
         </div>
         <div className="flex-1 overflow-hidden">
-          <h3 className="text-sm font-bold text-slate-900 truncate">Install GlobalPay App</h3>
+          <h3 className="text-sm font-bold truncate">Install GlobalPay App</h3>
           <p className="text-xs text-muted-foreground truncate">Add to home screen for quick access</p>
         </div>
         <div className="flex items-center gap-2">
@@ -90,7 +85,7 @@ export function PWAInstallPrompt() {
             variant="ghost" 
             size="icon" 
             onClick={() => setShowPrompt(false)}
-            className="h-9 w-9 text-muted-foreground hover:bg-slate-100"
+            className="h-9 w-9 text-muted-foreground hover:bg-muted"
           >
             <X size={16} />
           </Button>
