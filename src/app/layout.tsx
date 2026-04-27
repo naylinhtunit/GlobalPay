@@ -1,3 +1,4 @@
+
 import type { Metadata } from 'next';
 import './globals.css';
 import { CountryProvider } from '@/context/CountryContext';
@@ -5,6 +6,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { AuthInit } from '@/components/auth/AuthInit';
 import { PWAInstallPrompt } from '@/components/pwa/PWAInstallPrompt';
+import { ThemeProvider } from '@/components/ThemeProvider';
 import Script from 'next/script';
 
 export const metadata: Metadata = {
@@ -61,7 +63,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -72,14 +74,21 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
       </head>
       <body className="font-body antialiased bg-background min-h-screen">
-        <FirebaseClientProvider>
-          <CountryProvider>
-            <AuthInit />
-            {children}
-            <PWAInstallPrompt />
-            <Toaster />
-          </CountryProvider>
-        </FirebaseClientProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <FirebaseClientProvider>
+            <CountryProvider>
+              <AuthInit />
+              {children}
+              <PWAInstallPrompt />
+              <Toaster />
+            </CountryProvider>
+          </FirebaseClientProvider>
+        </ThemeProvider>
         <Script id="register-sw" strategy="afterInteractive">
           {`
             if ('serviceWorker' in navigator) {
