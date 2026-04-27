@@ -23,7 +23,7 @@ import {
 } from "firebase/firestore";
 import { useCountry } from "@/context/CountryContext";
 import { Button } from "@/components/ui/button";
-import { Eye, Calculator, Printer, Pencil, Trash2 } from "lucide-react";
+import { Eye, Calculator, Printer, Pencil, Trash2, Filter, Calendar } from "lucide-react";
 import { 
   Dialog, 
   DialogContent, 
@@ -66,6 +66,7 @@ export default function PayrollPage() {
   const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
   const [selectedEmpId, setSelectedEmpId] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("");
+  const [filterMonth, setFilterMonth] = useState<string>("all");
   const [oldPaidLeaveDays, setOldPaidLeaveDays] = useState(0);
   
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -74,8 +75,8 @@ export default function PayrollPage() {
   useEffect(() => {
     const options = [];
     const now = new Date();
-    // Start from -1 to get the next month first
-    for (let i = -1; i < 11; i++) {
+    // Generate a range of months for selection
+    for (let i = -1; i < 24; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const year = d.getFullYear();
       const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -85,14 +86,11 @@ export default function PayrollPage() {
     }
     setMonthOptions(options);
     if (!selectedMonth && options.length > 0) {
-      // Default to the first option which is now the next month
       setSelectedMonth(options[0].value);
     }
   }, []);
 
   const [japanData, setJapanData] = useState<JapanData>({
-    shiftType: "day",
-    startTime: "08:00",
     scheduledDays: 0,
     absenceHours: 0,
     lateEarlyHours: 0,
@@ -171,10 +169,17 @@ export default function PayrollPage() {
 
   const sortedRecords = useMemo(() => {
     if (!payrollRecords) return [];
-    return [...payrollRecords].sort((a: any, b: any) => 
-      (b.payPeriodStartDate || "").localeCompare(a.payPeriodStartDate || "")
+    let filtered = [...payrollRecords];
+    if (filterMonth !== "all") {
+      filtered = filtered.filter(rec => {
+        const recMonth = rec.payPeriodStartDate?.substring(0, 7) || rec.month;
+        return recMonth === filterMonth;
+      });
+    }
+    return filtered.sort((a: any, b: any) => 
+      (b.payPeriodStartDate || b.month || "").localeCompare(a.payPeriodStartDate || a.month || "")
     );
-  }, [payrollRecords]);
+  }, [payrollRecords, filterMonth]);
 
   const resetForm = () => {
     setEditingRecordId(null);
@@ -182,8 +187,6 @@ export default function PayrollPage() {
     setOldPaidLeaveDays(0);
     if (monthOptions.length > 0) setSelectedMonth(monthOptions[0].value);
     setJapanData({
-      shiftType: "day",
-      startTime: "08:00",
       scheduledDays: 0,
       absenceHours: 0,
       lateEarlyHours: 0,
@@ -309,14 +312,12 @@ export default function PayrollPage() {
       ? doc(firestore, "payrollRecords", editingRecordId)
       : doc(collection(firestore, "payrollRecords"));
 
-    // 1. Payroll Record
     if (editingRecordId) {
       batch.update(payrollRef, payload);
     } else {
       batch.set(payrollRef, { ...payload, createdAt: serverTimestamp() });
     }
 
-    // 2. Employee Leave Adjustment
     const empRef = doc(firestore, "employees", selectedEmpId);
     if (country === "Japan") {
       const newPaidLeave = Number(japanData.paidLeaveDays || 0);
@@ -348,9 +349,21 @@ export default function PayrollPage() {
     setEditingRecordId(record.id);
     setSelectedEmpId(record.employeeId);
     setSelectedMonth(record.payPeriodStartDate?.substring(0, 7) || record.month || "");
+    
     if (record.country === "Japan") {
-      setJapanData(record.japanData || {});
-      setOldPaidLeaveDays(Number(record.japanData?.paidLeaveDays || 0));
+      const legacyJapanData = record.japanData || {};
+      // Robust mapping for legacy data without shifts
+      const existingShifts = legacyJapanData.shifts || (legacyJapanData.scheduledDays > 0 ? [{
+        type: legacyJapanData.shiftType || "day",
+        startTime: legacyJapanData.startTime || "08:00",
+        days: Number(legacyJapanData.scheduledDays)
+      }] : []);
+
+      setJapanData({
+        ...legacyJapanData,
+        shifts: existingShifts
+      });
+      setOldPaidLeaveDays(Number(legacyJapanData.paidLeaveDays || 0));
     } else {
       setMyanmarData(record.myanmarData || {});
     }
@@ -364,7 +377,6 @@ export default function PayrollPage() {
     const payrollRef = doc(firestore, "payrollRecords", record.id);
     batch.delete(payrollRef);
 
-    // Revert leave if it was Japan
     if (record.country === "Japan" && record.japanData?.paidLeaveDays) {
       const empRef = doc(firestore, "employees", record.employeeId);
       batch.update(empRef, {
@@ -431,92 +443,112 @@ export default function PayrollPage() {
             <h2 className="text-2xl md:text-3xl font-bold text-primary">Monthly Payroll</h2>
             <p className="text-muted-foreground">Process payments for {country} employees</p>
           </div>
-          <Dialog open={isModalOpen} onOpenChange={(open) => {
-            setIsModalOpen(open);
-            if (!open) resetForm();
-          }}>
-            <DialogTrigger asChild>
-              <Button onClick={resetForm} className="gap-2 bg-primary shadow-lg w-full md:w-auto">
-                <Calculator size={18} /> New Payroll Entry
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[800px] max-h-[95vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>{editingRecordId ? "Edit Payroll" : "Process Payroll"} - {country}</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-6 py-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Select Employee</Label>
-                    <Select onValueChange={setSelectedEmpId} value={selectedEmpId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose employee" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(employees || []).map((emp: any) => (
-                          <SelectItem key={emp.id} value={emp.id}>{emp.fullName || emp.name} ({emp.employeeNumber})</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex items-center gap-2 bg-white border rounded-lg px-3 shadow-sm h-10">
+              <Filter size={16} className="text-muted-foreground" />
+              <Select onValueChange={setFilterMonth} value={filterMonth}>
+                <SelectTrigger className="border-none shadow-none focus:ring-0 h-8 w-[140px]">
+                  <SelectValue placeholder="All Months" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Months</SelectItem>
+                  {monthOptions.map(opt => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <Dialog open={isModalOpen} onOpenChange={(open) => {
+              setIsModalOpen(open);
+              if (!open) resetForm();
+            }}>
+              <DialogTrigger asChild>
+                <Button onClick={resetForm} className="gap-2 bg-primary shadow-lg">
+                  <Calculator size={18} /> New Entry
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[800px] max-h-[95vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>{editingRecordId ? "Edit Payroll" : "Process Payroll"} - {country}</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-6 py-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Select Employee</Label>
+                      <Select onValueChange={setSelectedEmpId} value={selectedEmpId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choose employee" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(employees || []).map((emp: any) => (
+                            <SelectItem key={emp.id} value={emp.id}>{emp.fullName || emp.name} ({emp.employeeNumber})</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Payroll Month</Label>
+                      <Select onValueChange={setSelectedMonth} value={selectedMonth}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choose month" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {monthOptions.map(opt => (
+                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Payroll Month</Label>
-                    <Select onValueChange={setSelectedMonth} value={selectedMonth}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose month" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {monthOptions.map(opt => (
-                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+
+                  {selectedEmpId && (
+                    <div className="mt-4 p-4 border rounded-lg bg-primary/5 flex items-center gap-4">
+                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                        {(employees || []).find((e: any) => e.id === selectedEmpId)?.fullName?.[0] || 'E'}
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-primary">
+                          {(employees || []).find((e: any) => e.id === selectedEmpId)?.fullName || (employees || []).find((e: any) => e.id === selectedEmpId)?.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground font-mono">
+                          Base: {((employees || []).find((e: any) => e.id === selectedEmpId)?.baseSalary || (employees || []).find((e: any) => e.id === selectedEmpId)?.salary || 0).toLocaleString()} {currency}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {country === "Japan" ? (
+                    <JapanPayrollForm 
+                      data={japanData} 
+                      onChange={setJapanData} 
+                      baseSalary={(employees || []).find((e: any) => e.id === selectedEmpId)?.baseSalary || (employees || []).find((e: any) => e.id === selectedEmpId)?.salary || 0}
+                      employeeLeave={
+                        (() => {
+                          const emp = (employees || []).find((e: any) => e.id === selectedEmpId);
+                          if (!emp) return undefined;
+                          const effectiveUsed = Math.max(0, (Number(emp.usedPaidLeave) || 0) - (editingRecordId ? oldPaidLeaveDays : 0));
+                          return { total: Number(emp.totalPaidLeave) || 0, used: effectiveUsed };
+                        })()
+                      }
+                    />
+                  ) : (
+                    <MyanmarPayrollForm 
+                      data={myanmarData} 
+                      onChange={setMyanmarData} 
+                      baseSalary={(employees || []).find((e: any) => e.id === selectedEmpId)?.baseSalary || (employees || []).find((e: any) => e.id === selectedEmpId)?.salary || 0}
+                    />
+                  )}
+                  
+                  <DialogFooter>
+                    <Button onClick={handleGenerate} className="w-full h-12 text-base shadow-md" disabled={!selectedEmpId}>
+                      {editingRecordId ? "Update Payslip" : "Generate Payslip"}
+                    </Button>
+                  </DialogFooter>
                 </div>
-
-                {selectedEmpId && (
-                  <div className="mt-4 p-4 border rounded-lg bg-primary/5">
-                    <p className="text-sm font-bold text-primary">
-                      Employee: {(employees || []).find((e: any) => e.id === selectedEmpId)?.fullName || (employees || []).find((e: any) => e.id === selectedEmpId)?.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Base Salary: {((employees || []).find((e: any) => e.id === selectedEmpId)?.baseSalary || (employees || []).find((e: any) => e.id === selectedEmpId)?.salary || 0).toLocaleString()} {currency}
-                    </p>
-                  </div>
-                )}
-
-                {country === "Japan" ? (
-                  <JapanPayrollForm 
-                    data={japanData} 
-                    onChange={setJapanData} 
-                    baseSalary={(employees || []).find((e: any) => e.id === selectedEmpId)?.baseSalary || (employees || []).find((e: any) => e.id === selectedEmpId)?.salary || 0}
-                    employeeLeave={
-                      (() => {
-                        const emp = (employees || []).find((e: any) => e.id === selectedEmpId);
-                        if (!emp) return undefined;
-                        // When editing, we temporarily "restore" the leave used by this specific payroll
-                        // so the form can correctly calculate what's remaining.
-                        const effectiveUsed = Math.max(0, (emp.usedPaidLeave || 0) - (editingRecordId ? oldPaidLeaveDays : 0));
-                        return { total: emp.totalPaidLeave || 0, used: effectiveUsed };
-                      })()
-                    }
-                  />
-                ) : (
-                  <MyanmarPayrollForm 
-                    data={myanmarData} 
-                    onChange={setMyanmarData} 
-                    baseSalary={(employees || []).find((e: any) => e.id === selectedEmpId)?.baseSalary || (employees || []).find((e: any) => e.id === selectedEmpId)?.salary || 0}
-                  />
-                )}
-                
-                <DialogFooter>
-                  <Button onClick={handleGenerate} className="w-full" disabled={!selectedEmpId}>
-                    {editingRecordId ? "Update Payslip" : "Generate Payslip"}
-                  </Button>
-                </DialogFooter>
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
@@ -535,25 +567,35 @@ export default function PayrollPage() {
                 {payrollLoading ? (
                   <TableRow><TableCell colSpan={5} className="text-center py-8">Loading records...</TableCell></TableRow>
                 ) : sortedRecords.length === 0 ? (
-                  <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No records found.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No records found for the selected period.</TableCell></TableRow>
                 ) : (
                   sortedRecords.map((rec: any) => (
-                    <TableRow key={rec.id} className="hover:bg-muted/20">
-                      <TableCell className="font-medium">{rec.payPeriodStartDate?.substring(0, 7) || rec.month || 'N/A'}</TableCell>
-                      <TableCell>{(employees || []).find((e: any) => e.id === rec.employeeId)?.fullName || (employees || []).find((e: any) => e.id === rec.employeeId)?.name || 'Unknown'}</TableCell>
-                      <TableCell className="hidden sm:table-cell font-mono">{Math.round(rec.netPay || rec.amount || 0).toLocaleString()}</TableCell>
-                      <TableCell>
-                        <span className="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">{rec.status}</span>
+                    <TableRow key={rec.id} className="hover:bg-muted/10 transition-colors">
+                      <TableCell className="font-medium flex items-center gap-2">
+                        <Calendar size={14} className="text-muted-foreground" />
+                        {rec.payPeriodStartDate?.substring(0, 7) || rec.month || 'N/A'}
                       </TableCell>
-                      <TableCell className="text-right space-x-2">
-                        <Button variant="ghost" size="icon" onClick={() => handlePreview(rec)} title="View Payslip">
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="font-semibold">{(employees || []).find((e: any) => e.id === rec.employeeId)?.fullName || (employees || []).find((e: any) => e.id === rec.employeeId)?.name || 'Unknown'}</span>
+                          <span className="text-[10px] text-muted-foreground">ID: {(employees || []).find((e: any) => e.id === rec.employeeId)?.employeeNumber || 'N/A'}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell font-mono font-bold">
+                        {Math.round(rec.netPay || rec.amount || 0).toLocaleString()} <span className="text-[10px] font-normal text-muted-foreground">{currency}</span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-bold border border-green-200">{rec.status}</span>
+                      </TableCell>
+                      <TableCell className="text-right space-x-1">
+                        <Button variant="ghost" size="icon" onClick={() => handlePreview(rec)} title="View Payslip" className="h-8 w-8">
                           <Eye size={14} />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(rec)} title="Edit">
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(rec)} title="Edit" className="h-8 w-8">
                           <Pencil size={14} />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(rec)} title="Delete">
-                          <Trash2 size={14} className="text-destructive" />
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(rec)} title="Delete" className="h-8 w-8 text-destructive hover:bg-destructive/10">
+                          <Trash2 size={14} />
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -570,15 +612,15 @@ export default function PayrollPage() {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pr-12 gap-4">
                 <DialogTitle>Payslip Preview</DialogTitle>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={handlePrint} className="gap-2">
+                  <Button variant="outline" size="sm" onClick={handlePrint} className="gap-2 h-9">
                     <Printer size={16} /> Print
                   </Button>
                 </div>
               </div>
             </DialogHeader>
-            <div className="bg-gray-100 p-2 md:p-8 rounded-lg mt-4">
+            <div className="bg-slate-100 p-2 md:p-8 rounded-lg mt-4 shadow-inner">
               {previewData && (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto bg-white rounded shadow-xl">
                   <PayslipDocument 
                     ref={printRef}
                     country={previewData.country} 

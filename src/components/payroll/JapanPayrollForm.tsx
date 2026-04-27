@@ -1,15 +1,10 @@
 
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Info, Sun, Moon, Plus, Trash2 } from "lucide-react";
+import { Sun, Moon, Plus, Trash2 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
 
@@ -20,10 +15,7 @@ export interface ShiftEntry {
 }
 
 export interface JapanData {
-  // Shift Context (Multiple)
   shifts?: ShiftEntry[];
-
-  // Attendance (勤怠)
   scheduledDays: number;
   absenceHours: number;
   lateEarlyHours: number;
@@ -31,18 +23,16 @@ export interface JapanData {
   lateNightOTHours: number;
   holidayWorkHours: number;
   holidayNightHours: number;
-  nightShiftHours: number; // ~22
-  nightShiftHoursExtra: number; // 22~
+  nightShiftHours: number;
+  nightShiftHoursExtra: number;
   paidLeaveDays: number;
   lunchCount: number;
   scheduledHours: number;
   remainingPaidLeave: number;
-
-  // Earnings (支給)
   otAllowance: number;
   lateNightOTAllowance: number;
-  nightShiftAllowance: number; // ~22
-  nightShiftAllowanceExtra: number; // 22~
+  nightShiftAllowance: number;
+  nightShiftAllowanceExtra: number;
   holidayWorkAllowance: number;
   holidayNightAllowance: number;
   familyAllowance: number;
@@ -53,8 +43,6 @@ export interface JapanData {
   lateEarlyDeduction: number;
   prevMonthAdj: number;
   leaveAllowance: number;
-
-  // Deductions (控除)
   healthInsurance: number;
   nursingCareInsurance: number;
   pension: number;
@@ -65,8 +53,6 @@ export interface JapanData {
   lunchFee: number;
   hostelFee: number;
   beddingFee: number;
-
-  // Others (その他)
   yearEndAdj: number;
   otherAdj1: number;
   otherAdj2: number;
@@ -83,11 +69,9 @@ interface Props {
 }
 
 export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave }: Props) {
-  // Default first shift if none exists
   const shifts = data.shifts || [{ type: "day", startTime: "08:00", days: 0 }];
 
   useEffect(() => {
-    // 1. Calculate Aggregated Values from Shifts
     let totalDays = 0;
     let totalNS1 = 0;
     let totalNS2 = 0;
@@ -116,47 +100,42 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave }: 
 
     const autoScheduledHours = totalDays * 8;
     const otDenominator = 170.5;
-    const hourlyRate = baseSalary / otDenominator;
+    const hourlyRate = (Number(baseSalary) || 0) / otDenominator;
 
-    // Multipliers
-    const calculatedOT = Math.round(hourlyRate * 1.25 * (data.regularOTHours || 0));
-    const calculatedLateNightOT = Math.round(hourlyRate * 1.50 * (data.lateNightOTHours || 0));
-    const calculatedHolidayWork = Math.round(hourlyRate * 1.35 * (data.holidayWorkHours || 0));
-    const calculatedHolidayNight = Math.round(hourlyRate * 0.25 * (data.holidayNightHours || 0));
+    const calculatedOT = Math.round(hourlyRate * 1.25 * (Number(data.regularOTHours) || 0));
+    const calculatedLateNightOT = Math.round(hourlyRate * 1.50 * (Number(data.lateNightOTHours) || 0));
+    const calculatedHolidayWork = Math.round(hourlyRate * 1.35 * (Number(data.holidayWorkHours) || 0));
+    const calculatedHolidayNight = Math.round(hourlyRate * 0.25 * (Number(data.holidayNightHours) || 0));
     const calculatedNightAlw1 = Math.round(hourlyRate * 0.25 * totalNS1);
     const calculatedNightAlw2 = Math.round(hourlyRate * 0.30 * totalNS2);
 
-    // Deductions
-    const calculatedAbsenceDed = Math.round(hourlyRate * (data.absenceHours || 0));
-    const calculatedLateEarlyDed = Math.round(hourlyRate * (data.lateEarlyHours || 0));
+    const calculatedAbsenceDed = Math.round(hourlyRate * (Number(data.absenceHours) || 0));
+    const calculatedLateEarlyDed = Math.round(hourlyRate * (Number(data.lateEarlyHours) || 0));
 
-    // Default Fees
     const defaultHousing = data.housingAllowance === 0 ? 10000 : data.housingAllowance;
     const defaultHostelFee = data.hostelFee === 0 ? 20000 : data.hostelFee;
 
-    // Taxes
     const calculatedHealthIns = data.healthInsurance === 0 ? 13312 : data.healthInsurance; 
     const calculatedPension = data.pension === 0 ? 23790 : data.pension;
     
-    const totalEarningsCalc = baseSalary + calculatedOT + calculatedLateNightOT + 
+    const totalEarningsCalc = (Number(baseSalary) || 0) + calculatedOT + calculatedLateNightOT + 
                              calculatedNightAlw1 + calculatedNightAlw2 + 
                              calculatedHolidayWork + calculatedHolidayNight + 
-                             (data.familyAllowance || 0) + (defaultHousing || 0) + 
-                             (data.nonTaxableCommuting || 0) + (data.taxableCommuting || 0) + 
-                             (data.prevMonthAdj || 0) + (data.leaveAllowance || 0) -
+                             (Number(data.familyAllowance) || 0) + (Number(defaultHousing) || 0) + 
+                             (Number(data.nonTaxableCommuting) || 0) + (Number(data.taxableCommuting) || 0) + 
+                             (Number(data.prevMonthAdj) || 0) + (Number(data.leaveAllowance) || 0) -
                              calculatedAbsenceDed - calculatedLateEarlyDed;
 
     const calculatedEmpIns = Math.round(totalEarningsCalc * 0.0055);
-    const totalSocIns = (calculatedHealthIns || 0) + (calculatedPension || 0) + (calculatedEmpIns || 0) + (data.nursingCareInsurance || 0);
-    const grossForTax = totalEarningsCalc - totalSocIns - (data.nonTaxableCommuting || 0);
+    const totalSocIns = (Number(calculatedHealthIns) || 0) + (Number(calculatedPension) || 0) + calculatedEmpIns + (Number(data.nursingCareInsurance) || 0);
+    const grossForTax = totalEarningsCalc - totalSocIns - (Number(data.nonTaxableCommuting) || 0);
     let calculatedIncomeTax = 0;
     if (grossForTax > 0) calculatedIncomeTax = Math.round(grossForTax * 0.0232);
 
     const remainingLeave = employeeLeave 
-      ? Math.max(0, employeeLeave.total - employeeLeave.used - Number(data.paidLeaveDays || 0))
+      ? Math.max(0, employeeLeave.total - employeeLeave.used - (Number(data.paidLeaveDays) || 0))
       : 0;
 
-    // Check if update is needed
     const needsUpdate = 
       data.scheduledDays !== totalDays ||
       data.nightShiftHours !== totalNS1 ||
@@ -223,38 +202,37 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave }: 
     }
   };
 
-  const totalEarnings = baseSalary + 
-                        (data.otAllowance || 0) + 
-                        (data.lateNightOTAllowance || 0) + 
-                        (data.nightShiftAllowance || 0) + 
-                        (data.nightShiftAllowanceExtra || 0) + 
-                        (data.holidayWorkAllowance || 0) + 
-                        (data.holidayNightAllowance || 0) + 
-                        (data.familyAllowance || 0) + 
-                        (data.housingAllowance || 0) + 
-                        (data.nonTaxableCommuting || 0) + 
-                        (data.taxableCommuting || 0) + 
-                        (data.prevMonthAdj || 0) + 
-                        (data.leaveAllowance || 0) -
-                        (data.absenceDeduction || 0) -
-                        (data.lateEarlyDeduction || 0);
+  const totalEarnings = (Number(baseSalary) || 0) + 
+                        (Number(data.otAllowance) || 0) + 
+                        (Number(data.lateNightOTAllowance) || 0) + 
+                        (Number(data.nightShiftAllowance) || 0) + 
+                        (Number(data.nightShiftAllowanceExtra) || 0) + 
+                        (Number(data.holidayWorkAllowance) || 0) + 
+                        (Number(data.holidayNightAllowance) || 0) + 
+                        (Number(data.familyAllowance) || 0) + 
+                        (Number(data.housingAllowance) || 0) + 
+                        (Number(data.nonTaxableCommuting) || 0) + 
+                        (Number(data.taxableCommuting) || 0) + 
+                        (Number(data.prevMonthAdj) || 0) + 
+                        (Number(data.leaveAllowance) || 0) -
+                        (Number(data.absenceDeduction) || 0) -
+                        (Number(data.lateEarlyDeduction) || 0);
 
-  const totalDeductions = (data.healthInsurance || 0) + 
-                          (data.nursingCareInsurance || 0) +
-                          (data.pension || 0) + 
-                          (data.socInsAdj || 0) + 
-                          (data.employmentInsurance || 0) + 
-                          (data.incomeTax || 0) + 
-                          (data.residentTax || 0) +
-                          (data.lunchFee || 0) +
-                          (data.hostelFee || 0) +
-                          (data.beddingFee || 0);
+  const totalDeductions = (Number(data.healthInsurance) || 0) + 
+                          (Number(data.nursingCareInsurance) || 0) +
+                          (Number(data.pension) || 0) + 
+                          (Number(data.socInsAdj) || 0) + 
+                          (Number(data.employmentInsurance) || 0) + 
+                          (Number(data.incomeTax) || 0) + 
+                          (Number(data.residentTax) || 0) +
+                          (Number(data.lunchFee) || 0) +
+                          (Number(data.hostelFee) || 0) +
+                          (Number(data.beddingFee) || 0);
   
-  const netPay = totalEarnings - totalDeductions + (data.yearEndAdj || 0) + (data.otherAdj1 || 0) + (data.otherAdj2 || 0) + (data.paidLeaveBuyback || 0);
+  const netPay = totalEarnings - totalDeductions + (Number(data.yearEndAdj) || 0) + (Number(data.otherAdj1) || 0) + (Number(data.otherAdj2) || 0) + (Number(data.paidLeaveBuyback) || 0);
 
   return (
     <div className="space-y-8">
-      {/* Multi-Shift Selection Section */}
       <div className="bg-card border-2 border-slate-200 p-6 rounded-xl space-y-6 shadow-sm">
         <div className="flex justify-between items-center border-b pb-3">
           <Label className="text-sm font-bold uppercase tracking-wider text-slate-800">勤務シフト (SHIFT SELECTION)</Label>
@@ -262,7 +240,6 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave }: 
             <Plus size={14} /> Add Shift Block
           </Button>
         </div>
-        
         <div className="space-y-6">
           {shifts.map((shift, idx) => (
             <div key={idx} className="relative grid grid-cols-1 md:grid-cols-3 gap-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
@@ -276,36 +253,22 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave }: 
                   <Trash2 size={12} />
                 </Button>
               )}
-              
               <div className="space-y-3">
                 <Label className="text-[10px] font-bold text-slate-500 uppercase">Type</Label>
-                <RadioGroup 
-                  value={shift.type} 
-                  onValueChange={(v) => updateShift(idx, "type", v)}
-                  className="flex gap-2"
-                >
+                <RadioGroup value={shift.type} onValueChange={(v) => updateShift(idx, "type", v as any)} className="flex gap-2">
                   <div className="flex items-center space-x-2 bg-white px-3 py-2 rounded border flex-1 cursor-pointer">
                     <RadioGroupItem value="day" id={`day-${idx}`} />
-                    <Label htmlFor={`day-${idx}`} className="flex items-center gap-1 cursor-pointer text-xs font-bold">
-                      <Sun size={14} className="text-orange-500" /> Day
-                    </Label>
+                    <Label htmlFor={`day-${idx}`} className="flex items-center gap-1 cursor-pointer text-xs font-bold"><Sun size={14} className="text-orange-500" /> Day</Label>
                   </div>
                   <div className="flex items-center space-x-2 bg-white px-3 py-2 rounded border flex-1 cursor-pointer">
                     <RadioGroupItem value="night" id={`night-${idx}`} />
-                    <Label htmlFor={`night-${idx}`} className="flex items-center gap-1 cursor-pointer text-xs font-bold">
-                      <Moon size={14} className="text-primary" /> Night
-                    </Label>
+                    <Label htmlFor={`night-${idx}`} className="flex items-center gap-1 cursor-pointer text-xs font-bold"><Moon size={14} className="text-primary" /> Night</Label>
                   </div>
                 </RadioGroup>
               </div>
-
               <div className="space-y-3">
                 <Label className="text-[10px] font-bold text-slate-500 uppercase">Start Time</Label>
-                <RadioGroup 
-                  value={shift.startTime} 
-                  onValueChange={(v) => updateShift(idx, "startTime", v)} 
-                  className="flex gap-2"
-                >
+                <RadioGroup value={shift.startTime} onValueChange={(v) => updateShift(idx, "startTime", v)} className="flex gap-2">
                   {shift.type === "day" ? (
                     <>
                       <div className="flex items-center space-x-2 bg-white px-3 py-2 rounded border flex-1 cursor-pointer">
@@ -331,28 +294,17 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave }: 
                   )}
                 </RadioGroup>
               </div>
-
               <div className="space-y-3">
                 <Label className="text-[10px] font-bold text-slate-500 uppercase">Days Worked</Label>
-                <Input 
-                  type="number" 
-                  className="h-9 text-xs bg-white" 
-                  placeholder="0"
-                  value={shift.days === 0 ? "" : shift.days}
-                  onFocus={handleFocus}
-                  onChange={e => updateShift(idx, "days", e.target.value === "" ? 0 : Number(e.target.value))}
-                />
+                <Input type="number" className="h-9 text-xs bg-white" placeholder="0" value={shift.days === 0 ? "" : shift.days} onFocus={handleFocus} onChange={e => updateShift(idx, "days", e.target.value === "" ? 0 : Number(e.target.value))} />
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Attendance Stats (Summary) */}
       <div className="space-y-4 bg-slate-50 p-4 rounded-lg border-2 border-slate-200">
-        <div className="flex justify-between items-center border-b pb-2">
-          <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider">勤怠 (ATTENDANCE TOTALS)</h4>
-        </div>
+        <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider border-b pb-2">勤怠 (ATTENDANCE TOTALS)</h4>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
             { label: "所定就労日", en: "Total Days", field: "scheduledDays", color: "text-primary font-bold", readOnly: true },
@@ -370,64 +322,39 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave }: 
           ].map((item) => (
             <div key={item.field} className="space-y-1">
               <Label className={`text-[10px] leading-tight block font-semibold ${item.color || ""}`}>{item.label}<br/><span className="text-slate-500 font-normal">{item.en}</span></Label>
-              <Input 
-                type="number" 
-                readOnly={item.readOnly}
-                className={`h-8 text-xs ${item.readOnly ? 'bg-slate-100' : 'bg-white border-slate-300'}`} 
-                placeholder="0"
-                value={(data as any)[item.field] === 0 ? "" : (data as any)[item.field]} 
-                onFocus={handleFocus} 
-                onChange={e => !item.readOnly && updateField(item.field as keyof JapanData, e.target.value)} 
-              />
+              <Input type="number" readOnly={item.readOnly} className={`h-8 text-xs ${item.readOnly ? 'bg-slate-100' : 'bg-white border-slate-300'}`} placeholder="0" value={(data as any)[item.field] === 0 ? "" : (data as any)[item.field]} onFocus={handleFocus} onChange={e => !item.readOnly && updateField(item.field as keyof JapanData, e.target.value)} />
             </div>
           ))}
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Earnings & Deductions Sections */}
         <div className="space-y-4 bg-blue-50/30 p-4 rounded-lg border border-blue-100">
-          <div className="flex justify-between items-center border-b border-blue-200 pb-2 mb-4">
-            <h4 className="text-sm font-bold text-blue-800 uppercase tracking-wider">支給 (EARNINGS)</h4>
-          </div>
+          <h4 className="text-sm font-bold text-blue-800 uppercase tracking-wider border-b border-blue-200 pb-2 mb-4">支給 (EARNINGS)</h4>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1 col-span-2 bg-white/60 p-2 rounded border border-blue-200">
                <Label className="text-[10px] font-bold">基本給 (Basic Salary)</Label>
-               <p className="text-lg font-black text-blue-700">{baseSalary?.toLocaleString()} JPY</p>
+               <p className="text-lg font-black text-blue-700">{Number(baseSalary || 0).toLocaleString()} JPY</p>
             </div>
             {[
               { label: "普通残業手当", en: "Regular OT", field: "otAllowance" },
               { label: "深夜残業手当", en: "Late Night OT", field: "lateNightOTAllowance" },
               { label: "夜勤手当 1", en: "Night Alw 1", field: "nightShiftAllowance" },
-              { label: "夜勤手当 2", en: "Night Alw 2", field: "nightShiftAllowanceExtra" },
+              { label: "夜勤手당 2", en: "Night Alw 2", field: "nightShiftAllowanceExtra" },
               { label: "休日勤務手当", en: "Holiday Alw", field: "holidayWorkAllowance" },
               { label: "住宅手当", en: "Housing Alw", field: "housingAllowance", readOnly: false },
               { label: "通勤費 (非課税)", en: "Non-tax Comm.", field: "nonTaxableCommuting", readOnly: false },
               { label: "欠勤控除", en: "Absence Ded", field: "absenceDeduction", color: "text-red-600" },
             ].map((item) => (
               <div key={item.field} className="space-y-1">
-                <Label className={`text-[10px] leading-tight block font-semibold ${item.color || ""}`}>
-                  {item.label}<br/>
-                  <span className="text-slate-500 font-normal uppercase">{item.en}</span>
-                </Label>
-                <Input 
-                  type="number" 
-                  readOnly={item.readOnly !== false}
-                  className="h-8 text-xs bg-white" 
-                  placeholder="0"
-                  value={(data as any)[item.field] === 0 ? "" : (data as any)[item.field]} 
-                  onFocus={handleFocus}
-                  onChange={e => item.readOnly === false && updateField(item.field as keyof JapanData, e.target.value)}
-                />
+                <Label className={`text-[10px] leading-tight block font-semibold ${item.color || ""}`}>{item.label}<br/><span className="text-slate-500 font-normal uppercase">{item.en}</span></Label>
+                <Input type="number" readOnly={item.readOnly !== false} className="h-8 text-xs bg-white" placeholder="0" value={(data as any)[item.field] === 0 ? "" : (data as any)[item.field]} onFocus={handleFocus} onChange={e => item.readOnly === false && updateField(item.field as keyof JapanData, e.target.value)} />
               </div>
             ))}
           </div>
         </div>
-
         <div className="space-y-4 bg-red-50/30 p-4 rounded-lg border border-red-100">
-          <div className="flex justify-between items-center border-b border-red-200 pb-2 mb-4">
-            <h4 className="text-sm font-bold text-red-800 uppercase tracking-wider">控除 (DEDUCTIONS)</h4>
-          </div>
+          <h4 className="text-sm font-bold text-red-800 uppercase tracking-wider border-b border-red-200 pb-2 mb-4">控除 (DEDUCTIONS)</h4>
           <div className="grid grid-cols-2 gap-3">
             {[
               { label: "健康保険料", en: "Health Ins", field: "healthInsurance" },
@@ -438,24 +365,13 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave }: 
               { label: "寮費", en: "Hostel Fee", field: "hostelFee" },
             ].map((item) => (
               <div key={item.field} className="space-y-1">
-                <Label className="text-[10px] leading-tight block font-semibold">
-                  {item.label}<br/>
-                  <span className="text-slate-500 font-normal uppercase">{item.en}</span>
-                </Label>
-                <Input 
-                  type="number" 
-                  className="h-8 text-xs bg-white" 
-                  placeholder="0"
-                  value={(data as any)[item.field] === 0 ? "" : (data as any)[item.field]} 
-                  onFocus={handleFocus}
-                  onChange={e => updateField(item.field as keyof JapanData, e.target.value)} 
-                />
+                <Label className="text-[10px] leading-tight block font-semibold">{item.label}<br/><span className="text-slate-500 font-normal uppercase">{item.en}</span></Label>
+                <Input type="number" className="h-8 text-xs bg-white" placeholder="0" value={(data as any)[item.field] === 0 ? "" : (data as any)[item.field]} onFocus={handleFocus} onChange={e => updateField(item.field as keyof JapanData, e.target.value)} />
               </div>
             ))}
           </div>
         </div>
       </div>
-
       <div className="p-6 bg-slate-900 text-white rounded-xl shadow-xl grid grid-cols-1 sm:grid-cols-3 gap-6">
         <div className="text-center sm:border-r border-slate-700">
           <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Gross Total</p>
