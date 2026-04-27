@@ -1,23 +1,25 @@
 
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Info } from "lucide-react";
+import { Info, Globe } from "lucide-react";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-interface MyanmarData {
+export interface MyanmarData {
   otHours: number;
   attendanceBonus: number;
   mealAllowance: number;
   ssbAmount: number;
   incomeTax: number;
+  exchangeRate?: number;
+  isUsdSalary?: boolean;
 }
 
 interface Props {
@@ -27,6 +29,18 @@ interface Props {
 }
 
 export function MyanmarPayrollForm({ data, onChange, baseSalary }: Props) {
+  const [effectiveBaseMMK, setEffectiveBaseMMK] = useState(baseSalary);
+  
+  // Detect if salary is USD (heuristic: small numbers like < 10000)
+  const isUsd = baseSalary > 0 && baseSalary < 10000;
+
+  useEffect(() => {
+    // Default exchange rate from CBM market weighted average
+    if (isUsd && !data.exchangeRate) {
+      onChange({ ...data, exchangeRate: 3600, isUsdSalary: true });
+    }
+  }, [isUsd]);
+
   const updateField = (field: keyof MyanmarData, value: string) => {
     const numValue = value === "" ? 0 : Number(value);
     onChange({ ...data, [field]: numValue });
@@ -38,11 +52,14 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary }: Props) {
     }
   };
 
-  // Myanmar Tax Calculation Logic
   useEffect(() => {
-    const hourlyRate = (baseSalary / 30 / 8);
+    const rate = data.exchangeRate || 1;
+    const baseMMK = isUsd ? baseSalary * rate : baseSalary;
+    setEffectiveBaseMMK(baseMMK);
+
+    const hourlyRate = (baseMMK / 30 / 8);
     const otPay = data.otHours * hourlyRate * 2;
-    const monthlyGross = baseSalary + otPay + (data.attendanceBonus || 0) + (data.mealAllowance || 0);
+    const monthlyGross = baseMMK + otPay + (data.attendanceBonus || 0) + (data.mealAllowance || 0);
     
     // 1. Calculate Annual Gross
     const annualGross = monthlyGross * 12;
@@ -56,13 +73,12 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary }: Props) {
     // 3. Progressive Tax Brackets (Myanmar PIT 2024-2025 Standard with 30% bracket)
     let totalAnnualTax = 0;
     if (taxableIncome > 70000000) {
-      // Over 700 Lakhs: 30%
       totalAnnualTax += (taxableIncome - 70000000) * 0.30;
-      totalAnnualTax += (70000000 - 30000000) * 0.25; // 30m to 70m: 25%
-      totalAnnualTax += 10000000 * 0.20; // 20-30m: 20%
-      totalAnnualTax += 10000000 * 0.15; // 10-20m: 15%
-      totalAnnualTax += 5000000 * 0.10;  // 5-10m: 10%
-      totalAnnualTax += 3000000 * 0.05;  // 2-5m: 5%
+      totalAnnualTax += (70000000 - 30000000) * 0.25; 
+      totalAnnualTax += 10000000 * 0.20; 
+      totalAnnualTax += 10000000 * 0.15; 
+      totalAnnualTax += 5000000 * 0.10;  
+      totalAnnualTax += 3000000 * 0.05;  
     } else if (taxableIncome > 30000000) {
       totalAnnualTax += (taxableIncome - 30000000) * 0.25;
       totalAnnualTax += 10000000 * 0.20;
@@ -88,9 +104,8 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary }: Props) {
     const monthlyTax = Math.round(totalAnnualTax / 12);
     
     // 4. Auto SSB (2%, Max 6,000 MMK)
-    const calculatedSSB = Math.min(Math.round(baseSalary * 0.02), 6000);
+    const calculatedSSB = Math.min(Math.round(baseMMK * 0.02), 6000);
 
-    // Only trigger onChange if values actually changed to avoid infinite loops
     if (data.ssbAmount !== calculatedSSB || data.incomeTax !== monthlyTax) {
       onChange({
         ...data,
@@ -98,15 +113,49 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary }: Props) {
         incomeTax: monthlyTax
       });
     }
-  }, [baseSalary, data.otHours, data.attendanceBonus, data.mealAllowance]);
+  }, [baseSalary, data.otHours, data.attendanceBonus, data.mealAllowance, data.exchangeRate, isUsd]);
 
-  const hourlyRate = (baseSalary / 30 / 8);
+  const hourlyRate = (effectiveBaseMMK / 30 / 8);
   const otPay = data.otHours * hourlyRate * 2;
-  const grossPay = baseSalary + otPay + (data.attendanceBonus || 0) + (data.mealAllowance || 0);
+  const grossPay = effectiveBaseMMK + otPay + (data.attendanceBonus || 0) + (data.mealAllowance || 0);
   const netPay = grossPay - (data.ssbAmount || 0) - (data.incomeTax || 0);
 
   return (
     <div className="space-y-6">
+      {isUsd && (
+        <div className="p-4 bg-primary/10 rounded-xl border border-primary/20 space-y-4 animate-in fade-in zoom-in duration-300">
+          <div className="flex items-center justify-between">
+            <Label className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2">
+              <Globe size={14} /> Currency Conversion (USD to MMK)
+            </Label>
+            <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold">USD detected</span>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <Label className="text-[10px] text-muted-foreground uppercase">Base Salary (USD)</Label>
+              <div className="h-11 bg-background border rounded-md flex items-center px-3 font-mono font-bold text-lg">
+                ${baseSalary.toLocaleString()}
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[10px] text-muted-foreground uppercase">Exchange Rate (CBM Market)</Label>
+              <Input 
+                type="number" 
+                placeholder="3600"
+                className="h-11 bg-background font-mono font-bold text-lg"
+                value={data.exchangeRate || ""} 
+                onFocus={handleFocus}
+                onChange={e => updateField("exchangeRate", e.target.value)} 
+              />
+            </div>
+          </div>
+          <div className="pt-2 border-t border-primary/10 flex justify-between items-center">
+            <span className="text-xs text-muted-foreground">Effective Basic Salary (MMK):</span>
+            <span className="font-black text-primary">{Math.round(effectiveBaseMMK).toLocaleString()} MMK</span>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">OT Hours (2x Rate)</Label>
@@ -207,7 +256,7 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary }: Props) {
       <div className="p-5 bg-primary/5 dark:bg-primary/10 rounded-xl border border-primary/20 space-y-3 shadow-inner">
         <div className="flex justify-between items-center text-sm">
           <span className="font-medium">Gross Total:</span>
-          <span className="font-bold text-lg">{grossPay.toLocaleString()} MMK</span>
+          <span className="font-bold text-lg">{Math.round(grossPay).toLocaleString()} MMK</span>
         </div>
         <div className="flex justify-between items-center text-sm text-destructive">
           <span className="font-medium">Deductions (SSB + Tax):</span>
@@ -216,7 +265,7 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary }: Props) {
         <Separator className="bg-primary/20" />
         <div className="flex justify-between items-center text-xl font-black">
           <span className="text-primary uppercase tracking-tighter">Net Salary:</span>
-          <span className="text-primary">{netPay.toLocaleString()} MMK</span>
+          <span className="text-primary">{Math.round(netPay).toLocaleString()} MMK</span>
         </div>
       </div>
     </div>

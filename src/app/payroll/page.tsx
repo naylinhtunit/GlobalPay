@@ -19,7 +19,8 @@ import {
   doc,
   serverTimestamp,
   writeBatch,
-  increment
+  increment,
+  getDoc
 } from "firebase/firestore";
 import { useCountry } from "@/context/CountryContext";
 import { Button } from "@/components/ui/button";
@@ -41,7 +42,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { JapanPayrollForm, type JapanData } from "@/components/payroll/JapanPayrollForm";
-import { MyanmarPayrollForm } from "@/components/payroll/MyanmarPayrollForm";
+import { MyanmarPayrollForm, type MyanmarData } from "@/components/payroll/MyanmarPayrollForm";
 import { PayslipDocument } from "@/components/payroll/PayslipDocument";
 import { 
   Table, 
@@ -75,7 +76,7 @@ export default function PayrollPage() {
   useEffect(() => {
     const options = [];
     const now = new Date();
-    // Generate a range of months for selection, including one month ahead
+    // Start generating from next month as requested
     for (let i = -1; i < 24; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const year = d.getFullYear();
@@ -86,7 +87,7 @@ export default function PayrollPage() {
     }
     setMonthOptions(options);
     
-    // Default to the next month option if available (it will be the first item in our list due to i=-1)
+    // Default to the next month option (the first item due to i=-1)
     if (!selectedMonth && options.length > 0) {
       setSelectedMonth(options[0].value);
     }
@@ -138,12 +139,13 @@ export default function PayrollPage() {
     kindPayment: 0,
   });
 
-  const [myanmarData, setMyanmarData] = useState({
+  const [myanmarData, setMyanmarData] = useState<MyanmarData>({
     otHours: 0,
     attendanceBonus: 0,
     mealAllowance: 0,
     ssbAmount: 0,
-    incomeTax: 0
+    incomeTax: 0,
+    exchangeRate: 3600
   });
 
   const printRef = useRef<HTMLDivElement>(null);
@@ -238,7 +240,8 @@ export default function PayrollPage() {
       attendanceBonus: 0,
       mealAllowance: 0,
       ssbAmount: 0,
-      incomeTax: 0
+      incomeTax: 0,
+      exchangeRate: 3600
     });
   };
 
@@ -284,8 +287,11 @@ export default function PayrollPage() {
       const others = (japanData.yearEndAdj || 0) + (japanData.otherAdj1 || 0) + (japanData.otherAdj2 || 0) + (japanData.paidLeaveBuyback || 0);
       netPay = grossPay - deductions + others;
     } else {
-      const hourlyRate = (baseSalary / 30 / 8);
-      grossPay = baseSalary + (myanmarData.otHours * hourlyRate * 2) + (myanmarData.attendanceBonus || 0) + (myanmarData.mealAllowance || 0);
+      const isUsd = baseSalary < 10000;
+      const rate = myanmarData.exchangeRate || 3600;
+      const effectiveBaseMMK = isUsd ? baseSalary * rate : baseSalary;
+      const hourlyRate = (effectiveBaseMMK / 30 / 8);
+      grossPay = effectiveBaseMMK + (myanmarData.otHours * hourlyRate * 2) + (myanmarData.attendanceBonus || 0) + (myanmarData.mealAllowance || 0);
       deductions = (myanmarData.ssbAmount || 0) + (myanmarData.incomeTax || 0);
       netPay = grossPay - deductions;
     }
@@ -325,8 +331,11 @@ export default function PayrollPage() {
       const newPaidLeave = Number(japanData.paidLeaveDays || 0);
       const leaveDiff = newPaidLeave - oldPaidLeaveDays;
       if (leaveDiff !== 0) {
+        // Atomic update with usedPaidLeave >= 0 constraint (enforced by rules, but we check here too)
+        const currentUsed = Number(emp.usedPaidLeave) || 0;
+        const targetUsed = Math.max(0, currentUsed + leaveDiff);
         batch.update(empRef, {
-          usedPaidLeave: increment(leaveDiff)
+          usedPaidLeave: targetUsed
         });
       }
     }
@@ -366,12 +375,15 @@ export default function PayrollPage() {
       });
       setOldPaidLeaveDays(Number(legacyJapanData.paidLeaveDays || 0));
     } else {
-      setMyanmarData(record.myanmarData || {});
+      setMyanmarData({
+        ...record.myanmarData,
+        exchangeRate: record.myanmarData?.exchangeRate || 3600
+      });
     }
     setIsModalOpen(true);
   };
 
-  const handleDelete = (record: any) => {
+  const handleDelete = async (record: any) => {
     if (!firestore || !confirm("Are you sure you want to delete this payroll record?")) return;
     
     const batch = writeBatch(firestore);
@@ -380,9 +392,13 @@ export default function PayrollPage() {
 
     if (record.country === "Japan" && record.japanData?.paidLeaveDays) {
       const empRef = doc(firestore, "employees", record.employeeId);
-      batch.update(empRef, {
-        usedPaidLeave: increment(-Number(record.japanData.paidLeaveDays))
-      });
+      const empSnap = await getDoc(empRef);
+      if (empSnap.exists()) {
+        const currentUsed = empSnap.data().usedPaidLeave || 0;
+        batch.update(empRef, {
+          usedPaidLeave: Math.max(0, currentUsed - Number(record.japanData.paidLeaveDays))
+        });
+      }
     }
 
     batch.commit().then(() => {
@@ -513,7 +529,7 @@ export default function PayrollPage() {
                           {(employees || []).find((e: any) => e.id === selectedEmpId)?.fullName || (employees || []).find((e: any) => e.id === selectedEmpId)?.name}
                         </p>
                         <p className="text-xs text-muted-foreground font-mono">
-                          Base: {((employees || []).find((e: any) => e.id === selectedEmpId)?.baseSalary || (employees || []).find((e: any) => e.id === selectedEmpId)?.salary || 0).toLocaleString()} {currency}
+                          Base: {((employees || []).find((e: any) => e.id === selectedEmpId)?.baseSalary || (employees || []).find((e: any) => e.id === selectedEmpId)?.salary || 0).toLocaleString()} {((employees || []).find((e: any) => e.id === selectedEmpId)?.baseSalary || 0) < 10000 ? 'USD' : currency}
                         </p>
                       </div>
                     </div>

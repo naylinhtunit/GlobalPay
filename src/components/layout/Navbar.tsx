@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Shield, LayoutDashboard, Users, FileText, LogOut, Menu, User, Globe, Sun, Moon } from "lucide-react";
+import { Shield, LayoutDashboard, Users, FileText, LogOut, Menu, User, Globe, Sun, Moon, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCountry } from "@/context/CountryContext";
 import { useAuth, useUser } from "@/firebase";
@@ -32,18 +32,19 @@ export function Navbar() {
   const auth = useAuth();
   const pathname = usePathname();
   const router = useRouter();
-  const { theme, setTheme, resolvedTheme } = useTheme();
+  const { setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
 
-  // Avoid hydration mismatch
   useEffect(() => setMounted(true), []);
 
   const navItems = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
     { name: "Employees", href: "/employees", icon: Users },
     { name: "Payroll", href: "/payroll", icon: FileText },
+    // Only show Exchange Rate for Myanmar
+    ...(country === "Myanmar" ? [{ name: "Exchange Rates", href: "/exchange-rates", icon: TrendingUp }] : []),
   ];
 
   const handleSignOut = async () => {
@@ -97,9 +98,7 @@ export function Navbar() {
 
   const ThemeToggle = () => {
     if (!mounted) return <div className="h-10 w-10" />;
-    
     const isDark = resolvedTheme === "dark";
-    
     return (
       <Button 
         variant="outline" 
@@ -122,7 +121,6 @@ export function Navbar() {
 
   return (
     <>
-      {/* Desktop Sidebar */}
       <nav className="hidden md:flex fixed left-0 top-0 h-full w-64 bg-card border-r flex flex-col z-50 shadow-sm">
         <div className="p-8">
           <div className="flex items-center gap-3 text-primary">
@@ -131,11 +129,9 @@ export function Navbar() {
           </div>
           <p className="text-[10px] text-primary/70 font-bold uppercase mt-2 tracking-widest bg-primary/5 px-2 py-1 rounded inline-block">Enterprise</p>
         </div>
-
         <div className="flex-1 px-4">
           <NavLinks />
         </div>
-
         <div className="p-6 border-t space-y-4 bg-muted/20">
           {user && (
             <div className="px-3 py-3 flex items-center gap-3 bg-background border rounded-xl shadow-sm">
@@ -162,8 +158,6 @@ export function Navbar() {
           </Button>
         </div>
       </nav>
-
-      {/* Mobile Header */}
       <header className="md:hidden fixed top-0 left-0 right-0 h-16 bg-card border-b flex items-center justify-between px-4 z-50 shadow-sm">
         <Link href="/">
           <div className="flex items-center gap-2 text-primary">
@@ -171,7 +165,6 @@ export function Navbar() {
             <h1 className="text-xl font-bold tracking-tight">GlobalPay</h1>
           </div>
         </Link>
-
         <div className="flex items-center gap-2">
           <ThemeToggle />
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
