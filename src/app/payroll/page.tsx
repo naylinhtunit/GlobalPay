@@ -55,6 +55,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { FirestorePermissionError } from "@/firebase/errors";
 import { errorEmitter } from "@/firebase/error-emitter";
+import { getCbmRates } from "@/app/actions/exchange-rates";
 
 export default function PayrollPage() {
   const { country, currency } = useCountry();
@@ -69,14 +70,27 @@ export default function PayrollPage() {
   const [selectedMonth, setSelectedMonth] = useState("");
   const [filterMonth, setFilterMonth] = useState<string>("all");
   const [oldPaidLeaveDays, setOldPaidLeaveDays] = useState(0);
+  const [latestCbmRate, setLatestCbmRate] = useState(3662);
   
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewData, setPreviewData] = useState<any>(null);
 
+  // Fetch dynamic rate for Myanmar
+  useEffect(() => {
+    if (country === "Myanmar") {
+      getCbmRates().then(data => {
+        if (data && data.rates && data.rates['USD']) {
+          const ref = parseInt(data.rates['USD'].replace(/,/g, ''));
+          const weighted = ref > 3000 ? ref : 3662;
+          setLatestCbmRate(weighted);
+        }
+      });
+    }
+  }, [country]);
+
   useEffect(() => {
     const options = [];
     const now = new Date();
-    // Start generating from next month as requested
     for (let i = -1; i < 24; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const year = d.getFullYear();
@@ -86,8 +100,6 @@ export default function PayrollPage() {
       options.push({ value, label });
     }
     setMonthOptions(options);
-    
-    // Default to the next month option (the first item due to i=-1)
     if (!selectedMonth && options.length > 0) {
       setSelectedMonth(options[0].value);
     }
@@ -145,7 +157,7 @@ export default function PayrollPage() {
     mealAllowance: 0,
     ssbAmount: 0,
     incomeTax: 0,
-    exchangeRate: 3600
+    exchangeRate: 3662
   });
 
   const printRef = useRef<HTMLDivElement>(null);
@@ -241,7 +253,7 @@ export default function PayrollPage() {
       mealAllowance: 0,
       ssbAmount: 0,
       incomeTax: 0,
-      exchangeRate: 3600
+      exchangeRate: latestCbmRate
     });
   };
 
@@ -287,8 +299,8 @@ export default function PayrollPage() {
       const others = (japanData.yearEndAdj || 0) + (japanData.otherAdj1 || 0) + (japanData.otherAdj2 || 0) + (japanData.paidLeaveBuyback || 0);
       netPay = grossPay - deductions + others;
     } else {
-      const isUsd = emp.salaryCurrency === "USD" || baseSalary < 10000;
-      const rate = myanmarData.exchangeRate || 3600;
+      const isUsd = emp.salaryCurrency === "USD" || (baseSalary > 0 && baseSalary < 10000);
+      const rate = myanmarData.exchangeRate || latestCbmRate;
       const effectiveBaseMMK = isUsd ? baseSalary * rate : baseSalary;
       const hourlyRate = (effectiveBaseMMK / 30 / 8);
       grossPay = effectiveBaseMMK + (myanmarData.otHours * hourlyRate * 2) + (myanmarData.attendanceBonus || 0) + (myanmarData.mealAllowance || 0);
@@ -376,7 +388,7 @@ export default function PayrollPage() {
     } else {
       setMyanmarData({
         ...record.myanmarData,
-        exchangeRate: record.myanmarData?.exchangeRate || 3600
+        exchangeRate: record.myanmarData?.exchangeRate || latestCbmRate
       });
     }
     setIsModalOpen(true);
@@ -554,6 +566,7 @@ export default function PayrollPage() {
                       onChange={setMyanmarData} 
                       baseSalary={(employees || []).find((e: any) => e.id === selectedEmpId)?.baseSalary || (employees || []).find((e: any) => e.id === selectedEmpId)?.salary || 0}
                       salaryCurrency={(employees || []).find((e: any) => e.id === selectedEmpId)?.salaryCurrency}
+                      dynamicCbmRate={latestCbmRate}
                     />
                   )}
                   

@@ -27,9 +27,10 @@ interface Props {
   onChange: (data: MyanmarData) => void;
   baseSalary: number;
   salaryCurrency?: string;
+  dynamicCbmRate?: number;
 }
 
-export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency }: Props) {
+export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency, dynamicCbmRate }: Props) {
   const [effectiveBaseMMK, setEffectiveBaseMMK] = useState(baseSalary);
   
   // Explicit check for USD based on employee record or heuristic
@@ -37,12 +38,13 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency 
 
   useEffect(() => {
     // Default exchange rate from CBM market weighted average if USD
+    const rateToUse = dynamicCbmRate || 3662;
     if (isUsd && !data.exchangeRate) {
-      onChange({ ...data, exchangeRate: 3600, isUsdSalary: true });
+      onChange({ ...data, exchangeRate: rateToUse, isUsdSalary: true });
     } else if (!isUsd && data.isUsdSalary) {
       onChange({ ...data, isUsdSalary: false, exchangeRate: 1 });
     }
-  }, [isUsd, salaryCurrency]);
+  }, [isUsd, salaryCurrency, dynamicCbmRate]);
 
   const updateField = (field: keyof MyanmarData, value: string) => {
     const numValue = value === "" ? 0 : Number(value);
@@ -56,7 +58,7 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency 
   };
 
   useEffect(() => {
-    const rate = data.exchangeRate || 1;
+    const rate = data.exchangeRate || dynamicCbmRate || 3662;
     const baseMMK = isUsd ? baseSalary * rate : baseSalary;
     setEffectiveBaseMMK(baseMMK);
 
@@ -116,7 +118,7 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency 
         incomeTax: monthlyTax
       });
     }
-  }, [baseSalary, data.otHours, data.attendanceBonus, data.mealAllowance, data.exchangeRate, isUsd, salaryCurrency]);
+  }, [baseSalary, data.otHours, data.attendanceBonus, data.mealAllowance, data.exchangeRate, isUsd, salaryCurrency, dynamicCbmRate]);
 
   const hourlyRate = (effectiveBaseMMK / 30 / 8);
   const otPay = data.otHours * hourlyRate * 2;
@@ -144,7 +146,7 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency 
               <Label className="text-[10px] text-muted-foreground uppercase">Exchange Rate (CBM Market)</Label>
               <Input 
                 type="number" 
-                placeholder="3600"
+                placeholder={String(dynamicCbmRate || 3662)}
                 className="h-11 bg-background font-mono font-bold text-lg"
                 value={data.exchangeRate || ""} 
                 onFocus={handleFocus}
@@ -241,7 +243,7 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency 
                 <div className="space-y-2.5 text-muted-foreground">
                   <p className="leading-relaxed">၁။ တစ်နှစ်စာ စုစုပေါင်းဝင်ငွေကို အရင်တွက်ပါသည်။</p>
                   <p className="leading-relaxed">၂။ အခြေခံသက်သာခွင့် ၂၀% (အများဆုံး ၁၀၀ သိန်း) ကို နှုတ်ပါသည်။</p>
-                  <p className="leading-relaxed">၃။ ကျန်ရှိသော ပမာဏအပေါ် ၅% မှ အမြင့်ဆုံး ၃၀% (သိန်း ၇၀၀ အထက်) အထိ အဆင့်ဆင့်သော အခွန်နှုန်းထားများဖြင့် တွက်ချက်ထားပါသည်။</p>
+                  <p className="leading-relaxed">၃။ ကျန်ရှိသော ပမာဏအပေါ် ၅% မှ အမြင့်ဆုံး ၃၀% (သိန်း ၇၀၀ အထက်) အဆင့်ဆင့်သော အခွန်နှုန်းထားများဖြင့် တွက်ချက်ထားပါသည်။</p>
                 </div>
               </PopoverContent>
             </Popover>
