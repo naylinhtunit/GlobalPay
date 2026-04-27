@@ -38,5 +38,10 @@ service cloud.firestore {
       allow update: if isDataOwner(resource)
         && request.resource.data.companyId == resource.data.companyId;
     }
+
+    match /companyCalendars/{calendarId} {
+      allow read, delete: if isDataOwner(resource);
+      allow create, update: if isNewDataOwner();
+    }
   }
 }
