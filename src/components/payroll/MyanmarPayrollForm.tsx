@@ -1,7 +1,7 @@
 
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -32,46 +32,96 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary }: Props) {
     }
   };
 
+  // Myanmar Tax Calculation Logic
+  useEffect(() => {
+    const hourlyRate = (baseSalary / 30 / 8);
+    const otPay = data.otHours * hourlyRate * 2;
+    const monthlyGross = baseSalary + otPay + (data.attendanceBonus || 0) + (data.mealAllowance || 0);
+    
+    // 1. Calculate Annual Gross
+    const annualGross = monthlyGross * 12;
+    
+    // 2. Deduction: Personal Allowance 20% (Max 10,000,000 MMK)
+    const personalAllowance = Math.min(annualGross * 0.20, 10000000);
+    
+    // Taxable Income
+    const taxableIncome = Math.max(0, annualGross - personalAllowance);
+
+    // 3. Progressive Tax Brackets (Myanmar PIT 2024-2025 Standard)
+    let totalAnnualTax = 0;
+    if (taxableIncome > 30000000) {
+      totalAnnualTax += (taxableIncome - 30000000) * 0.25;
+      totalAnnualTax += 10000000 * 0.20; // 20-30m
+      totalAnnualTax += 10000000 * 0.15; // 10-20m
+      totalAnnualTax += 5000000 * 0.10;  // 5-10m
+      totalAnnualTax += 3000000 * 0.05;  // 2-5m
+    } else if (taxableIncome > 20000000) {
+      totalAnnualTax += (taxableIncome - 20000000) * 0.20;
+      totalAnnualTax += 10000000 * 0.15;
+      totalAnnualTax += 5000000 * 0.10;
+      totalAnnualTax += 3000000 * 0.05;
+    } else if (taxableIncome > 10000000) {
+      totalAnnualTax += (taxableIncome - 10000000) * 0.15;
+      totalAnnualTax += 5000000 * 0.10;
+      totalAnnualTax += 3000000 * 0.05;
+    } else if (taxableIncome > 5000000) {
+      totalAnnualTax += (taxableIncome - 5000000) * 0.10;
+      totalAnnualTax += 3000000 * 0.05;
+    } else if (taxableIncome > 2000000) {
+      totalAnnualTax += (taxableIncome - 2000000) * 0.05;
+    }
+
+    const monthlyTax = Math.round(totalAnnualTax / 12);
+    
+    // 4. Auto SSB (2%, Max 6,000 MMK)
+    const calculatedSSB = Math.min(Math.round(baseSalary * 0.02), 6000);
+
+    // Only trigger onChange if values actually changed to avoid infinite loops
+    if (data.ssbAmount !== calculatedSSB || data.incomeTax !== monthlyTax) {
+      onChange({
+        ...data,
+        ssbAmount: calculatedSSB,
+        incomeTax: monthlyTax
+      });
+    }
+  }, [baseSalary, data.otHours, data.attendanceBonus, data.mealAllowance]);
+
   const hourlyRate = (baseSalary / 30 / 8);
   const otPay = data.otHours * hourlyRate * 2;
-  
-  const calculatedSSB = Math.min(baseSalary * 0.02, 6000);
-
   const grossPay = baseSalary + otPay + (data.attendanceBonus || 0) + (data.mealAllowance || 0);
   const netPay = grossPay - (data.ssbAmount || 0) - (data.incomeTax || 0);
-
-  const handleApplySSB = () => {
-    onChange({ ...data, ssbAmount: calculatedSSB });
-  };
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label>OT Hours (2x Rate)</Label>
+          <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">OT Hours (2x Rate)</Label>
           <Input 
             type="number" 
             placeholder="0"
+            className="h-11 bg-background"
             value={data.otHours === 0 ? "" : data.otHours} 
             onFocus={handleFocus}
             onChange={e => updateField("otHours", e.target.value)} 
           />
         </div>
         <div className="space-y-2">
-          <Label>Attendance Bonus</Label>
+          <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Attendance Bonus</Label>
           <Input 
             type="number" 
             placeholder="0"
+            className="h-11 bg-background"
             value={data.attendanceBonus === 0 ? "" : data.attendanceBonus} 
             onFocus={handleFocus}
             onChange={e => updateField("attendanceBonus", e.target.value)} 
           />
         </div>
-        <div className="space-y-2">
-          <Label>Meal Allowance</Label>
+        <div className="space-y-2 col-span-2">
+          <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Meal Allowance</Label>
           <Input 
             type="number" 
             placeholder="0"
+            className="h-11 bg-background"
             value={data.mealAllowance === 0 ? "" : data.mealAllowance} 
             onFocus={handleFocus}
             onChange={e => updateField("mealAllowance", e.target.value)} 
@@ -79,45 +129,43 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary }: Props) {
         </div>
       </div>
 
-      <Separator />
+      <Separator className="bg-border/50" />
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <div className="flex justify-between items-center">
-            <Label>SSB (2%)</Label>
-            <button type="button" onClick={handleApplySSB} className="text-[10px] text-primary hover:underline">Auto Calc</button>
-          </div>
+          <Label className="text-xs font-bold uppercase tracking-wider text-primary">SSB (2% Auto)</Label>
           <Input 
             type="number" 
+            readOnly
+            className="h-11 bg-muted/30 font-bold"
             placeholder="0"
             value={data.ssbAmount === 0 ? "" : data.ssbAmount} 
-            onFocus={handleFocus}
-            onChange={e => updateField("ssbAmount", e.target.value)} 
           />
         </div>
         <div className="space-y-2">
-          <Label>Income Tax</Label>
+          <Label className="text-xs font-bold uppercase tracking-wider text-primary">Income Tax (Progressive)</Label>
           <Input 
             type="number" 
+            readOnly
+            className="h-11 bg-muted/30 font-bold"
             placeholder="0"
             value={data.incomeTax === 0 ? "" : data.incomeTax} 
-            onFocus={handleFocus}
-            onChange={e => updateField("incomeTax", e.target.value)} 
           />
         </div>
       </div>
 
-      <div className="p-4 bg-muted/50 rounded-lg border space-y-2">
-        <div className="flex justify-between font-medium">
-          <span>Gross Total:</span>
-          <span>{grossPay.toLocaleString()} MMK</span>
+      <div className="p-5 bg-primary/5 dark:bg-primary/10 rounded-xl border border-primary/20 space-y-3 shadow-inner">
+        <div className="flex justify-between items-center text-sm">
+          <span className="font-medium">Gross Total:</span>
+          <span className="font-bold text-lg">{grossPay.toLocaleString()} MMK</span>
         </div>
-        <div className="flex justify-between text-destructive">
-          <span>Deductions:</span>
-          <span>-{((data.ssbAmount || 0) + (data.incomeTax || 0)).toLocaleString()} MMK</span>
+        <div className="flex justify-between items-center text-sm text-destructive">
+          <span className="font-medium">Deductions (SSB + Tax):</span>
+          <span className="font-bold">-{((data.ssbAmount || 0) + (data.incomeTax || 0)).toLocaleString()} MMK</span>
         </div>
-        <div className="flex justify-between text-lg font-bold border-t pt-2 mt-2">
-          <span>Net Salary:</span>
+        <Separator className="bg-primary/20" />
+        <div className="flex justify-between items-center text-xl font-black">
+          <span className="text-primary uppercase tracking-tighter">Net Salary:</span>
           <span className="text-primary">{netPay.toLocaleString()} MMK</span>
         </div>
       </div>
