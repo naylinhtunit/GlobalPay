@@ -385,7 +385,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave }: 
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Earnings & Deductions Sections remain similar but use Calculated values */}
+        {/* Earnings & Deductions Sections */}
         <div className="space-y-4 bg-blue-50/30 p-4 rounded-lg border border-blue-100">
           <div className="flex justify-between items-center border-b border-blue-200 pb-2 mb-4">
             <h4 className="text-sm font-bold text-blue-800 uppercase tracking-wider">支給 (EARNINGS)</h4>
@@ -396,22 +396,27 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave }: 
                <p className="text-lg font-black text-blue-700">{baseSalary?.toLocaleString()} JPY</p>
             </div>
             {[
-              { label: "普通残業手当", en: "Reg OT", field: "otAllowance" },
+              { label: "普通残業手当", en: "Regular OT", field: "otAllowance" },
               { label: "深夜残業手当", en: "Late Night OT", field: "lateNightOTAllowance" },
               { label: "夜勤手当 1", en: "Night Alw 1", field: "nightShiftAllowance" },
-              { label: "夜勤手당 2", en: "Night Alw 2", field: "nightShiftAllowanceExtra" },
+              { label: "夜勤手当 2", en: "Night Alw 2", field: "nightShiftAllowanceExtra" },
               { label: "休日勤務手当", en: "Holiday Alw", field: "holidayWorkAllowance" },
               { label: "住宅手当", en: "Housing Alw", field: "housingAllowance", readOnly: false },
               { label: "通勤費 (非課税)", en: "Non-tax Comm.", field: "nonTaxableCommuting", readOnly: false },
               { label: "欠勤控除", en: "Absence Ded", field: "absenceDeduction", color: "text-red-600" },
             ].map((item) => (
               <div key={item.field} className="space-y-1">
-                <Label className={`text-[10px] font-semibold ${item.color || ""}`}>{item.label}</Label>
+                <Label className={`text-[10px] leading-tight block font-semibold ${item.color || ""}`}>
+                  {item.label}<br/>
+                  <span className="text-slate-500 font-normal uppercase">{item.en}</span>
+                </Label>
                 <Input 
                   type="number" 
                   readOnly={item.readOnly !== false}
                   className="h-8 text-xs bg-white" 
+                  placeholder="0"
                   value={(data as any)[item.field] === 0 ? "" : (data as any)[item.field]} 
+                  onFocus={handleFocus}
                   onChange={e => item.readOnly === false && updateField(item.field as keyof JapanData, e.target.value)}
                 />
               </div>
@@ -433,8 +438,18 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave }: 
               { label: "寮費", en: "Hostel Fee", field: "hostelFee" },
             ].map((item) => (
               <div key={item.field} className="space-y-1">
-                <Label className="text-[10px] font-semibold">{item.label}</Label>
-                <Input type="number" className="h-8 text-xs bg-white" value={(data as any)[item.field] === 0 ? "" : (data as any)[item.field]} onChange={e => updateField(item.field as keyof JapanData, e.target.value)} />
+                <Label className="text-[10px] leading-tight block font-semibold">
+                  {item.label}<br/>
+                  <span className="text-slate-500 font-normal uppercase">{item.en}</span>
+                </Label>
+                <Input 
+                  type="number" 
+                  className="h-8 text-xs bg-white" 
+                  placeholder="0"
+                  value={(data as any)[item.field] === 0 ? "" : (data as any)[item.field]} 
+                  onFocus={handleFocus}
+                  onChange={e => updateField(item.field as keyof JapanData, e.target.value)} 
+                />
               </div>
             ))}
           </div>
