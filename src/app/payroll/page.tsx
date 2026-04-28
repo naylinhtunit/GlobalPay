@@ -20,7 +20,7 @@ import {
 } from "firebase/firestore";
 import { useCountry } from "@/context/CountryContext";
 import { Button } from "@/components/ui/button";
-import { Eye, Calculator, Printer, Pencil, Trash2, Filter, Calendar } from "lucide-react";
+import { Eye, Calculator, Printer, Pencil, Trash2, Filter, Calendar, Download, Loader2 } from "lucide-react";
 import { 
   Dialog, 
   DialogContent, 
@@ -68,6 +68,7 @@ export default function PayrollPage() {
   
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewData, setPreviewData] = useState<any>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     const options = [];
@@ -433,6 +434,45 @@ export default function PayrollPage() {
     }
   };
 
+  const handleDownloadPDF = async () => {
+    if (!printRef.current || isDownloading) return;
+    setIsDownloading(true);
+    
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const { jsPDF } = await import('jspdf');
+
+      const element = printRef.current;
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`Payslip_${previewData?.employee?.fullName || 'Employee'}_${previewData?.month}.pdf`);
+      
+      toast({ title: "Success", description: "Payslip downloaded as PDF." });
+    } catch (error) {
+      console.error("PDF Download failed:", error);
+      toast({ title: "Error", description: "Failed to download PDF.", variant: "destructive" });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   return (
     <div className="md:pl-64 pt-16 md:pt-0 min-h-screen bg-background">
       <Navbar />
@@ -613,9 +653,29 @@ export default function PayrollPage() {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pr-12 gap-4">
                 <DialogTitle>Payslip Preview</DialogTitle>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={handlePrint} className="gap-2 h-9">
-                    <Printer size={16} /> Print
-                  </Button>
+                  {country === "Myanmar" ? (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleDownloadPDF} 
+                      className="gap-2 h-9 min-w-[140px]"
+                      disabled={isDownloading}
+                    >
+                      {isDownloading ? (
+                        <>
+                          <Loader2 size={16} className="animate-spin" /> Downloading...
+                        </>
+                      ) : (
+                        <>
+                          <Download size={16} /> Download PDF
+                        </>
+                      )}
+                    </Button>
+                  ) : (
+                    <Button variant="outline" size="sm" onClick={handlePrint} className="gap-2 h-9">
+                      <Printer size={16} /> Print
+                    </Button>
+                  )}
                 </div>
               </div>
             </DialogHeader>
