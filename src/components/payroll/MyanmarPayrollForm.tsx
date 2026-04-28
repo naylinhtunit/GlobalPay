@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Info, Globe } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import {
   Popover,
   PopoverContent,
@@ -59,7 +60,6 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency 
     const taxableIncome = Math.max(0, annualGross - personalAllowance);
 
     let totalAnnualTax = 0;
-    // UNION TAX LAW (MYANMAR) - Max 25% bracket
     if (taxableIncome > 30000000) {
       totalAnnualTax += (taxableIncome - 30000000) * 0.25;
       totalAnnualTax += 10000000 * 0.20;
@@ -102,44 +102,44 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency 
   return (
     <div className="space-y-6">
       {isUsd && (
-        <div className="overflow-hidden rounded-2xl border bg-muted/30">
-          <div className="p-6 space-y-8">
+        <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+          <div className="p-4 space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Globe size={18} className="text-primary" />
-                <span className="text-base font-bold text-primary tracking-tight">Currency Conversion</span>
+                <Globe size={16} className="text-primary" />
+                <span className="text-sm font-bold text-primary tracking-tight">Currency Conversion</span>
               </div>
-              <span className="text-[10px] bg-primary/10 text-primary px-3 py-1 rounded-full font-black uppercase tracking-widest">USD Profile</span>
+              <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-widest px-2 py-0">USD Profile</Badge>
             </div>
             
-            <div className="grid grid-cols-2 gap-8">
-              <div className="space-y-3">
-                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest text-center block">Base Salary</Label>
-                <div className="h-16 bg-background border rounded-full flex items-center justify-center font-mono font-bold text-2xl shadow-sm">
-                  ${baseSalary.toLocaleString()}
-                </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Base Salary</Label>
+                <Input 
+                  readOnly 
+                  className="h-10 bg-muted/20 text-lg font-bold border-dashed"
+                  value={`$${baseSalary.toLocaleString()}`} 
+                />
               </div>
-              <div className="space-y-3">
-                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest text-center block">Exchange Rate</Label>
-                <div className="relative">
-                  <Input 
-                    type="number" 
-                    placeholder="0.00"
-                    className="h-16 bg-background border rounded-full font-mono font-bold text-2xl shadow-sm focus:ring-primary/50 text-center"
-                    value={data.exchangeRate === 0 ? "" : data.exchangeRate} 
-                    onFocus={handleFocus}
-                    onChange={e => updateField("exchangeRate", e.target.value)} 
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Exchange Rate</Label>
+                <Input 
+                  type="number" 
+                  placeholder="0.00"
+                  className="h-10 bg-background text-lg font-bold"
+                  value={data.exchangeRate === 0 ? "" : data.exchangeRate} 
+                  onFocus={handleFocus}
+                  onChange={e => updateField("exchangeRate", e.target.value)} 
+                />
               </div>
             </div>
           </div>
 
-          <div className="px-6 py-5 flex justify-between items-center bg-muted border-t">
-            <span className="text-sm font-semibold text-muted-foreground">Effective Basic Salary:</span>
-            <div className="text-right">
-              <span className="text-2xl font-black text-primary tracking-tighter">{Math.round(effectiveBaseMMK).toLocaleString()}</span>
-              <span className="text-[10px] font-black ml-1.5 text-primary/60 uppercase">MMK</span>
+          <div className="px-4 py-3 flex justify-between items-center bg-muted/50 border-t">
+            <span className="text-xs font-semibold text-muted-foreground">Effective Basic Salary:</span>
+            <div className="text-right flex items-baseline gap-1">
+              <span className="text-xl font-bold text-primary tracking-tight">{Math.round(effectiveBaseMMK).toLocaleString()}</span>
+              <span className="text-[10px] font-bold text-primary/60 uppercase">MMK</span>
             </div>
           </div>
         </div>
