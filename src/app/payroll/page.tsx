@@ -8,9 +8,6 @@ import {
   useCollection, 
   useMemoFirebase,
   useUser,
-  addDocumentNonBlocking,
-  updateDocumentNonBlocking,
-  deleteDocumentNonBlocking
 } from "@/firebase";
 import { 
   collection, 
@@ -19,7 +16,6 @@ import {
   doc,
   serverTimestamp,
   writeBatch,
-  increment,
   getDoc
 } from "firebase/firestore";
 import { useCountry } from "@/context/CountryContext";
@@ -70,21 +66,35 @@ export default function PayrollPage() {
   const [selectedMonth, setSelectedMonth] = useState("");
   const [filterMonth, setFilterMonth] = useState<string>("all");
   const [oldPaidLeaveDays, setOldPaidLeaveDays] = useState(0);
-  const [latestCbmRate, setLatestCbmRate] = useState(3662);
+  const [latestCbmRate, setLatestCbmRate] = useState(3662); // Default fallback
   
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewData, setPreviewData] = useState<any>(null);
 
-  // Fetch dynamic rate for Myanmar
+  // Fetch dynamic rate from CBM API for Myanmar
   useEffect(() => {
     if (country === "Myanmar") {
-      getCbmRates().then(data => {
-        if (data && data.rates && data.rates['USD']) {
-          const ref = parseInt(data.rates['USD'].replace(/,/g, ''));
-          const weighted = ref > 3000 ? ref : 3662;
-          setLatestCbmRate(weighted);
+      const fetchLatestRate = async () => {
+        try {
+          const data = await getCbmRates();
+          if (data && data.rates && data.rates['USD']) {
+            const refRate = parseInt(data.rates['USD'].replace(/,/g, ''));
+            // If the official rate is 2100, we use the weighted average simulation (approx 3600-3800)
+            // If the official rate has been floated and is higher, we use it directly.
+            const marketRate = refRate > 3000 ? refRate : 3662; 
+            setLatestCbmRate(marketRate);
+            
+            // Update current myanmar data if it's open
+            setMyanmarData(prev => ({
+              ...prev,
+              exchangeRate: prev.exchangeRate === 3662 ? marketRate : prev.exchangeRate
+            }));
+          }
+        } catch (err) {
+          console.error("Failed to fetch dynamic rates for payroll:", err);
         }
-      });
+      };
+      fetchLatestRate();
     }
   }, [country]);
 
@@ -157,7 +167,7 @@ export default function PayrollPage() {
     mealAllowance: 0,
     ssbAmount: 0,
     incomeTax: 0,
-    exchangeRate: 3662
+    exchangeRate: latestCbmRate
   });
 
   const printRef = useRef<HTMLDivElement>(null);
@@ -373,18 +383,8 @@ export default function PayrollPage() {
     setSelectedMonth(record.payPeriodStartDate?.substring(0, 7) || record.month || "");
     
     if (record.country === "Japan") {
-      const legacyJapanData = record.japanData || {};
-      const existingShifts = legacyJapanData.shifts || (legacyJapanData.scheduledDays > 0 ? [{
-        type: legacyJapanData.shiftType || "day",
-        startTime: legacyJapanData.startTime || "08:00",
-        days: Number(legacyJapanData.scheduledDays)
-      }] : []);
-
-      setJapanData({
-        ...legacyJapanData,
-        shifts: existingShifts
-      });
-      setOldPaidLeaveDays(Number(legacyJapanData.paidLeaveDays || 0));
+      setJapanData({ ...record.japanData });
+      setOldPaidLeaveDays(Number(record.japanData?.paidLeaveDays || 0));
     } else {
       setMyanmarData({
         ...record.myanmarData,
@@ -559,6 +559,7 @@ export default function PayrollPage() {
                           return { total: Number(emp.totalPaidLeave) || 0, used: effectiveUsed };
                         })()
                       }
+                      selectedMonth={selectedMonth}
                     />
                   ) : (
                     <MyanmarPayrollForm 

@@ -65,7 +65,7 @@ export default function ExchangeRatesPage() {
   // Get Reference Rate from API (usually 2100)
   const referenceRateUSD = rates?.rates['USD'] ? parseInt(rates.rates['USD'].replace(/,/g, '')) : 2100;
   
-  // Market weighted rate (dynamic simulation based on current market trends if API is limited to reference)
+  // Market weighted rate (Dynamic simulation: if ref is 2100, market is approx 3600+)
   const weightedRateUSD = referenceRateUSD > 3000 ? referenceRateUSD : 3662;
 
   return (
@@ -92,7 +92,6 @@ export default function ExchangeRatesPage() {
           </Alert>
         )}
 
-        {/* Highlight Section for USD Rates as requested in the image */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <Card className="shadow-lg border-primary/20 bg-primary/5 overflow-hidden">
             <CardHeader className="pb-2">
@@ -193,7 +192,7 @@ export default function ExchangeRatesPage() {
               <p className="leading-relaxed text-muted-foreground">
                 The <span className="text-primary font-bold">CBM Reference Rate</span> is determined by the Central Bank based on interbank market results.
               </p>
-              <Separator />
+              <div className="h-px w-full bg-border" />
               <p className="leading-relaxed text-muted-foreground">
                 The <span className="text-orange-600 font-bold">Weighted Average Rate</span> (Bank-Customer) represents the actual volume-weighted rates at which banks trade with their clients. This is the rate typically used for GlobalPay payroll calculations in Myanmar.
               </p>
@@ -207,8 +206,4 @@ export default function ExchangeRatesPage() {
       </main>
     </div>
   );
-}
-
-function Separator() {
-  return <div className="h-px w-full bg-border" />;
 }
