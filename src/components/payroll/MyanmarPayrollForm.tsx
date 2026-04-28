@@ -5,7 +5,7 @@ import React, { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Info, Globe } from "lucide-react";
+import { Info, Globe, Banknote } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -54,23 +54,17 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency 
     const otPay = data.otHours * hourlyRate * 2;
     const monthlyGross = baseMMK + otPay + (data.attendanceBonus || 0) + (data.mealAllowance || 0);
     
-    // 1. Calculate Annual Gross
     const annualGross = monthlyGross * 12;
-    
-    // 2. Deduction: Personal Allowance 20% (Max 10,000,000 MMK)
     const personalAllowance = Math.min(annualGross * 0.20, 10000000);
-    
-    // Taxable Income
     const taxableIncome = Math.max(0, annualGross - personalAllowance);
 
-    // 3. Progressive Tax Brackets (Myanmar PIT Standard Max 25%)
     let totalAnnualTax = 0;
     if (taxableIncome > 30000000) {
       totalAnnualTax += (taxableIncome - 30000000) * 0.25;
-      totalAnnualTax += 10000000 * 0.20; // 20M to 30M
-      totalAnnualTax += 10000000 * 0.15; // 10M to 20M
-      totalAnnualTax += 5000000 * 0.10;  // 5M to 10M
-      totalAnnualTax += 3000000 * 0.05;  // 2M to 5M
+      totalAnnualTax += 10000000 * 0.20;
+      totalAnnualTax += 10000000 * 0.15;
+      totalAnnualTax += 5000000 * 0.10;
+      totalAnnualTax += 3000000 * 0.05;
     } else if (taxableIncome > 20000000) {
       totalAnnualTax += (taxableIncome - 20000000) * 0.20;
       totalAnnualTax += 10000000 * 0.15;
@@ -88,8 +82,6 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency 
     }
 
     const monthlyTax = Math.round(totalAnnualTax / 12);
-    
-    // 4. Auto SSB (2%, Max 6,000 MMK)
     const calculatedSSB = Math.min(Math.round(baseMMK * 0.02), 6000);
 
     if (data.ssbAmount !== calculatedSSB || data.incomeTax !== monthlyTax) {
@@ -109,46 +101,54 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency 
   return (
     <div className="space-y-6">
       {isUsd && (
-        <div className="p-4 bg-primary/10 rounded-xl border border-primary/20 space-y-4 animate-in fade-in zoom-in duration-300">
-          <div className="flex items-center justify-between">
-            <Label className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2">
-              <Globe size={14} /> Currency Conversion (USD to MMK)
-            </Label>
-            <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold">USD detected</span>
+        <div className="p-5 bg-muted/40 rounded-xl border border-primary/10 space-y-5 animate-in fade-in slide-in-from-top-2 duration-500">
+          <div className="flex items-center justify-between border-b border-primary/5 pb-3">
+            <div className="flex items-center gap-2">
+              <Globe size={16} className="text-primary" />
+              <span className="text-sm font-semibold text-primary">Currency Conversion</span>
+            </div>
+            <span className="text-[10px] bg-primary/10 text-primary px-2.5 py-1 rounded-full font-bold uppercase tracking-tight">USD Profile</span>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <Label className="text-[10px] text-muted-foreground uppercase">Base Salary (USD)</Label>
-              <div className="h-11 bg-background border rounded-md flex items-center px-3 font-mono font-bold text-lg">
+          
+          <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">Base Salary (USD)</Label>
+              <div className="h-10 bg-background border rounded-lg flex items-center px-3 font-mono font-bold text-base shadow-sm">
                 ${baseSalary.toLocaleString()}
               </div>
             </div>
-            <div className="space-y-1">
-              <Label className="text-[10px] text-muted-foreground uppercase">Exchange Rate (Manual)</Label>
-              <Input 
-                type="number" 
-                placeholder="Enter Rate"
-                className="h-11 bg-background font-mono font-bold text-lg"
-                value={data.exchangeRate === 0 ? "" : data.exchangeRate} 
-                onFocus={handleFocus}
-                onChange={e => updateField("exchangeRate", e.target.value)} 
-              />
+            <div className="space-y-2">
+              <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">Exchange Rate (Manual)</Label>
+              <div className="relative">
+                <Input 
+                  type="number" 
+                  placeholder="0.00"
+                  className="h-10 bg-background font-mono font-bold text-base pl-3"
+                  value={data.exchangeRate === 0 ? "" : data.exchangeRate} 
+                  onFocus={handleFocus}
+                  onChange={e => updateField("exchangeRate", e.target.value)} 
+                />
+              </div>
             </div>
           </div>
-          <div className="pt-2 border-t border-primary/10 flex justify-between items-center">
-            <span className="text-xs text-muted-foreground">Effective Basic Salary (MMK):</span>
-            <span className="font-black text-primary">{Math.round(effectiveBaseMMK).toLocaleString()} MMK</span>
+
+          <div className="pt-3 border-t border-primary/5 flex justify-between items-center bg-primary/5 -mx-5 px-5 -mb-5 py-3 rounded-b-xl">
+            <span className="text-xs font-medium text-muted-foreground">Effective Basic Salary:</span>
+            <div className="text-right">
+              <span className="text-lg font-bold text-primary">{Math.round(effectiveBaseMMK).toLocaleString()}</span>
+              <span className="text-[10px] font-black ml-1 text-primary/60">MMK</span>
+            </div>
           </div>
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">OT Hours (2x Rate)</Label>
           <Input 
             type="number" 
             placeholder="0"
-            className="h-11 bg-background"
+            className="h-10 bg-background"
             value={data.otHours === 0 ? "" : data.otHours} 
             onFocus={handleFocus}
             onChange={e => updateField("otHours", e.target.value)} 
@@ -159,18 +159,18 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency 
           <Input 
             type="number" 
             placeholder="0"
-            className="h-11 bg-background"
+            className="h-10 bg-background"
             value={data.attendanceBonus === 0 ? "" : data.attendanceBonus} 
             onFocus={handleFocus}
             onChange={e => updateField("attendanceBonus", e.target.value)} 
           />
         </div>
-        <div className="space-y-2 col-span-2">
+        <div className="space-y-2 col-span-1 sm:col-span-2">
           <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Meal Allowance</Label>
           <Input 
             type="number" 
             placeholder="0"
-            className="h-11 bg-background"
+            className="h-10 bg-background"
             value={data.mealAllowance === 0 ? "" : data.mealAllowance} 
             onFocus={handleFocus}
             onChange={e => updateField("mealAllowance", e.target.value)} 
@@ -180,14 +180,14 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency 
 
       <Separator className="bg-border/50" />
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <div className="flex items-center gap-1.5">
             <Label className="text-xs font-bold uppercase tracking-wider text-primary">SSB (2% Auto)</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <button className="text-muted-foreground hover:text-primary transition-colors p-1 -m-1" aria-label="SSB Information">
-                  <Info size={16} />
+                  <Info size={14} />
                 </button>
               </PopoverTrigger>
               <PopoverContent className="text-xs p-4 space-y-3 w-[280px] max-w-[calc(100vw-40px)] shadow-2xl rounded-xl border-primary/20">
@@ -202,7 +202,7 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency 
           <Input 
             type="number" 
             readOnly
-            className="h-11 bg-muted/30 font-bold"
+            className="h-10 bg-muted/30 font-bold"
             placeholder="0"
             value={data.ssbAmount === 0 ? "" : data.ssbAmount} 
           />
@@ -213,7 +213,7 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency 
             <Popover>
               <PopoverTrigger asChild>
                 <button className="text-muted-foreground hover:text-primary transition-colors p-1 -m-1" aria-label="Income Tax Information">
-                  <Info size={16} />
+                  <Info size={14} />
                 </button>
               </PopoverTrigger>
               <PopoverContent className="text-xs p-4 space-y-3 w-[320px] max-w-[calc(100vw-40px)] shadow-2xl rounded-xl border-primary/20">
@@ -232,26 +232,29 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency 
           <Input 
             type="number" 
             readOnly
-            className="h-11 bg-muted/30 font-bold"
+            className="h-10 bg-muted/30 font-bold"
             placeholder="0"
             value={data.incomeTax === 0 ? "" : data.incomeTax} 
           />
         </div>
       </div>
 
-      <div className="p-5 bg-primary/5 dark:bg-primary/10 rounded-xl border border-primary/20 space-y-3 shadow-inner">
+      <div className="p-5 bg-primary/5 dark:bg-primary/10 rounded-xl border border-primary/10 space-y-3 shadow-inner">
         <div className="flex justify-between items-center text-sm">
-          <span className="font-medium">Gross Total:</span>
-          <span className="font-bold text-lg">{Math.round(grossPay).toLocaleString()} MMK</span>
+          <span className="font-medium text-muted-foreground">Gross Total:</span>
+          <span className="font-bold">{Math.round(grossPay).toLocaleString()} MMK</span>
         </div>
-        <div className="flex justify-between items-center text-sm text-destructive">
-          <span className="font-medium">Deductions (SSB + Tax):</span>
+        <div className="flex justify-between items-center text-sm text-destructive/80">
+          <span className="font-medium">Total Deductions:</span>
           <span className="font-bold">-{((data.ssbAmount || 0) + (data.incomeTax || 0)).toLocaleString()} MMK</span>
         </div>
-        <Separator className="bg-primary/20" />
+        <Separator className="bg-primary/10" />
         <div className="flex justify-between items-center text-xl font-black">
-          <span className="text-primary uppercase tracking-tighter">Net Salary:</span>
-          <span className="text-primary">{Math.round(netPay).toLocaleString()} MMK</span>
+          <span className="text-primary tracking-tight">Net Salary:</span>
+          <div className="flex items-baseline gap-1">
+            <span className="text-primary">{Math.round(netPay).toLocaleString()}</span>
+            <span className="text-[10px] text-primary/60 font-bold">MMK</span>
+          </div>
         </div>
       </div>
     </div>
