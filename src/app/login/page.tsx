@@ -43,36 +43,36 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-      <Card className="w-full max-w-md shadow-xl border-none">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-md shadow-2xl border-primary/10">
         <CardHeader className="space-y-2 text-center pt-10">
           <div className="flex justify-center mb-4">
             <Shield className="w-16 h-16 text-primary" strokeWidth={1.5} />
           </div>
-          <CardTitle className="text-4xl font-bold tracking-tight text-slate-900">GlobalPay</CardTitle>
-          <CardDescription className="text-base text-slate-500">
+          <CardTitle className="text-4xl font-bold tracking-tight text-foreground">GlobalPay</CardTitle>
+          <CardDescription className="text-base text-muted-foreground">
             International Payroll Management System
           </CardDescription>
         </CardHeader>
         <CardContent className="px-8 pb-10">
           <form onSubmit={handleLogin} className="space-y-6 mt-6">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-semibold text-slate-700">Username / Email</Label>
+              <Label htmlFor="email" className="text-sm font-semibold">Username / Email</Label>
               <Input
                 id="email"
                 placeholder="e.g. globalpay"
-                className="h-12 bg-slate-50 border-slate-200"
+                className="h-12 bg-muted/50"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" throws-error="false" className="text-sm font-semibold text-slate-700">Password</Label>
+              <Label htmlFor="password" throws-error="false" className="text-sm font-semibold">Password</Label>
               <Input
                 id="password"
                 type="password"
-                className="h-12 bg-slate-50 border-slate-200"
+                className="h-12 bg-muted/50"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -82,8 +82,8 @@ export default function LoginPage() {
               {isLoading ? "Signing in..." : <><LogIn size={20} /> Sign In</>}
             </Button>
           </form>
-          <div className="mt-10 pt-6 border-t border-slate-100 text-center">
-            <p className="text-xs font-medium text-slate-400 tracking-wider uppercase">Authorized Access Only</p>
+          <div className="mt-10 pt-6 border-t border-border text-center">
+            <p className="text-xs font-medium text-muted-foreground tracking-wider uppercase">Authorized Access Only</p>
           </div>
         </CardContent>
       </Card>
