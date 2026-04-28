@@ -59,6 +59,7 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency 
     const taxableIncome = Math.max(0, annualGross - personalAllowance);
 
     let totalAnnualTax = 0;
+    // UNION TAX LAW (MYANMAR) - Max 25% bracket
     if (taxableIncome > 30000000) {
       totalAnnualTax += (taxableIncome - 30000000) * 0.25;
       totalAnnualTax += 10000000 * 0.20;
@@ -113,8 +114,8 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency 
             
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-3">
-                <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">Base Salary (USD)</Label>
-                <div className="h-14 bg-slate-950/50 border border-white/5 rounded-2xl flex items-center px-4 font-mono font-bold text-xl shadow-inner">
+                <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">Base Salary</Label>
+                <div className="h-14 bg-slate-950/50 border border-white/5 rounded-full flex items-center px-4 font-mono font-bold text-xl shadow-inner">
                   ${baseSalary.toLocaleString()}
                 </div>
               </div>
@@ -124,7 +125,7 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency 
                   <Input 
                     type="number" 
                     placeholder="0.00"
-                    className="h-14 bg-slate-950/50 border border-white/5 rounded-2xl font-mono font-bold text-xl px-4 shadow-inner focus:ring-primary/50"
+                    className="h-14 bg-slate-950/50 border border-white/5 rounded-full font-mono font-bold text-xl px-4 shadow-inner focus:ring-primary/50 text-center"
                     value={data.exchangeRate === 0 ? "" : data.exchangeRate} 
                     onFocus={handleFocus}
                     onChange={e => updateField("exchangeRate", e.target.value)} 
