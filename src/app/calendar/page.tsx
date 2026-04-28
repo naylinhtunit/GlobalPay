@@ -63,14 +63,15 @@ export default function CalendarPage() {
     }
   }, [country]);
 
-  // Firestore query for company calendar events
+  // Firestore query for company calendar events, filtered by country
   const calendarQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return query(
       collection(firestore, "companyCalendars"),
-      where("companyId", "==", user.uid)
+      where("companyId", "==", user.uid),
+      where("country", "==", country)
     );
-  }, [firestore, user]);
+  }, [firestore, user, country]);
 
   const { data: companyEvents } = useCollection(calendarQuery);
 
@@ -102,27 +103,33 @@ export default function CalendarPage() {
     if (!selectedDateForEdit || !firestore || !user) return;
     
     const dateStr = format(selectedDateForEdit, "yyyy-MM-dd");
-    const eventId = `${user.uid}_${dateStr}`;
+    // ID includes country to avoid collisions and allow switching
+    const eventId = `${user.uid}_${country}_${dateStr}`;
     
-    await setDoc(doc(firestore, "companyCalendars", eventId), {
+    setDoc(doc(firestore, "companyCalendars", eventId), {
       companyId: user.uid,
+      country,
       date: dateStr,
-      title: eventTitle || "Company Holiday",
+      title: eventTitle || (language === "JP" ? "会社休日" : "ကုမ္ပဏီပိတ်ရက်"),
       isWorkday: false,
       updatedAt: serverTimestamp(),
+    }).catch(err => {
+      console.error("Failed to save event:", err);
     });
 
     setIsAddingEvent(false);
-    toast({ title: "Saved", description: "Calendar updated." });
+    toast({ title: country === "Japan" ? "保存されました" : "သိမ်းဆည်းပြီးပါပြီ", description: country === "Japan" ? "カレンダーを更新しました" : "ပြက္ခဒိန်ကို အပ်ဒိတ်လုပ်ပြီးပါပြီ" });
   };
 
   const deleteManualEvent = async () => {
     if (!selectedDateForEdit || !firestore || !user) return;
     const dateStr = format(selectedDateForEdit, "yyyy-MM-dd");
-    const eventId = `${user.uid}_${dateStr}`;
-    await deleteDoc(doc(firestore, "companyCalendars", eventId));
+    const eventId = `${user.uid}_${country}_${dateStr}`;
+    deleteDoc(doc(firestore, "companyCalendars", eventId)).catch(err => {
+      console.error("Failed to delete event:", err);
+    });
     setIsAddingEvent(false);
-    toast({ title: "Removed", description: "Holiday removed." });
+    toast({ title: country === "Japan" ? "削除されました" : "ဖယ်ရှားပြီးပါပြီ", description: country === "Japan" ? "休日を削除しました" : "ပိတ်ရက်ကို ဖယ်ရှားလိုက်ပါပြီ" });
   };
 
   const translate = (key: string) => {
@@ -244,7 +251,9 @@ export default function CalendarPage() {
                   </h4>
                   <div className="max-h-[400px] overflow-y-auto space-y-2 pr-2">
                     {(companyEvents || []).filter(e => e.date.startsWith(currentYear.toString())).length === 0 ? (
-                      <p className="text-[10px] text-muted-foreground italic text-center py-4">No holidays marked for this year.</p>
+                      <p className="text-[10px] text-muted-foreground italic text-center py-4">
+                        {language === "JP" ? "休日の登録はありません。" : "ပိတ်ရက်များ မရှိသေးပါ။"}
+                      </p>
                     ) : (
                       (companyEvents || [])
                         .filter(e => e.date.startsWith(currentYear.toString()))
@@ -273,7 +282,7 @@ export default function CalendarPage() {
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase text-muted-foreground">{language === "JP" ? "休日名" : "Holiday Name"}</Label>
+                <Label className="text-xs font-bold uppercase text-muted-foreground">{language === "JP" ? "休日名" : "ပိတ်ရက်အမည်"}</Label>
                 <Input 
                   placeholder={translate("placeholder")} 
                   value={eventTitle} 
