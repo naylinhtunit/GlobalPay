@@ -5,7 +5,7 @@ import React, { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Info, Globe, Banknote } from "lucide-react";
+import { Info, Globe } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -101,42 +101,44 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency 
   return (
     <div className="space-y-6">
       {isUsd && (
-        <div className="p-5 bg-muted/40 rounded-xl border border-primary/10 space-y-5 animate-in fade-in slide-in-from-top-2 duration-500">
-          <div className="flex items-center justify-between border-b border-primary/5 pb-3">
-            <div className="flex items-center gap-2">
-              <Globe size={16} className="text-primary" />
-              <span className="text-sm font-semibold text-primary">Currency Conversion</span>
-            </div>
-            <span className="text-[10px] bg-primary/10 text-primary px-2.5 py-1 rounded-full font-bold uppercase tracking-tight">USD Profile</span>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">Base Salary (USD)</Label>
-              <div className="h-10 bg-background border rounded-lg flex items-center px-3 font-mono font-bold text-base shadow-sm">
-                ${baseSalary.toLocaleString()}
+        <div className="overflow-hidden rounded-2xl border border-primary/10 bg-muted/40 animate-in fade-in slide-in-from-top-2 duration-500">
+          <div className="p-5 space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Globe size={18} className="text-primary" />
+                <span className="text-base font-bold text-primary tracking-tight">Currency Conversion</span>
               </div>
+              <span className="text-[10px] bg-primary/10 text-primary px-3 py-1 rounded-full font-black uppercase tracking-widest">USD Profile</span>
             </div>
-            <div className="space-y-2">
-              <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">Exchange Rate (Manual)</Label>
-              <div className="relative">
-                <Input 
-                  type="number" 
-                  placeholder="0.00"
-                  className="h-10 bg-background font-mono font-bold text-base pl-3"
-                  value={data.exchangeRate === 0 ? "" : data.exchangeRate} 
-                  onFocus={handleFocus}
-                  onChange={e => updateField("exchangeRate", e.target.value)} 
-                />
+            
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">Base Salary (USD)</Label>
+                <div className="h-14 bg-slate-950/50 border border-white/5 rounded-2xl flex items-center px-4 font-mono font-bold text-xl shadow-inner">
+                  ${baseSalary.toLocaleString()}
+                </div>
+              </div>
+              <div className="space-y-3">
+                <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">Exchange Rate</Label>
+                <div className="relative">
+                  <Input 
+                    type="number" 
+                    placeholder="0.00"
+                    className="h-14 bg-slate-950/50 border border-white/5 rounded-2xl font-mono font-bold text-xl px-4 shadow-inner focus:ring-primary/50"
+                    value={data.exchangeRate === 0 ? "" : data.exchangeRate} 
+                    onFocus={handleFocus}
+                    onChange={e => updateField("exchangeRate", e.target.value)} 
+                  />
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="pt-3 border-t border-primary/5 flex justify-between items-center bg-primary/5 -mx-5 px-5 -mb-5 py-3 rounded-b-xl">
-            <span className="text-xs font-medium text-muted-foreground">Effective Basic Salary:</span>
+          <div className="px-6 py-4 flex justify-between items-center bg-slate-900/40 border-t border-white/5">
+            <span className="text-sm font-semibold text-muted-foreground">Effective Basic Salary:</span>
             <div className="text-right">
-              <span className="text-lg font-bold text-primary">{Math.round(effectiveBaseMMK).toLocaleString()}</span>
-              <span className="text-[10px] font-black ml-1 text-primary/60">MMK</span>
+              <span className="text-2xl font-black text-primary tracking-tighter">{Math.round(effectiveBaseMMK).toLocaleString()}</span>
+              <span className="text-[10px] font-black ml-1.5 text-primary/60 uppercase">MMK</span>
             </div>
           </div>
         </div>
@@ -209,7 +211,7 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency 
         </div>
         <div className="space-y-2">
           <div className="flex items-center gap-1.5">
-            <Label className="text-xs font-bold uppercase tracking-wider text-primary">Income Tax (Progressive)</Label>
+            <Label className="text-xs font-bold uppercase tracking-wider text-primary">Income Tax (PIT)</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <button className="text-muted-foreground hover:text-primary transition-colors p-1 -m-1" aria-label="Income Tax Information">
