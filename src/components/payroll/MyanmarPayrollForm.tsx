@@ -32,7 +32,6 @@ interface Props {
 export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency }: Props) {
   const [effectiveBaseMMK, setEffectiveBaseMMK] = useState(baseSalary);
   
-  // Explicit check for USD based on employee record or heuristic
   const isUsd = salaryCurrency === "USD" || (baseSalary > 0 && baseSalary < 10000);
 
   const updateField = (field: keyof MyanmarData, value: string) => {
@@ -64,21 +63,14 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency 
     // Taxable Income
     const taxableIncome = Math.max(0, annualGross - personalAllowance);
 
-    // 3. Progressive Tax Brackets (Myanmar PIT 2024-2025 Standard with 30% bracket)
+    // 3. Progressive Tax Brackets (Myanmar PIT Standard Max 25%)
     let totalAnnualTax = 0;
-    if (taxableIncome > 70000000) {
-      totalAnnualTax += (taxableIncome - 70000000) * 0.30;
-      totalAnnualTax += (70000000 - 30000000) * 0.25; 
-      totalAnnualTax += 10000000 * 0.20; 
-      totalAnnualTax += 10000000 * 0.15; 
-      totalAnnualTax += 5000000 * 0.10;  
-      totalAnnualTax += 3000000 * 0.05;  
-    } else if (taxableIncome > 30000000) {
+    if (taxableIncome > 30000000) {
       totalAnnualTax += (taxableIncome - 30000000) * 0.25;
-      totalAnnualTax += 10000000 * 0.20;
-      totalAnnualTax += 10000000 * 0.15;
-      totalAnnualTax += 5000000 * 0.10;
-      totalAnnualTax += 3000000 * 0.05;
+      totalAnnualTax += 10000000 * 0.20; // 20M to 30M
+      totalAnnualTax += 10000000 * 0.15; // 10M to 20M
+      totalAnnualTax += 5000000 * 0.10;  // 5M to 10M
+      totalAnnualTax += 3000000 * 0.05;  // 2M to 5M
     } else if (taxableIncome > 20000000) {
       totalAnnualTax += (taxableIncome - 20000000) * 0.20;
       totalAnnualTax += 10000000 * 0.15;
@@ -135,7 +127,7 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency 
               <Label className="text-[10px] text-muted-foreground uppercase">Exchange Rate (Manual)</Label>
               <Input 
                 type="number" 
-                placeholder="Enter Rate (e.g. 3600)"
+                placeholder="Enter Rate"
                 className="h-11 bg-background font-mono font-bold text-lg"
                 value={data.exchangeRate === 0 ? "" : data.exchangeRate} 
                 onFocus={handleFocus}
@@ -232,7 +224,7 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency 
                 <div className="space-y-2.5 text-muted-foreground">
                   <p className="leading-relaxed">၁။ တစ်နှစ်စာ စုစုပေါင်းဝင်ငွေကို အရင်တွက်ပါသည်။</p>
                   <p className="leading-relaxed">၂။ အခြေခံသက်သာခွင့် ၂၀% (အများဆုံး ၁၀၀ သိန်း) ကို နှုတ်ပါသည်။</p>
-                  <p className="leading-relaxed">၃။ ကျန်ရှိသော ပမာဏအပေါ် ၅% မှ အမြင့်ဆုံး ၃၀% (သိန်း ၇၀၀ အထက်) အဆင့်ဆင့်သော အခွန်နှုန်းထားများဖြင့် တွက်ချက်ထားပါသည်။</p>
+                  <p className="leading-relaxed">၃။ ကျန်ရှိသော ပမာဏအပေါ် ၅% မှ အမြင့်ဆုံး ၂၅% (သိန်း ၃၀၀ အထက်) အဆင့်ဆင့်သော အခွန်နှုန်းထားများဖြင့် တွက်ချက်ထားပါသည်။</p>
                 </div>
               </PopoverContent>
             </Popover>
