@@ -20,7 +20,7 @@ import {
 } from "firebase/firestore";
 import { useCountry } from "@/context/CountryContext";
 import { Button } from "@/components/ui/button";
-import { Eye, Calculator, Printer, Pencil, Trash2, Filter, Calendar, Download, Loader2 } from "lucide-react";
+import { Eye, Calculator, Pencil, Trash2, Filter, Calendar, Download, Loader2 } from "lucide-react";
 import { 
   Dialog, 
   DialogContent, 
@@ -405,35 +405,6 @@ export default function PayrollPage() {
     setIsPreviewOpen(true);
   };
 
-  const handlePrint = () => {
-    if (!printRef.current) return;
-    const content = printRef.current.innerHTML;
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(`
-        <html>
-          <head>
-            <title>Payslip - ${previewData?.employee?.fullName || 'Employee'}</title>
-            <script src="https://cdn.tailwindcss.com"></script>
-            <style>
-              @media print {
-                body { padding: 0; margin: 0; }
-                .no-print { display: none; }
-              }
-            </style>
-          </head>
-          <body class="p-8">${content}</body>
-        </html>
-      `);
-      printWindow.document.close();
-      printWindow.focus();
-      setTimeout(() => {
-        printWindow.print();
-        printWindow.close();
-      }, 500);
-    }
-  };
-
   const handleDownloadPDF = async () => {
     if (!printRef.current || isDownloading) return;
     setIsDownloading(true);
@@ -653,29 +624,23 @@ export default function PayrollPage() {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pr-12 gap-4">
                 <DialogTitle>Payslip Preview</DialogTitle>
                 <div className="flex gap-2">
-                  {country === "Myanmar" ? (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={handleDownloadPDF} 
-                      className="gap-2 h-9 min-w-[140px]"
-                      disabled={isDownloading}
-                    >
-                      {isDownloading ? (
-                        <>
-                          <Loader2 size={16} className="animate-spin" /> Downloading...
-                        </>
-                      ) : (
-                        <>
-                          <Download size={16} /> Download PDF
-                        </>
-                      )}
-                    </Button>
-                  ) : (
-                    <Button variant="outline" size="sm" onClick={handlePrint} className="gap-2 h-9">
-                      <Printer size={16} /> Print
-                    </Button>
-                  )}
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleDownloadPDF} 
+                    className="gap-2 h-9 min-w-[140px]"
+                    disabled={isDownloading}
+                  >
+                    {isDownloading ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" /> Downloading...
+                      </>
+                    ) : (
+                      <>
+                        <Download size={16} /> Download PDF
+                      </>
+                    )}
+                  </Button>
                 </div>
               </div>
             </DialogHeader>
