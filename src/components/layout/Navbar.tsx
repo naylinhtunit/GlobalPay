@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Shield, LayoutDashboard, Users, FileText, LogOut, Menu, User, Globe, Sun, Moon, TrendingUp, Calendar as CalendarIcon } from "lucide-react";
+import { Shield, LayoutDashboard, Users, FileText, LogOut, Menu, User, Globe, Sun, Moon, Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCountry } from "@/context/CountryContext";
 import { useAuth, useUser } from "@/firebase";
@@ -43,8 +43,6 @@ export function Navbar() {
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
     { name: "Employees", href: "/employees", icon: Users },
     { name: "Payroll", href: "/payroll", icon: FileText },
-    // Only show Exchange Rate for Myanmar
-    ...(country === "Myanmar" ? [{ name: "Exchange Rates", href: "/exchange-rates", icon: TrendingUp }] : []),
     // Only show Calendar for Japan
     ...(country === "Japan" ? [{ name: "Calendar", href: "/calendar", icon: CalendarIcon }] : []),
   ];

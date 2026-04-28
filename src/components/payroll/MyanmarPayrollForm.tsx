@@ -27,24 +27,13 @@ interface Props {
   onChange: (data: MyanmarData) => void;
   baseSalary: number;
   salaryCurrency?: string;
-  dynamicCbmRate?: number;
 }
 
-export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency, dynamicCbmRate }: Props) {
+export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency }: Props) {
   const [effectiveBaseMMK, setEffectiveBaseMMK] = useState(baseSalary);
   
   // Explicit check for USD based on employee record or heuristic
   const isUsd = salaryCurrency === "USD" || (baseSalary > 0 && baseSalary < 10000);
-
-  useEffect(() => {
-    // Default exchange rate from CBM market weighted average if USD
-    const rateToUse = dynamicCbmRate || 3662;
-    if (isUsd && !data.exchangeRate) {
-      onChange({ ...data, exchangeRate: rateToUse, isUsdSalary: true });
-    } else if (!isUsd && data.isUsdSalary) {
-      onChange({ ...data, isUsdSalary: false, exchangeRate: 1 });
-    }
-  }, [isUsd, salaryCurrency, dynamicCbmRate]);
 
   const updateField = (field: keyof MyanmarData, value: string) => {
     const numValue = value === "" ? 0 : Number(value);
@@ -58,7 +47,7 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency,
   };
 
   useEffect(() => {
-    const rate = data.exchangeRate || dynamicCbmRate || 3662;
+    const rate = data.exchangeRate || 1;
     const baseMMK = isUsd ? baseSalary * rate : baseSalary;
     setEffectiveBaseMMK(baseMMK);
 
@@ -118,7 +107,7 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency,
         incomeTax: monthlyTax
       });
     }
-  }, [baseSalary, data.otHours, data.attendanceBonus, data.mealAllowance, data.exchangeRate, isUsd, salaryCurrency, dynamicCbmRate]);
+  }, [baseSalary, data.otHours, data.attendanceBonus, data.mealAllowance, data.exchangeRate, isUsd, salaryCurrency]);
 
   const hourlyRate = (effectiveBaseMMK / 30 / 8);
   const otPay = data.otHours * hourlyRate * 2;
@@ -143,12 +132,12 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency,
               </div>
             </div>
             <div className="space-y-1">
-              <Label className="text-[10px] text-muted-foreground uppercase">Exchange Rate (CBM Market)</Label>
+              <Label className="text-[10px] text-muted-foreground uppercase">Exchange Rate (Manual)</Label>
               <Input 
                 type="number" 
-                placeholder={String(dynamicCbmRate || 3662)}
+                placeholder="Enter Rate (e.g. 3600)"
                 className="h-11 bg-background font-mono font-bold text-lg"
-                value={data.exchangeRate || ""} 
+                value={data.exchangeRate === 0 ? "" : data.exchangeRate} 
                 onFocus={handleFocus}
                 onChange={e => updateField("exchangeRate", e.target.value)} 
               />

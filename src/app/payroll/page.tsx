@@ -51,7 +51,6 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { FirestorePermissionError } from "@/firebase/errors";
 import { errorEmitter } from "@/firebase/error-emitter";
-import { getCbmRates } from "@/app/actions/exchange-rates";
 
 export default function PayrollPage() {
   const { country, currency } = useCountry();
@@ -66,37 +65,9 @@ export default function PayrollPage() {
   const [selectedMonth, setSelectedMonth] = useState("");
   const [filterMonth, setFilterMonth] = useState<string>("all");
   const [oldPaidLeaveDays, setOldPaidLeaveDays] = useState(0);
-  const [latestCbmRate, setLatestCbmRate] = useState(3662); // Default fallback
   
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewData, setPreviewData] = useState<any>(null);
-
-  // Fetch dynamic rate from CBM API for Myanmar
-  useEffect(() => {
-    if (country === "Myanmar") {
-      const fetchLatestRate = async () => {
-        try {
-          const data = await getCbmRates();
-          if (data && data.rates && data.rates['USD']) {
-            const refRate = parseInt(data.rates['USD'].replace(/,/g, ''));
-            // If the official rate is 2100, we use the weighted average simulation (approx 3600-3800)
-            // If the official rate has been floated and is higher, we use it directly.
-            const marketRate = refRate > 3000 ? refRate : 3662; 
-            setLatestCbmRate(marketRate);
-            
-            // Update current myanmar data if it's open
-            setMyanmarData(prev => ({
-              ...prev,
-              exchangeRate: prev.exchangeRate === 3662 ? marketRate : prev.exchangeRate
-            }));
-          }
-        } catch (err) {
-          console.error("Failed to fetch dynamic rates for payroll:", err);
-        }
-      };
-      fetchLatestRate();
-    }
-  }, [country]);
 
   useEffect(() => {
     const options = [];
@@ -167,7 +138,7 @@ export default function PayrollPage() {
     mealAllowance: 0,
     ssbAmount: 0,
     incomeTax: 0,
-    exchangeRate: latestCbmRate
+    exchangeRate: 0
   });
 
   const printRef = useRef<HTMLDivElement>(null);
@@ -263,7 +234,7 @@ export default function PayrollPage() {
       mealAllowance: 0,
       ssbAmount: 0,
       incomeTax: 0,
-      exchangeRate: latestCbmRate
+      exchangeRate: 0
     });
   };
 
@@ -310,7 +281,7 @@ export default function PayrollPage() {
       netPay = grossPay - deductions + others;
     } else {
       const isUsd = emp.salaryCurrency === "USD" || (baseSalary > 0 && baseSalary < 10000);
-      const rate = myanmarData.exchangeRate || latestCbmRate;
+      const rate = myanmarData.exchangeRate || 1;
       const effectiveBaseMMK = isUsd ? baseSalary * rate : baseSalary;
       const hourlyRate = (effectiveBaseMMK / 30 / 8);
       grossPay = effectiveBaseMMK + (myanmarData.otHours * hourlyRate * 2) + (myanmarData.attendanceBonus || 0) + (myanmarData.mealAllowance || 0);
@@ -388,7 +359,7 @@ export default function PayrollPage() {
     } else {
       setMyanmarData({
         ...record.myanmarData,
-        exchangeRate: record.myanmarData?.exchangeRate || latestCbmRate
+        exchangeRate: record.myanmarData?.exchangeRate || 0
       });
     }
     setIsModalOpen(true);
@@ -567,7 +538,6 @@ export default function PayrollPage() {
                       onChange={setMyanmarData} 
                       baseSalary={(employees || []).find((e: any) => e.id === selectedEmpId)?.baseSalary || (employees || []).find((e: any) => e.id === selectedEmpId)?.salary || 0}
                       salaryCurrency={(employees || []).find((e: any) => e.id === selectedEmpId)?.salaryCurrency}
-                      dynamicCbmRate={latestCbmRate}
                     />
                   )}
                   
