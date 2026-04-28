@@ -29,10 +29,9 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  Info
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import {
   Dialog,
   DialogContent,
@@ -83,6 +82,13 @@ export default function CalendarPage() {
     return map;
   }, [companyEvents]);
 
+  // Use parseISO to ensure dates are treated as local midnight to avoid timezone shifts
+  const holidayDates = useMemo(() => {
+    return (companyEvents || [])
+      .filter(e => !e.isWorkday)
+      .map(e => parseISO(e.date));
+  }, [companyEvents]);
+
   const yearlySummary = useMemo(() => {
     const companyHolidays = (companyEvents || []).filter(e => 
       e.date.startsWith(currentYear.toString()) && !e.isWorkday
@@ -103,7 +109,6 @@ export default function CalendarPage() {
     if (!selectedDateForEdit || !firestore || !user) return;
     
     const dateStr = format(selectedDateForEdit, "yyyy-MM-dd");
-    // ID includes country to avoid collisions and allow switching
     const eventId = `${user.uid}_${country}_${dateStr}`;
     
     setDoc(doc(firestore, "companyCalendars", eventId), {
@@ -118,7 +123,7 @@ export default function CalendarPage() {
     });
 
     setIsAddingEvent(false);
-    toast({ title: country === "Japan" ? "保存されました" : "သိမ်းဆည်းပြီးပါပြီ", description: country === "Japan" ? "カレンダーを更新しました" : "ပြက္ခဒိန်ကို အပ်ဒိတ်လုပ်ပြီးပါပြီ" });
+    toast({ title: country === "Japan" ? "保存されました" : "သိမ်းဆည်းပြီးပါပြီ", description: country === "Japan" ? "カレンダーကို အပ်ဒိတ်လုပ်ပြီးပါပြီ" : "ပြက္ခဒိန်ကို အပ်ဒိတ်လုပ်ပြီးပါပြီ" });
   };
 
   const deleteManualEvent = async () => {
@@ -129,7 +134,7 @@ export default function CalendarPage() {
       console.error("Failed to delete event:", err);
     });
     setIsAddingEvent(false);
-    toast({ title: country === "Japan" ? "削除されました" : "ဖယ်ရှားပြီးပါပြီ", description: country === "Japan" ? "休日を削除しました" : "ပိတ်ရက်ကို ဖယ်ရှားလိုက်ပါပြီ" });
+    toast({ title: country === "Japan" ? "削除されました" : "ဖယ်ရှားပြီးပါပြီ", description: country === "Japan" ? "休日ကို ဖယ်ရှားလိုက်ပါပြီ" : "ပိတ်ရက်ကို ဖယ်ရှားလိုက်ပါပြီ" });
   };
 
   const translate = (key: string) => {
@@ -217,8 +222,9 @@ export default function CalendarPage() {
                       month={monthDate}
                       onDayClick={handleDayClick}
                       disableNavigation
+                      showOutsideDays={false}
                       modifiers={{
-                        companyHoliday: (companyEvents || []).filter(e => !e.isWorkday).map(e => new Date(e.date))
+                        companyHoliday: holidayDates
                       }}
                       modifiersClassNames={{
                         companyHoliday: "border-2 border-destructive rounded-full text-destructive font-black shadow-sm bg-destructive/10"

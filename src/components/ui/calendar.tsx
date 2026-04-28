@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -13,18 +14,20 @@ function Calendar({
   className,
   classNames,
   showOutsideDays = true,
+  disableNavigation = false,
   ...props
-}: CalendarProps) {
+}: CalendarProps & { disableNavigation?: boolean }) {
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
+      disableNavigation={disableNavigation}
       className={cn("p-0", className)}
       classNames={{
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-4",
         month_caption: "hidden", // Hide internal caption since we use Card Headers
         caption_label: "text-sm font-medium",
-        nav: "space-x-1 flex items-center",
+        nav: cn("space-x-1 flex items-center", disableNavigation && "hidden"),
         button_previous: cn(
           buttonVariants({ variant: "outline" }),
           "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
