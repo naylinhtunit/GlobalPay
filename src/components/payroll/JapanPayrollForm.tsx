@@ -1,7 +1,6 @@
-
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sun, Moon, Plus, Trash2, Info } from "lucide-react";
@@ -370,8 +369,9 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
           <div className="grid grid-cols-2 gap-3">
             {[
               { label: "健康保険料", en: "Health Ins", field: "healthInsurance" },
-              { label: "厚生年金", en: "Welfare Pension", field: "pension" },
-              { label: "雇用保険", en: "Employment Ins", field: "employmentInsurance" },
+              { label: "介護保険料", en: "Nursing Care", field: "nursingCareInsurance" },
+              { label: "厚生年金保険", en: "Welfare Pension", field: "pension" },
+              { label: "雇用保険料", en: "Employment Ins", field: "employmentInsurance" },
               { label: "所得税", en: "Income Tax", field: "incomeTax" },
               { label: "住民税", en: "Resident Tax", field: "residentTax" },
               { label: "寮費", en: "Hostel Fee", field: "hostelFee" },
