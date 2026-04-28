@@ -102,8 +102,8 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency 
   return (
     <div className="space-y-6">
       {isUsd && (
-        <div className="overflow-hidden rounded-2xl border border-primary/10 bg-muted/40 animate-in fade-in slide-in-from-top-2 duration-500">
-          <div className="p-5 space-y-6">
+        <div className="overflow-hidden rounded-2xl border bg-muted/30">
+          <div className="p-6 space-y-8">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Globe size={18} className="text-primary" />
@@ -112,20 +112,20 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency 
               <span className="text-[10px] bg-primary/10 text-primary px-3 py-1 rounded-full font-black uppercase tracking-widest">USD Profile</span>
             </div>
             
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-2 gap-8">
               <div className="space-y-3">
-                <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">Base Salary</Label>
-                <div className="h-14 bg-slate-950/50 border border-white/5 rounded-full flex items-center px-4 font-mono font-bold text-xl shadow-inner">
+                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest text-center block">Base Salary</Label>
+                <div className="h-16 bg-background border rounded-full flex items-center justify-center font-mono font-bold text-2xl shadow-sm">
                   ${baseSalary.toLocaleString()}
                 </div>
               </div>
               <div className="space-y-3">
-                <Label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">Exchange Rate</Label>
+                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest text-center block">Exchange Rate</Label>
                 <div className="relative">
                   <Input 
                     type="number" 
                     placeholder="0.00"
-                    className="h-14 bg-slate-950/50 border border-white/5 rounded-full font-mono font-bold text-xl px-4 shadow-inner focus:ring-primary/50 text-center"
+                    className="h-16 bg-background border rounded-full font-mono font-bold text-2xl shadow-sm focus:ring-primary/50 text-center"
                     value={data.exchangeRate === 0 ? "" : data.exchangeRate} 
                     onFocus={handleFocus}
                     onChange={e => updateField("exchangeRate", e.target.value)} 
@@ -135,7 +135,7 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency 
             </div>
           </div>
 
-          <div className="px-6 py-4 flex justify-between items-center bg-slate-900/40 border-t border-white/5">
+          <div className="px-6 py-5 flex justify-between items-center bg-muted border-t">
             <span className="text-sm font-semibold text-muted-foreground">Effective Basic Salary:</span>
             <div className="text-right">
               <span className="text-2xl font-black text-primary tracking-tighter">{Math.round(effectiveBaseMMK).toLocaleString()}</span>
