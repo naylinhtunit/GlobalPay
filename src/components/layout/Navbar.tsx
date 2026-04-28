@@ -43,8 +43,7 @@ export function Navbar() {
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
     { name: "Employees", href: "/employees", icon: Users },
     { name: "Payroll", href: "/payroll", icon: FileText },
-    // Only show Calendar for Japan
-    ...(country === "Japan" ? [{ name: "Calendar", href: "/calendar", icon: CalendarIcon }] : []),
+    { name: "Calendar", href: "/calendar", icon: CalendarIcon },
   ];
 
   const handleSignOut = async () => {

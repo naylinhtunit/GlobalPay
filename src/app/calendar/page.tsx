@@ -1,6 +1,7 @@
+
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { useCountry } from "@/context/CountryContext";
 import { 
@@ -42,7 +43,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export default function JapanCalendarPage() {
+export default function CalendarPage() {
   const { country } = useCountry();
   const { user } = useUser();
   const firestore = useFirestore();
@@ -53,6 +54,14 @@ export default function JapanCalendarPage() {
   const [isAddingEvent, setIsAddingEvent] = useState(false);
   const [selectedDateForEdit, setSelectedDateForEdit] = useState<Date | null>(null);
   const [eventTitle, setEventTitle] = useState("");
+
+  useEffect(() => {
+    if (country === "Myanmar") {
+      setLanguage("MM");
+    } else {
+      setLanguage("JP");
+    }
+  }, [country]);
 
   // Firestore query for company calendar events
   const calendarQuery = useMemoFirebase(() => {
@@ -152,18 +161,6 @@ export default function JapanCalendarPage() {
     return Array.from({ length: 12 }, (_, i) => new Date(currentYear, i, 1));
   }, [currentYear]);
 
-  if (country !== "Japan") {
-    return (
-      <div className="md:pl-64 pt-16 md:pt-0 min-h-screen flex items-center justify-center p-8 bg-background">
-        <Navbar />
-        <Card className="max-w-md w-full text-center p-8 border-primary/20 bg-card">
-          <Globe className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-          <p className="text-muted-foreground">Calendar feature is only available for Japan region.</p>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className="md:pl-64 pt-16 md:pt-0 min-h-screen bg-background text-foreground">
       <Navbar />
@@ -185,13 +182,15 @@ export default function JapanCalendarPage() {
                 <ChevronRight size={16} />
               </Button>
             </div>
-            <Button 
-              variant="outline" 
-              onClick={() => setLanguage(language === "JP" ? "MM" : "JP")}
-              className="gap-2 border-primary/20 bg-card hover:bg-muted"
-            >
-              <Globe size={16} /> {language === "JP" ? "မြန်မာ" : "日本語"}
-            </Button>
+            {country === "Japan" && (
+              <Button 
+                variant="outline" 
+                onClick={() => setLanguage(language === "JP" ? "MM" : "JP")}
+                className="gap-2 border-primary/20 bg-card hover:bg-muted"
+              >
+                <Globe size={16} /> {language === "JP" ? "မြန်မာ" : "日本語"}
+              </Button>
+            )}
           </div>
         </div>
 
