@@ -202,28 +202,33 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
       </div>
     );
   } else {
-    // Myanmar Payslip remains as is
-    const baseSalary = employee.baseSalary || 400000;
-    const hourlyRate = (baseSalary / 30 / 8);
-    const otPay = data.otHours * hourlyRate * 2;
-    const grossPay = baseSalary + otPay + data.attendanceBonus + data.mealAllowance;
-    const totalDeductions = data.ssbAmount + data.incomeTax;
+    // Myanmar Payslip logic
+    const isUsd = employee.salaryCurrency === "USD" || (employee.baseSalary > 0 && employee.baseSalary < 10000);
+    const rate = data.exchangeRate || 1;
+    const baseSalaryMMK = isUsd ? (employee.baseSalary * rate) : (employee.baseSalary || 400000);
+    
+    const hourlyRate = (baseSalaryMMK / 30 / 8);
+    const otPay = (data.otHours || 0) * hourlyRate * 2;
+    const allowances = (data.attendanceBonus || 0) + (data.mealAllowance || 0);
+    const grossPay = baseSalaryMMK + otPay + allowances;
+    const totalDeductions = (data.ssbAmount || 0) + (data.incomeTax || 0);
+    const netPay = grossPay - totalDeductions;
 
     return (
       <div ref={ref} className="p-12 max-w-[800px] mx-auto bg-white text-black font-sans border border-gray-300 shadow-lg">
         <div className="text-center border-b-2 border-black pb-4 mb-8">
-          <h1 className="text-3xl font-bold tracking-tighter">PAYSLIP</h1>
+          <h1 className="text-3xl font-bold tracking-tighter uppercase">Payslip</h1>
           <p className="text-gray-600 font-medium">Month: {month}</p>
         </div>
 
         <div className="grid grid-cols-2 gap-8 mb-8">
           <div className="space-y-1">
-            <p className="text-sm font-bold text-gray-500 uppercase tracking-wider">Employee Information</p>
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Employee Information</p>
             <p className="font-bold">ID: {employee.employeeNumber}</p>
-            <p className="font-bold">Name: {employee.fullName}</p>
+            <p className="font-bold">Name: {employee.fullName || employee.name}</p>
           </div>
           <div className="text-right space-y-1">
-            <p className="text-sm font-bold text-gray-500 uppercase tracking-wider">Payment Details</p>
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Payment Details</p>
             <p className="font-bold">Currency: MMK</p>
           </div>
         </div>
@@ -232,19 +237,39 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
           <thead>
             <tr className="bg-gray-100">
               <th className="border border-black p-3 text-left">Earnings</th>
-              <th className="border border-black p-3 text-right">Amount</th>
+              <th className="border border-black p-3 text-right">Amount (MMK)</th>
             </tr>
           </thead>
           <tbody>
-            <tr><td className="border border-black p-3">Basic Salary</td><td className="border border-black p-3 text-right">{baseSalary.toLocaleString()}</td></tr>
-            <tr><td className="border border-black p-3">OT & Allowances</td><td className="border border-black p-3 text-right">{Math.round(otPay + data.attendanceBonus + data.mealAllowance).toLocaleString()}</td></tr>
-            <tr className="font-bold bg-gray-50"><td className="border border-black p-3">Gross Total</td><td className="border border-black p-3 text-right">{Math.round(grossPay).toLocaleString()}</td></tr>
+            <tr>
+              <td className="border border-black p-3">Basic Salary</td>
+              <td className="border border-black p-3 text-right">{Math.round(baseSalaryMMK).toLocaleString()}</td>
+            </tr>
+            <tr>
+              <td className="border border-black p-3">OT & Allowances</td>
+              <td className="border border-black p-3 text-right">{Math.round(otPay + allowances).toLocaleString()}</td>
+            </tr>
+            <tr className="font-bold bg-gray-50">
+              <td className="border border-black p-3">Gross Total</td>
+              <td className="border border-black p-3 text-right">{Math.round(grossPay).toLocaleString()}</td>
+            </tr>
+            <tr className="text-red-600">
+              <td className="border border-black p-3">Total Deductions (Tax & SSB)</td>
+              <td className="border border-black p-3 text-right">-{Math.round(totalDeductions).toLocaleString()}</td>
+            </tr>
           </tbody>
         </table>
 
-        <div className="bg-slate-900 text-white p-6 flex justify-between items-center rounded-lg">
-          <span className="text-xl font-bold">Net Salary</span>
-          <span className="text-3xl font-black">{Math.round(grossPay - totalDeductions).toLocaleString()} MMK</span>
+        <div className="bg-slate-900 text-white p-8 flex justify-between items-center rounded-xl shadow-inner">
+          <span className="text-xl font-bold uppercase tracking-tight">Net Salary</span>
+          <div className="text-right">
+            <span className="text-4xl font-black">{Math.round(netPay).toLocaleString()}</span>
+            <span className="text-sm font-bold ml-2">MMK</span>
+          </div>
+        </div>
+        
+        <div className="mt-8 text-center text-[10px] text-gray-400 italic">
+          * This is a computer generated document. No signature is required.
         </div>
       </div>
     );
