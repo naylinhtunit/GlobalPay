@@ -1,12 +1,15 @@
 
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Sun, Moon, Plus, Trash2 } from "lucide-react";
+import { Sun, Moon, Plus, Trash2, Info } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
+import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
+import { collection, query, where } from "firebase/firestore";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export interface ShiftEntry {
   type: "day" | "night";
@@ -66,10 +69,29 @@ interface Props {
   onChange: (data: JapanData) => void;
   baseSalary: number;
   employeeLeave?: { total: number; used: number };
+  selectedMonth?: string;
 }
 
-export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave }: Props) {
+export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, selectedMonth }: Props) {
+  const { user } = useUser();
+  const firestore = useFirestore();
   const shifts = data.shifts || [{ type: "day", startTime: "08:00", days: 0 }];
+
+  // Fetch company holidays for the selected month to auto-calculate default days
+  const calendarQuery = useMemoFirebase(() => {
+    if (!firestore || !user || !selectedMonth) return null;
+    return query(
+      collection(firestore, "companyCalendars"),
+      where("companyId", "==", user.uid)
+    );
+  }, [firestore, user, selectedMonth]);
+
+  const { data: companyEvents } = useCollection(calendarQuery);
+
+  const monthHolidays = useMemo(() => {
+    if (!selectedMonth || !companyEvents) return 0;
+    return (companyEvents || []).filter(e => e.date.startsWith(selectedMonth) && !e.isWorkday).length;
+  }, [companyEvents, selectedMonth]);
 
   useEffect(() => {
     let totalDays = 0;
@@ -113,9 +135,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave }: 
     const calculatedLateEarlyDed = Math.round(hourlyRate * (Number(data.lateEarlyHours) || 0));
 
     const defaultHousing = data.housingAllowance === 0 ? 10000 : data.housingAllowance;
-    const defaultHostelFee = data.hostelFee === 0 ? 20000 : data.hostelFee;
-
-    const calculatedHealthIns = data.healthInsurance === 0 ? 13312 : data.healthInsurance; 
+    const defaultHealthIns = data.healthInsurance === 0 ? 13312 : data.healthInsurance; 
     const calculatedPension = data.pension === 0 ? 23790 : data.pension;
     
     const totalEarningsCalc = (Number(baseSalary) || 0) + calculatedOT + calculatedLateNightOT + 
@@ -127,7 +147,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave }: 
                              calculatedAbsenceDed - calculatedLateEarlyDed;
 
     const calculatedEmpIns = Math.round(totalEarningsCalc * 0.0055);
-    const totalSocIns = (Number(calculatedHealthIns) || 0) + (Number(calculatedPension) || 0) + calculatedEmpIns + (Number(data.nursingCareInsurance) || 0);
+    const totalSocIns = (Number(defaultHealthIns) || 0) + (Number(calculatedPension) || 0) + calculatedEmpIns + (Number(data.nursingCareInsurance) || 0);
     const grossForTax = totalEarningsCalc - totalSocIns - (Number(data.nonTaxableCommuting) || 0);
     let calculatedIncomeTax = 0;
     if (grossForTax > 0) calculatedIncomeTax = Math.round(grossForTax * 0.0232);
@@ -141,8 +161,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave }: 
       data.nightShiftHours !== totalNS1 ||
       data.nightShiftHoursExtra !== totalNS2 ||
       data.otAllowance !== calculatedOT ||
-      data.housingAllowance !== defaultHousing ||
-      data.healthInsurance !== calculatedHealthIns ||
+      data.healthInsurance !== defaultHealthIns ||
       data.pension !== calculatedPension ||
       data.incomeTax !== calculatedIncomeTax ||
       data.remainingPaidLeave !== remainingLeave;
@@ -164,11 +183,10 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave }: 
         absenceDeduction: calculatedAbsenceDed,
         lateEarlyDeduction: calculatedLateEarlyDed,
         housingAllowance: defaultHousing,
-        healthInsurance: calculatedHealthIns,
+        healthInsurance: defaultHealthIns,
         pension: calculatedPension,
         employmentInsurance: calculatedEmpIns,
         incomeTax: calculatedIncomeTax,
-        hostelFee: defaultHostelFee,
         remainingPaidLeave: remainingLeave
       });
     }
@@ -194,12 +212,6 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave }: 
   const updateField = (field: keyof JapanData, value: string) => {
     const numValue = value === "" ? 0 : Number(value);
     onChange({ ...data, [field]: numValue });
-  };
-
-  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    if (e.target.value === "" || e.target.value === "0") {
-      e.target.select();
-    }
   };
 
   const totalEarnings = (Number(baseSalary) || 0) + 
@@ -233,6 +245,13 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave }: 
 
   return (
     <div className="space-y-8">
+      {monthHolidays > 0 && (
+        <div className="bg-orange-500/10 border border-orange-500/20 p-3 rounded-lg flex items-center gap-3 text-orange-700 text-xs font-bold">
+          <Info size={14} />
+          Note: {monthHolidays} company holidays detected for {selectedMonth} from your calendar.
+        </div>
+      )}
+
       <div className="bg-card border p-6 rounded-xl space-y-6 shadow-sm">
         <div className="flex justify-between items-center border-b pb-3">
           <Label className="text-sm font-bold uppercase tracking-wider">勤務シフト (SHIFT SELECTION)</Label>
@@ -296,7 +315,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave }: 
               </div>
               <div className="space-y-3">
                 <Label className="text-[10px] font-bold text-muted-foreground uppercase">Days Worked</Label>
-                <Input type="number" className="h-9 text-xs" placeholder="0" value={shift.days === 0 ? "" : shift.days} onFocus={handleFocus} onChange={e => updateShift(idx, "days", e.target.value === "" ? 0 : Number(e.target.value))} />
+                <Input type="number" className="h-9 text-xs" placeholder="0" value={shift.days === 0 ? "" : shift.days} onChange={e => updateShift(idx, "days", e.target.value === "" ? 0 : Number(e.target.value))} />
               </div>
             </div>
           ))}
@@ -310,19 +329,16 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave }: 
             { label: "所定就労日", en: "Total Days", field: "scheduledDays", color: "text-primary font-bold", readOnly: true },
             { label: "欠勤日時間", en: "Absence", field: "absenceHours" },
             { label: "遅刻早退", en: "Late/Early", field: "lateEarlyHours" },
-            { label: "普通残業 (1.25)", en: "Regular OT", field: "regularOTHours" },
-            { label: "深夜残業 (1.50)", en: "Late Night OT", field: "lateNightOTHours" },
-            { label: "休日勤務 (1.35)", en: "Holiday Work", field: "holidayWorkHours" },
-            { label: "休日深夜 (0.25)", en: "Holiday Night", field: "holidayNightHours" },
-            { label: "~22 (0.25)", en: "NS 1 Hours", field: "nightShiftHours", color: "text-primary font-bold", readOnly: true },
-            { label: "22~ (0.30)", en: "NS 2 Hours", field: "nightShiftHoursExtra", color: "text-primary font-bold", readOnly: true },
+            { label: "普通残業", en: "Regular OT", field: "regularOTHours" },
+            { label: "深夜残業", en: "Late Night OT", field: "lateNightOTHours" },
+            { label: "休日勤務", en: "Holiday Work", field: "holidayWorkHours" },
+            { label: "休日深夜", en: "Holiday Night", field: "holidayNightHours" },
             { label: "有休日数", en: "Paid Leave", field: "paidLeaveDays" },
-            { label: "昼食回数", en: "Lunch Count", field: "lunchCount" },
             { label: "有休残日数", en: "Rem. Leave", field: "remainingPaidLeave", readOnly: true },
           ].map((item) => (
             <div key={item.field} className="space-y-1">
               <Label className={`text-[10px] leading-tight block font-semibold ${item.color || ""}`}>{item.label}<br/><span className="text-muted-foreground font-normal">{item.en}</span></Label>
-              <Input type="number" readOnly={item.readOnly} className={`h-8 text-xs ${item.readOnly ? 'bg-muted/50' : ''}`} placeholder="0" value={(data as any)[item.field] === 0 ? "" : (data as any)[item.field]} onFocus={handleFocus} onChange={e => !item.readOnly && updateField(item.field as keyof JapanData, e.target.value)} />
+              <Input type="number" readOnly={item.readOnly} className={`h-8 text-xs ${item.readOnly ? 'bg-muted/50' : ''}`} placeholder="0" value={(data as any)[item.field] === 0 ? "" : (data as any)[item.field]} onChange={e => !item.readOnly && updateField(item.field as keyof JapanData, e.target.value)} />
             </div>
           ))}
         </div>
@@ -332,10 +348,6 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave }: 
         <div className="space-y-4 bg-primary/5 p-4 rounded-lg border border-primary/10">
           <h4 className="text-sm font-bold text-primary uppercase tracking-wider border-b border-primary/20 pb-2 mb-4">支給 (EARNINGS)</h4>
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1 col-span-2 bg-background/50 p-2 rounded border border-primary/10">
-               <Label className="text-[10px] font-bold">基本給 (Basic Salary)</Label>
-               <p className="text-lg font-black text-primary">{Number(baseSalary || 0).toLocaleString()} JPY</p>
-            </div>
             {[
               { label: "普通残業手当", en: "Regular OT", field: "otAllowance" },
               { label: "深夜残業手当", en: "Late Night OT", field: "lateNightOTAllowance" },
@@ -343,12 +355,12 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave }: 
               { label: "夜勤手당 2", en: "Night Alw 2", field: "nightShiftAllowanceExtra" },
               { label: "休日勤務手当", en: "Holiday Alw", field: "holidayWorkAllowance" },
               { label: "住宅手当", en: "Housing Alw", field: "housingAllowance", readOnly: false },
-              { label: "通勤費 (非課税)", en: "Non-tax Comm.", field: "nonTaxableCommuting", readOnly: false },
+              { label: "通勤費", en: "Commuting", field: "nonTaxableCommuting", readOnly: false },
               { label: "欠勤控除", en: "Absence Ded", field: "absenceDeduction", color: "text-destructive" },
             ].map((item) => (
               <div key={item.field} className="space-y-1">
                 <Label className={`text-[10px] leading-tight block font-semibold ${item.color || ""}`}>{item.label}<br/><span className="text-muted-foreground font-normal uppercase">{item.en}</span></Label>
-                <Input type="number" readOnly={item.readOnly !== false} className="h-8 text-xs" placeholder="0" value={(data as any)[item.field] === 0 ? "" : (data as any)[item.field]} onFocus={handleFocus} onChange={e => item.readOnly === false && updateField(item.field as keyof JapanData, e.target.value)} />
+                <Input type="number" readOnly={item.readOnly !== false} className="h-8 text-xs" placeholder="0" value={(data as any)[item.field] === 0 ? "" : (data as any)[item.field]} onChange={e => item.readOnly === false && updateField(item.field as keyof JapanData, e.target.value)} />
               </div>
             ))}
           </div>
@@ -366,7 +378,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave }: 
             ].map((item) => (
               <div key={item.field} className="space-y-1">
                 <Label className="text-[10px] leading-tight block font-semibold">{item.label}<br/><span className="text-muted-foreground font-normal uppercase">{item.en}</span></Label>
-                <Input type="number" className="h-8 text-xs" placeholder="0" value={(data as any)[item.field] === 0 ? "" : (data as any)[item.field]} onFocus={handleFocus} onChange={e => updateField(item.field as keyof JapanData, e.target.value)} />
+                <Input type="number" className="h-8 text-xs" placeholder="0" value={(data as any)[item.field] === 0 ? "" : (data as any)[item.field]} onChange={e => updateField(item.field as keyof JapanData, e.target.value)} />
               </div>
             ))}
           </div>

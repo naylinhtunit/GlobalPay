@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
@@ -15,6 +16,7 @@ import {
   where, 
   doc, 
   setDoc,
+  deleteDoc,
   serverTimestamp 
 } from "firebase/firestore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,19 +29,19 @@ import {
   CalendarDays, 
   Briefcase, 
   Globe,
-  Trash2,
   Plus,
-  Calendar as CalendarIcon
+  Calendar as CalendarIcon,
+  Info,
+  CheckCircle2
 } from "lucide-react";
 import { scanCalendar } from "@/ai/flows/scan-calendar-flow";
 import { useToast } from "@/hooks/use-toast";
-import { Badge } from "@/components/ui/badge";
+import { format, startOfYear, endOfYear, isSameDay } from "date-fns";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -75,7 +77,8 @@ export default function JapanCalendarPage() {
   const [language, setLanguage] = useState<"JP" | "MM">("JP");
   const [isScanning, setIsScanning] = useState(false);
   const [isAddingEvent, setIsAddingEvent] = useState(false);
-  const [newEvent, setNewEvent] = useState({ date: "", title: "" });
+  const [selectedDateForEdit, setSelectedDateForEdit] = useState<Date | null>(null);
+  const [eventTitle, setEventTitle] = useState("");
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState(false);
@@ -101,30 +104,20 @@ export default function JapanCalendarPage() {
   }, [language]);
 
   const companyEventsMap = useMemo(() => {
-    const map: Record<string, string> = {};
+    const map: Record<string, any> = {};
     (companyEvents || []).forEach(e => {
-      map[e.date] = e.title;
+      map[e.date] = e;
     });
     return map;
   }, [companyEvents]);
 
-  const allHolidays = useMemo(() => {
-    const dates = Object.keys(holidaysMap).map(d => new Date(d));
-    const companyDates = Object.keys(companyEventsMap).map(d => new Date(d));
-    return [...dates, ...companyDates];
-  }, [holidaysMap, companyEventsMap]);
-
-  if (country !== "Japan") {
-    return (
-      <div className="md:pl-64 pt-16 md:pt-0 min-h-screen flex items-center justify-center p-8">
-        <Navbar />
-        <Card className="max-w-md w-full text-center p-8 border-primary/20 bg-card">
-          <Globe className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-          <p className="text-muted-foreground">Calendar feature is only available for Japan region.</p>
-        </Card>
-      </div>
+  const yearlySummary = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    const companyHolidays = (companyEvents || []).filter(e => 
+      e.date.startsWith(currentYear.toString()) && !e.isWorkday
     );
-  }
+    return companyHolidays.length;
+  }, [companyEvents]);
 
   const startCamera = async () => {
     try {
@@ -170,7 +163,6 @@ export default function JapanCalendarPage() {
     try {
       const result = await scanCalendar({ photoDataUri: dataUri });
       if (result && result.events) {
-        // Save events to Firestore
         const companyCalRef = collection(firestore, "companyCalendars");
         for (const event of result.events) {
           const eventId = `${user.uid}_${event.date}`;
@@ -184,7 +176,7 @@ export default function JapanCalendarPage() {
         }
         toast({
           title: "Calendar Scanned",
-          description: `Successfully added ${result.events.length} events for ${result.detectedMonth || "the calendar"}.`,
+          description: `Successfully added ${result.events.length} events.`,
         });
       }
     } catch (error) {
@@ -192,28 +184,55 @@ export default function JapanCalendarPage() {
       toast({
         variant: "destructive",
         title: "Scan Failed",
-        description: "Could not process the image. Please try again with a clearer photo.",
+        description: "Could not process the image.",
       });
     } finally {
       setIsScanning(false);
     }
   };
 
-  const handleAddManualEvent = async () => {
-    if (!newEvent.date || !newEvent.title || !firestore || !user) return;
+  const handleDayClick = (date: Date) => {
+    const dateStr = format(date, "yyyy-MM-dd");
+    const existing = companyEventsMap[dateStr];
     
-    const eventId = `${user.uid}_${newEvent.date}`;
+    if (existing) {
+      // If exists, open dialog to delete or edit
+      setSelectedDateForEdit(date);
+      setEventTitle(existing.title);
+      setIsAddingEvent(true);
+    } else {
+      // If doesn't exist, open dialog to add
+      setSelectedDateForEdit(date);
+      setEventTitle("");
+      setIsAddingEvent(true);
+    }
+  };
+
+  const saveManualEvent = async () => {
+    if (!selectedDateForEdit || !firestore || !user) return;
+    
+    const dateStr = format(selectedDateForEdit, "yyyy-MM-dd");
+    const eventId = `${user.uid}_${dateStr}`;
+    
     await setDoc(doc(firestore, "companyCalendars", eventId), {
       companyId: user.uid,
-      date: newEvent.date,
-      title: newEvent.title,
+      date: dateStr,
+      title: eventTitle || "Company Holiday",
       isWorkday: false,
       updatedAt: serverTimestamp(),
     });
 
-    setNewEvent({ date: "", title: "" });
     setIsAddingEvent(false);
-    toast({ title: "Event Added", description: "Holiday has been saved to your company calendar." });
+    toast({ title: "Saved", description: "Calendar updated." });
+  };
+
+  const deleteManualEvent = async () => {
+    if (!selectedDateForEdit || !firestore || !user) return;
+    const dateStr = format(selectedDateForEdit, "yyyy-MM-dd");
+    const eventId = `${user.uid}_${dateStr}`;
+    await deleteDoc(doc(firestore, "companyCalendars", eventId));
+    setIsAddingEvent(false);
+    toast({ title: "Removed", description: "Holiday removed." });
   };
 
   const translate = (key: string) => {
@@ -226,7 +245,10 @@ export default function JapanCalendarPage() {
         addEvent: "イベントを追加",
         scanning: "スキャン中...",
         holiday: "祝日",
-        workday: "平日"
+        workday: "平日",
+        yearlySummary: "年間の会社休日合計",
+        days: "日",
+        clickToMark: "日付をクリックして休日に設定"
       },
       MM: {
         title: "ပြက္ခဒိန်",
@@ -236,11 +258,26 @@ export default function JapanCalendarPage() {
         addEvent: "ပိတ်ရက်ထည့်ရန်",
         scanning: "ဖတ်နေဆဲ...",
         holiday: "ရုံးပိတ်ရက်",
-        workday: "ရုံးဖွင့်ရက်"
+        workday: "ရုံးဖွင့်ရက်",
+        yearlySummary: "ယခုနှစ် စုစုပေါင်း ကုမ္ပဏီပိတ်ရက်",
+        days: "ရက်",
+        clickToMark: "ပိတ်ရက်သတ်မှတ်ရန် ရက်စွဲကို နှိပ်ပါ"
       }
     };
-    return dict[language][key];
+    return dict[language][key] || key;
   };
+
+  if (country !== "Japan") {
+    return (
+      <div className="md:pl-64 pt-16 md:pt-0 min-h-screen flex items-center justify-center p-8">
+        <Navbar />
+        <Card className="max-w-md w-full text-center p-8 border-primary/20 bg-card">
+          <Globe className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+          <p className="text-muted-foreground">Calendar feature is only available for Japan region.</p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="md:pl-64 pt-16 md:pt-0 min-h-screen bg-background text-foreground">
@@ -268,96 +305,117 @@ export default function JapanCalendarPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <Card className="shadow-lg border-primary/10 overflow-hidden bg-card">
-            <CardHeader className="bg-muted/30 border-b">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Calendar View */}
+          <Card className="lg:col-span-2 shadow-lg border-primary/10 overflow-hidden bg-card">
+            <CardHeader className="bg-muted/30 border-b flex flex-row items-center justify-between">
               <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
                 <Globe size={16} className="text-primary" /> {translate("publicHolidays")}
               </CardTitle>
+              <span className="text-[10px] text-muted-foreground italic flex items-center gap-1">
+                <Info size={12} /> {translate("clickToMark")}
+              </span>
             </CardHeader>
-            <CardContent className="p-6 flex flex-col items-center">
-              <Calendar
-                mode="multiple"
-                selected={allHolidays}
-                className="rounded-md border shadow-sm bg-background"
-                modifiers={{
-                  holiday: JAPAN_PUBLIC_HOLIDAYS.map(h => new Date(h.date))
-                }}
-                modifiersClassNames={{
-                  holiday: "bg-destructive/10 text-destructive font-bold"
-                }}
-              />
-              <div className="mt-6 w-full space-y-2">
-                <h4 className="text-xs font-bold text-muted-foreground uppercase mb-2">Upcoming Holidays</h4>
-                {JAPAN_PUBLIC_HOLIDAYS.slice(0, 5).map((h, i) => (
-                  <div key={i} className="flex justify-between items-center p-2 rounded-lg bg-muted/30 border border-primary/5 text-sm">
-                    <span className="font-mono text-xs">{h.date}</span>
-                    <span className="font-bold">{language === "JP" ? h.title_jp : h.title}</span>
-                  </div>
-                ))}
+            <CardContent className="p-6">
+              <div className="flex flex-col items-center">
+                <Calendar
+                  mode="single"
+                  onDayClick={handleDayClick}
+                  className="rounded-md border shadow-sm bg-background w-full flex justify-center p-8"
+                  modifiers={{
+                    publicHoliday: JAPAN_PUBLIC_HOLIDAYS.map(h => new Date(h.date)),
+                    companyHoliday: (companyEvents || []).filter(e => !e.isWorkday).map(e => new Date(e.date))
+                  }}
+                  modifiersClassNames={{
+                    publicHoliday: "bg-destructive/10 text-destructive font-bold",
+                    companyHoliday: "border-2 border-destructive rounded-full text-destructive font-black scale-110 shadow-sm"
+                  }}
+                />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="shadow-lg border-orange-500/10 overflow-hidden bg-card">
-            <CardHeader className="bg-orange-500/5 border-b">
-              <div className="flex justify-between items-center">
+          {/* Sidebar Info */}
+          <div className="space-y-6">
+            <Card className="shadow-lg border-primary/20 bg-primary/5">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs font-bold text-muted-foreground uppercase">{translate("yearlySummary")}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-5xl font-black text-primary">{yearlySummary}</span>
+                  <span className="text-lg font-bold text-muted-foreground">{translate("days")}</span>
+                </div>
+                <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
+                  <CheckCircle2 size={14} className="text-green-500" />
+                  Synced with monthly payroll
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-lg border-orange-500/10 bg-card overflow-hidden">
+              <CardHeader className="bg-orange-500/5 border-b">
                 <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
                   <Briefcase size={16} className="text-orange-600" /> {translate("companyCalendar")}
                 </CardTitle>
-                <Dialog open={isAddingEvent} onOpenChange={setIsAddingEvent}>
-                  <DialogTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 gap-1 text-orange-600 hover:bg-orange-500/10">
-                      <Plus size={14} /> {translate("addEvent")}
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>{translate("addEvent")}</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-2">
-                        <Label>Date</Label>
-                        <Input type="date" value={newEvent.date} onChange={e => setNewEvent({...newEvent, date: e.target.value})} className="bg-background" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Holiday/Event Name</Label>
-                        <Input placeholder="e.g. Summer Vacation" value={newEvent.title} onChange={e => setNewEvent({...newEvent, title: e.target.value})} className="bg-background" />
-                      </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="divide-y max-h-[400px] overflow-y-auto">
+                  {(companyEvents || []).length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <CalendarDays className="mx-auto h-8 w-8 opacity-20 mb-2" />
+                      <p className="text-xs">No company specific holidays found.</p>
                     </div>
-                    <DialogFooter>
-                      <Button onClick={handleAddManualEvent} className="bg-primary hover:bg-primary/90">Save Event</Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              </div>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="space-y-4">
-                {(companyEvents || []).length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground bg-muted/10 rounded-xl border border-dashed border-primary/10">
-                    <CalendarDays className="mx-auto h-8 w-8 opacity-20 mb-2" />
-                    <p className="text-sm">No company specific holidays found.</p>
-                    <p className="text-[10px]">Scan a calendar paper to auto-fill this list.</p>
-                  </div>
-                ) : (
-                  (companyEvents || []).map((ev: any) => (
-                    <div key={ev.id} className="flex items-center gap-4 p-3 rounded-xl border border-primary/5 bg-background hover:shadow-md transition-shadow">
-                      <div className="h-10 w-10 rounded-lg bg-orange-500/10 flex flex-col items-center justify-center text-orange-600 shrink-0">
-                        <span className="text-[10px] font-bold uppercase">{new Date(ev.date).toLocaleString('default', { month: 'short' })}</span>
-                        <span className="text-lg font-black leading-none">{new Date(ev.date).getDate()}</span>
+                  ) : (
+                    (companyEvents || []).sort((a,b) => a.date.localeCompare(b.date)).map((ev: any) => (
+                      <div key={ev.id} className="flex items-center gap-4 p-4 hover:bg-muted/30 transition-colors">
+                        <div className="h-10 w-10 rounded-lg bg-orange-500/10 flex flex-col items-center justify-center text-orange-600 shrink-0">
+                          <span className="text-[10px] font-bold uppercase">{new Date(ev.date).toLocaleString('default', { month: 'short' })}</span>
+                          <span className="text-lg font-black leading-none">{new Date(ev.date).getDate()}</span>
+                        </div>
+                        <div className="flex-1 overflow-hidden">
+                          <p className="text-sm font-bold truncate">{ev.title}</p>
+                          <p className="text-[10px] text-muted-foreground">{ev.isWorkday ? translate("workday") : translate("holiday")}</p>
+                        </div>
                       </div>
-                      <div className="flex-1 overflow-hidden">
-                        <p className="font-bold truncate">{ev.title}</p>
-                        <p className="text-[10px] text-muted-foreground">{ev.isWorkday ? translate("workday") : translate("holiday")}</p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
+
+        {/* Edit/Add Dialog */}
+        <Dialog open={isAddingEvent} onOpenChange={setIsAddingEvent}>
+          <DialogContent className="sm:max-w-[400px]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <CalendarIcon className="text-primary" />
+                {selectedDateForEdit && format(selectedDateForEdit, "PPP")}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Holiday/Event Name</Label>
+                <Input 
+                  placeholder="e.g. Summer Vacation" 
+                  value={eventTitle} 
+                  onChange={e => setEventTitle(e.target.value)} 
+                />
+              </div>
+              <p className="text-[10px] text-muted-foreground italic">
+                * Marking this as a holiday will adjust payroll working days.
+              </p>
+            </div>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button variant="outline" onClick={deleteManualEvent} className="text-destructive hover:bg-destructive/5 flex-1">
+                Remove Event
+              </Button>
+              <Button onClick={saveManualEvent} className="bg-primary flex-1">Save Holiday</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Camera Modal */}
         <Dialog open={showCamera} onOpenChange={setShowCamera}>
@@ -376,3 +434,4 @@ export default function JapanCalendarPage() {
     </div>
   );
 }
+
