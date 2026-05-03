@@ -20,7 +20,7 @@ import {
 } from "firebase/firestore";
 import { useCountry } from "@/context/CountryContext";
 import { Button } from "@/components/ui/button";
-import { Eye, Calculator, Pencil, Trash2, Filter, Calendar, Download, Loader2 } from "lucide-react";
+import { Eye, Calculator, Pencil, Trash2, Filter, Calendar, Download, Loader2, History } from "lucide-react";
 import { 
   Dialog, 
   DialogContent, 
@@ -64,7 +64,6 @@ export default function PayrollPage() {
   const [selectedEmpId, setSelectedEmpId] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("");
   const [filterMonth, setFilterMonth] = useState<string>("all");
-  const [oldPaidLeaveDays, setOldPaidLeaveDays] = useState(0);
   
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewData, setPreviewData] = useState<any>(null);
@@ -165,6 +164,35 @@ export default function PayrollPage() {
   const { data: payrollRecords, isLoading: payrollLoading } = useCollection(payrollQuery);
   const { data: employees } = useCollection(employeesQuery);
 
+  const selectedEmployee = useMemo(() => {
+    return (employees || []).find((e: any) => e.id === selectedEmpId);
+  }, [employees, selectedEmpId]);
+
+  // Salary History Logic: Find the effective salary for the chosen payroll month
+  const historicalSalary = useMemo(() => {
+    if (!selectedEmployee || !selectedMonth) return 0;
+    
+    // Migration: If no history exists, use baseSalary
+    if (!selectedEmployee.salaryHistory || selectedEmployee.salaryHistory.length === 0) {
+      return selectedEmployee.baseSalary || 0;
+    }
+
+    // Sort history to find the most recent record that is NOT later than the selected month
+    const history = [...selectedEmployee.salaryHistory].sort((a, b) => b.effectiveMonth.localeCompare(a.effectiveMonth));
+    const effectiveRecord = history.find(h => h.effectiveMonth <= selectedMonth);
+    
+    return effectiveRecord ? effectiveRecord.amount : (history[history.length - 1]?.amount || 0);
+  }, [selectedEmployee, selectedMonth]);
+
+  // Yearly Leave Logic: Calculate already used leave for this year, excluding current editing record
+  const currentYearLeaveUsed = useMemo(() => {
+    if (!selectedEmpId || !payrollRecords || !selectedMonth) return 0;
+    const year = selectedMonth.substring(0, 4);
+    return (payrollRecords || [])
+      .filter(p => p.employeeId === selectedEmpId && p.id !== editingRecordId && p.payPeriodStartDate?.startsWith(year))
+      .reduce((acc, curr) => acc + (curr.paidLeaveDays || 0), 0);
+  }, [selectedEmpId, payrollRecords, selectedMonth, editingRecordId]);
+
   const sortedRecords = useMemo(() => {
     if (!payrollRecords) return [];
     let filtered = [...payrollRecords];
@@ -182,7 +210,6 @@ export default function PayrollPage() {
   const resetForm = () => {
     setEditingRecordId(null);
     setSelectedEmpId("");
-    setOldPaidLeaveDays(0);
     if (monthOptions.length > 0) setSelectedMonth(monthOptions[0].value);
     setJapanData({
       scheduledDays: 0,
@@ -240,15 +267,12 @@ export default function PayrollPage() {
   };
 
   const handleGenerate = async () => {
-    if (!selectedEmpId || !firestore || !user) return;
+    if (!selectedEmployee || !firestore || !user) return;
     
-    const emp = (employees || []).find((e: any) => e.id === selectedEmpId);
-    if (!emp) return;
-
     let grossPay = 0;
     let deductions = 0;
     let netPay = 0;
-    const baseSalary = Number(emp.baseSalary || emp.salary || 0);
+    const baseSalary = historicalSalary; // Use the salary from date, not current
 
     if (country === "Japan") {
       grossPay = baseSalary + 
@@ -281,7 +305,7 @@ export default function PayrollPage() {
       const others = (japanData.yearEndAdj || 0) + (japanData.otherAdj1 || 0) + (japanData.otherAdj2 || 0) + (japanData.paidLeaveBuyback || 0);
       netPay = grossPay - deductions + others;
     } else {
-      const isUsd = emp.salaryCurrency === "USD" || (baseSalary > 0 && baseSalary < 10000);
+      const isUsd = selectedEmployee.salaryCurrency === "USD" || (baseSalary > 0 && baseSalary < 10000);
       const rate = myanmarData.exchangeRate || 1;
       const effectiveBaseMMK = isUsd ? baseSalary * rate : baseSalary;
       const hourlyRate = (effectiveBaseMMK / 30 / 8);
@@ -304,6 +328,7 @@ export default function PayrollPage() {
       totalGrossPay: Math.round(grossPay),
       totalDeductions: Math.round(deductions),
       netPay: Math.round(netPay),
+      paidLeaveDays: Number(japanData.paidLeaveDays || 0), // Persist leave count for yearly calculation
       japanData: country === "Japan" ? japanData : null,
       myanmarData: country === "Myanmar" ? myanmarData : null,
       updatedAt: serverTimestamp()
@@ -318,19 +343,6 @@ export default function PayrollPage() {
       batch.update(payrollRef, payload);
     } else {
       batch.set(payrollRef, { ...payload, createdAt: serverTimestamp() });
-    }
-
-    const empRef = doc(firestore, "employees", selectedEmpId);
-    if (country === "Japan") {
-      const newPaidLeave = Number(japanData.paidLeaveDays || 0);
-      const leaveDiff = newPaidLeave - oldPaidLeaveDays;
-      if (leaveDiff !== 0) {
-        const currentUsed = Number(emp.usedPaidLeave) || 0;
-        const targetUsed = Math.max(0, currentUsed + leaveDiff);
-        batch.update(empRef, {
-          usedPaidLeave: targetUsed
-        });
-      }
     }
 
     batch.commit().then(() => {
@@ -356,7 +368,6 @@ export default function PayrollPage() {
     
     if (record.country === "Japan") {
       setJapanData({ ...record.japanData });
-      setOldPaidLeaveDays(Number(record.japanData?.paidLeaveDays || 0));
     } else {
       setMyanmarData({
         ...record.myanmarData,
@@ -372,17 +383,6 @@ export default function PayrollPage() {
     const batch = writeBatch(firestore);
     const payrollRef = doc(firestore, "payrollRecords", record.id);
     batch.delete(payrollRef);
-
-    if (record.country === "Japan" && record.japanData?.paidLeaveDays) {
-      const empRef = doc(firestore, "employees", record.employeeId);
-      const empSnap = await getDoc(empRef);
-      if (empSnap.exists()) {
-        const currentUsed = empSnap.data().usedPaidLeave || 0;
-        batch.update(empRef, {
-          usedPaidLeave: Math.max(0, currentUsed - Number(record.japanData.paidLeaveDays))
-        });
-      }
-    }
 
     batch.commit().then(() => {
       toast({ title: "Payroll deleted", variant: "destructive" });
@@ -451,7 +451,7 @@ export default function PayrollPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
             <h2 className="text-2xl md:text-3xl font-bold text-primary">Monthly Payroll</h2>
-            <p className="text-muted-foreground">Process payments for {country} employees</p>
+            <p className="text-muted-foreground">Process payments based on historical salary and yearly leave</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex items-center gap-2 bg-card border rounded-lg px-3 shadow-sm h-10 w-full sm:w-auto">
@@ -512,18 +512,23 @@ export default function PayrollPage() {
                     </div>
                   </div>
 
-                  {selectedEmpId && (
-                    <div className="mt-4 p-4 border rounded-lg bg-primary/10 flex items-center gap-4">
+                  {selectedEmployee && (
+                    <div className="mt-4 p-4 border rounded-lg bg-primary/5 flex items-center gap-4">
                       <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
-                        {(employees || []).find((e: any) => e.id === selectedEmpId)?.fullName?.[0] || 'E'}
+                        {selectedEmployee.fullName?.[0] || 'E'}
                       </div>
                       <div className="flex-1">
-                        <p className="text-sm font-bold text-primary">
-                          {(employees || []).find((e: any) => e.id === selectedEmpId)?.fullName || (employees || []).find((e: any) => e.id === selectedEmpId)?.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground font-mono">
-                          Base: {((employees || []).find((e: any) => e.id === selectedEmpId)?.baseSalary || 0).toLocaleString()} {((employees || []).find((e: any) => e.id === selectedEmpId)?.salaryCurrency) || (country === "Myanmar" ? "MMK" : "JPY")}
-                        </p>
+                        <p className="text-sm font-bold text-primary">{selectedEmployee.fullName}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] font-bold bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
+                            Base: {historicalSalary.toLocaleString()} {selectedEmployee.salaryCurrency || currency}
+                          </span>
+                          {selectedEmployee.salaryHistory && selectedEmployee.salaryHistory.length > 1 && (
+                            <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded flex items-center gap-1">
+                              <History size={10} /> History Applied
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -532,14 +537,12 @@ export default function PayrollPage() {
                     <JapanPayrollForm 
                       data={japanData} 
                       onChange={setJapanData} 
-                      baseSalary={(employees || []).find((e: any) => e.id === selectedEmpId)?.baseSalary || (employees || []).find((e: any) => e.id === selectedEmpId)?.salary || 0}
+                      baseSalary={historicalSalary}
                       employeeLeave={
-                        (() => {
-                          const emp = (employees || []).find((e: any) => e.id === selectedEmpId);
-                          if (!emp) return undefined;
-                          const effectiveUsed = Math.max(0, (Number(emp.usedPaidLeave) || 0) - (editingRecordId ? oldPaidLeaveDays : 0));
-                          return { total: Number(emp.totalPaidLeave) || 0, used: effectiveUsed };
-                        })()
+                        selectedEmployee ? { 
+                          total: Number(selectedEmployee.totalPaidLeave) || 0, 
+                          used: currentYearLeaveUsed 
+                        } : undefined
                       }
                       selectedMonth={selectedMonth}
                     />
@@ -547,8 +550,8 @@ export default function PayrollPage() {
                     <MyanmarPayrollForm 
                       data={myanmarData} 
                       onChange={setMyanmarData} 
-                      baseSalary={(employees || []).find((e: any) => e.id === selectedEmpId)?.baseSalary || (employees || []).find((e: any) => e.id === selectedEmpId)?.salary || 0}
-                      salaryCurrency={(employees || []).find((e: any) => e.id === selectedEmpId)?.salaryCurrency}
+                      baseSalary={historicalSalary}
+                      salaryCurrency={selectedEmployee?.salaryCurrency}
                     />
                   )}
                   
@@ -589,12 +592,12 @@ export default function PayrollPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col">
-                          <span className="font-semibold">{(employees || []).find((e: any) => e.id === rec.employeeId)?.fullName || (employees || []).find((e: any) => e.id === rec.employeeId)?.name || 'Unknown'}</span>
+                          <span className="font-semibold">{(employees || []).find((e: any) => e.id === rec.employeeId)?.fullName || 'Unknown'}</span>
                           <span className="text-[10px] text-muted-foreground">ID: {(employees || []).find((e: any) => e.id === rec.employeeId)?.employeeNumber || 'N/A'}</span>
                         </div>
                       </TableCell>
                       <TableCell className="hidden sm:table-cell font-mono font-bold">
-                        {Math.round(rec.netPay || rec.amount || 0).toLocaleString()} <span className="text-[10px] font-normal text-muted-foreground">{currency}</span>
+                        {Math.round(rec.netPay || 0).toLocaleString()} <span className="text-[10px] font-normal text-muted-foreground">{currency}</span>
                       </TableCell>
                       <TableCell>
                         <span className="px-2 py-0.5 rounded-full bg-green-500/10 text-green-600 text-[10px] font-bold border border-green-500/20">{rec.status}</span>
@@ -653,6 +656,7 @@ export default function PayrollPage() {
                     employee={previewData.employee} 
                     month={previewData.month} 
                     data={previewData.data} 
+                    record={previewData}
                   />
                 </div>
               )}

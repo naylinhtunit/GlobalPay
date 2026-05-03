@@ -5,14 +5,13 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Employee",
       "type": "object",
-      "description": "Represents an individual employee with their core personal and employment details within the GlobalPay system.",
+      "description": "Represents an individual employee with their core personal and employment details and historical records.",
       "properties": {
         "id": {
           "type": "string"
         },
         "companyId": {
-          "type": "string",
-          "description": "ID of the company/tenant this employee belongs to."
+          "type": "string"
         },
         "employeeNumber": {
           "type": "string"
@@ -25,7 +24,18 @@
           "format": "email"
         },
         "baseSalary": {
-          "type": "number"
+          "type": "number",
+          "description": "Latest or current base salary."
+        },
+        "salaryHistory": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "amount": { "type": "number" },
+              "effectiveMonth": { "type": "string", "description": "Format YYYY-MM" }
+            }
+          }
         },
         "country": {
           "type": "string"
@@ -39,11 +49,10 @@
         },
         "totalPaidLeave": {
           "type": "number",
-          "description": "Total number of paid leave days allowed per year."
+          "description": "Annual allowance of paid leave days."
         },
-        "usedPaidLeave": {
-          "type": "number",
-          "description": "Total number of paid leave days used so far."
+        "salaryCurrency": {
+          "type": "string"
         }
       },
       "required": [
@@ -87,7 +96,8 @@
           "type": "string"
         },
         "basicSalary": {
-          "type": "number"
+          "type": "number",
+          "description": "The base salary at the time this payroll was calculated."
         },
         "status": {
           "type": "string"
@@ -100,6 +110,10 @@
         },
         "netPay": {
           "type": "number"
+        },
+        "paidLeaveDays": {
+          "type": "number",
+          "description": "Number of paid leave days taken in this specific month."
         },
         "japanData": {
           "type": "object"

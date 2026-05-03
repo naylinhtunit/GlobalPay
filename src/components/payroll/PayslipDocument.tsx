@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from "react";
@@ -8,48 +9,22 @@ interface Props {
   employee: any;
   month: string;
   data: any;
+  record?: any; // Contains the actual basicSalary at payment time
 }
 
-export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ country, employee, month, data }, ref) => {
-  // Use manual parsing for month to avoid timezone shifts from new Date()
+export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ country, employee, month, data, record }, ref) => {
   const [yearPart, monthPart] = (month || "").split('-');
   const displayYear = yearPart || new Date().getFullYear().toString();
   const displayMonthNum = monthPart ? parseInt(monthPart, 10) : new Date().getMonth() + 1;
-
-  // Calculate the actual last day of the month to avoid invalid dates like Feb 30
   const lastDayOfMonth = new Date(parseInt(displayYear), displayMonthNum, 0).getDate();
 
-  if (country === "Japan") {
-    const baseSalary = employee.baseSalary || 200000;
-    const totalEarnings = baseSalary + 
-                          (data.otAllowance || 0) + 
-                          (data.lateNightOTAllowance || 0) + 
-                          (data.nightShiftAllowance || 0) + 
-                          (data.nightShiftAllowanceExtra || 0) + 
-                          (data.holidayWorkAllowance || 0) + 
-                          (data.holidayNightAllowance || 0) + 
-                          (data.familyAllowance || 0) + 
-                          (data.housingAllowance || 0) + 
-                          (data.nonTaxableCommuting || 0) + 
-                          (data.taxableCommuting || 0) + 
-                          (data.prevMonthAdj || 0) + 
-                          (data.leaveAllowance || 0) -
-                          (data.absenceDeduction || 0) -
-                          (data.lateEarlyDeduction || 0);
+  // Use the salary recorded at payment time to preserve historical integrity
+  const payTimeSalary = record?.basicSalary || employee.baseSalary || 0;
 
-    const totalDeductions = (data.healthInsurance || 0) + 
-                            (data.nursingCareInsurance || 0) +
-                            (data.pension || 0) + 
-                            (data.socInsAdj || 0) + 
-                            (data.employmentInsurance || 0) + 
-                            (data.incomeTax || 0) + 
-                            (data.residentTax || 0) +
-                            (data.lunchFee || 0) +
-                            (data.hostelFee || 0) +
-                            (data.beddingFee || 0);
-    
-    const othersSum = (data.yearEndAdj || 0) + (data.otherAdj1 || 0) + (data.otherAdj2 || 0) + (data.paidLeaveBuyback || 0);
-    const netPay = totalEarnings - totalDeductions + othersSum;
+  if (country === "Japan") {
+    const totalEarnings = (record?.totalGrossPay || 0);
+    const totalDeductions = (record?.totalDeductions || 0);
+    const netPay = (record?.netPay || 0);
 
     return (
       <div ref={ref} className="p-8 md:p-12 max-w-[1000px] mx-auto bg-white text-black font-sans border border-gray-400 shadow-sm print:shadow-none print:border-none print:p-4">
@@ -118,7 +93,7 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
             <div className="flex-1 p-1 space-y-0.5">
               <div className="flex justify-between border-b border-gray-100">
                 <span className="flex flex-col"><span>基本給</span><span className="text-[7px] text-gray-400">Basic Salary</span></span>
-                <span className="font-mono self-center">{(employee.baseSalary || 0).toLocaleString()}</span>
+                <span className="font-mono self-center">{(payTimeSalary).toLocaleString()}</span>
               </div>
               {[
                 { l: "普通残業手당", e: "Reg OT (1.25)", v: data.otAllowance },
@@ -199,9 +174,9 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
     );
   } else {
     // Myanmar Payslip logic
-    const isUsd = employee.salaryCurrency === "USD" || (employee.baseSalary > 0 && employee.baseSalary < 10000);
+    const isUsd = employee.salaryCurrency === "USD" || (payTimeSalary > 0 && payTimeSalary < 10000);
     const rate = data.exchangeRate || 1;
-    const baseSalaryMMK = isUsd ? (employee.baseSalary * rate) : (employee.baseSalary || 400000);
+    const baseSalaryMMK = isUsd ? (payTimeSalary * rate) : (payTimeSalary);
     
     const hourlyRate = (baseSalaryMMK / 30 / 8);
     const otPay = (data.otHours || 0) * hourlyRate * 2;
@@ -221,7 +196,7 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
           <div className="space-y-1">
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Employee Information</p>
             <p className="font-bold">ID: {employee.employeeNumber}</p>
-            <p className="font-bold">Name: {employee.fullName || employee.name}</p>
+            <p className="font-bold">Name: {employee.fullName}</p>
           </div>
           <div className="text-right space-y-1">
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Payment Details</p>
