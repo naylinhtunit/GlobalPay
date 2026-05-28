@@ -182,7 +182,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
         ...data,
         shifts,
         scheduledDays: totalDays,
-        scheduledHours: auto_scheduledHours,
+        scheduledHours: autoScheduledHours,
         nightShiftHours: totalNS1,
         nightShiftHoursExtra: totalNS2,
         otAllowance: calculatedOT,
