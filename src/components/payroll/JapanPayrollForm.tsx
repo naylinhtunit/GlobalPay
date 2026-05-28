@@ -76,7 +76,6 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
   const firestore = useFirestore();
   const shifts = data.shifts || [{ type: "day", startTime: "08:00", days: 0 }];
 
-  // Fetch company holidays for the selected month to auto-calculate default days
   const calendarQuery = useMemoFirebase(() => {
     if (!firestore || !user || !selectedMonth) return null;
     return query(
@@ -133,23 +132,35 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
     const calculatedAbsenceDed = Math.round(hourlyRate * (Number(data.absenceHours) || 0));
     const calculatedLateEarlyDed = Math.round(hourlyRate * (Number(data.lateEarlyHours) || 0));
 
-    const defaultHousing = data.housingAllowance === 0 ? 10000 : data.housingAllowance;
-    const defaultHealthIns = data.healthInsurance === 0 ? 13312 : data.healthInsurance; 
-    const calculatedPension = data.pension === 0 ? 23790 : data.pension;
+    // Dynamic Social Insurance Rates (Employee share approx)
+    const dynamicHealthIns = Math.round(baseSalary * 0.05); // Approx 5% for Health
+    const dynamicPension = Math.round(baseSalary * 0.0915); // Standard 9.15% for Welfare Pension
+    const dynamicEmpIns = Math.round(baseSalary * 0.006); // Standard 0.6% for general industries
+
+    const currentHealthIns = data.healthInsurance === 0 ? dynamicHealthIns : data.healthInsurance;
+    const currentPension = data.pension === 0 ? dynamicPension : data.pension;
+    const currentEmpIns = data.employmentInsurance === 0 ? dynamicEmpIns : data.employmentInsurance;
     
     const totalEarningsCalc = (Number(baseSalary) || 0) + calculatedOT + calculatedLateNightOT + 
                              calculatedNightAlw1 + calculatedNightAlw2 + 
                              calculatedHolidayWork + calculatedHolidayNight + 
-                             (Number(data.familyAllowance) || 0) + (Number(defaultHousing) || 0) + 
+                             (Number(data.familyAllowance) || 0) + (Number(data.housingAllowance) || 0) + 
                              (Number(data.nonTaxableCommuting) || 0) + (Number(data.taxableCommuting) || 0) + 
                              (Number(data.prevMonthAdj) || 0) + (Number(data.leaveAllowance) || 0) -
                              calculatedAbsenceDed - calculatedLateEarlyDed;
 
-    const calculatedEmpIns = Math.round(totalEarningsCalc * 0.0055);
-    const totalSocIns = (Number(defaultHealthIns) || 0) + (Number(calculatedPension) || 0) + calculatedEmpIns + (Number(data.nursingCareInsurance) || 0);
+    const totalSocIns = currentHealthIns + currentPension + currentEmpIns + (Number(data.nursingCareInsurance) || 0);
     const grossForTax = totalEarningsCalc - totalSocIns - (Number(data.nonTaxableCommuting) || 0);
+    
+    // Improved Income Tax (Gensen Choshu) Approximation based on Tax Table
     let calculatedIncomeTax = 0;
-    if (grossForTax > 0) calculatedIncomeTax = Math.round(grossForTax * 0.0232);
+    if (grossForTax > 0) {
+      if (grossForTax < 88000) calculatedIncomeTax = 0;
+      else if (grossForTax < 150000) calculatedIncomeTax = Math.round(grossForTax * 0.03);
+      else if (grossForTax < 250000) calculatedIncomeTax = Math.round(grossForTax * 0.05);
+      else if (grossForTax < 350000) calculatedIncomeTax = Math.round(grossForTax * 0.065);
+      else calculatedIncomeTax = Math.round(grossForTax * 0.10);
+    }
 
     const remainingLeave = employeeLeave 
       ? Math.max(0, employeeLeave.total - employeeLeave.used - (Number(data.paidLeaveDays) || 0))
@@ -160,8 +171,9 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
       data.nightShiftHours !== totalNS1 ||
       data.nightShiftHoursExtra !== totalNS2 ||
       data.otAllowance !== calculatedOT ||
-      data.healthInsurance !== defaultHealthIns ||
-      data.pension !== calculatedPension ||
+      data.healthInsurance !== currentHealthIns ||
+      data.pension !== currentPension ||
+      data.employmentInsurance !== currentEmpIns ||
       data.incomeTax !== calculatedIncomeTax ||
       data.remainingPaidLeave !== remainingLeave;
 
@@ -170,7 +182,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
         ...data,
         shifts,
         scheduledDays: totalDays,
-        scheduledHours: autoScheduledHours,
+        scheduledHours: auto_scheduledHours,
         nightShiftHours: totalNS1,
         nightShiftHoursExtra: totalNS2,
         otAllowance: calculatedOT,
@@ -181,10 +193,9 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
         holidayNightAllowance: calculatedHolidayNight,
         absenceDeduction: calculatedAbsenceDed,
         lateEarlyDeduction: calculatedLateEarlyDed,
-        housingAllowance: defaultHousing,
-        healthInsurance: defaultHealthIns,
-        pension: calculatedPension,
-        employmentInsurance: calculatedEmpIns,
+        healthInsurance: currentHealthIns,
+        pension: currentPension,
+        employmentInsurance: currentEmpIns,
         incomeTax: calculatedIncomeTax,
         remainingPaidLeave: remainingLeave
       });
@@ -345,7 +356,10 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-4 bg-primary/5 p-4 rounded-lg border border-primary/10">
-          <h4 className="text-sm font-bold text-primary uppercase tracking-wider border-b border-primary/20 pb-2 mb-4">支給 (EARNINGS)</h4>
+          <div className="flex justify-between items-center border-b border-primary/20 pb-2 mb-4">
+            <h4 className="text-sm font-bold text-primary uppercase tracking-wider">支給 (EARNINGS)</h4>
+            <span className="text-[9px] text-primary/60 italic">* Auto-calculated from base salary</span>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             {[
               { label: "普通残業手当", en: "Regular OT", field: "otAllowance" },
@@ -365,7 +379,19 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
           </div>
         </div>
         <div className="space-y-4 bg-destructive/5 p-4 rounded-lg border border-destructive/10">
-          <h4 className="text-sm font-bold text-destructive uppercase tracking-wider border-b border-destructive/20 pb-2 mb-4">控除 (DEDUCTIONS)</h4>
+          <div className="flex justify-between items-center border-b border-destructive/20 pb-2 mb-4">
+            <h4 className="text-sm font-bold text-destructive uppercase tracking-wider">控除 (DEDUCTIONS)</h4>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info size={14} className="text-destructive/50 cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">Health, Pension, and Tax are estimated based on salary tiers.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             {[
               { label: "健康保険料", en: "Health Ins", field: "healthInsurance" },
@@ -382,6 +408,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
               </div>
             ))}
           </div>
+          <p className="text-[9px] text-destructive/70 italic mt-2">Resident Tax (住民税) must be entered manually from your local notice.</p>
         </div>
       </div>
       <div className="p-6 bg-slate-900 text-white dark:bg-slate-950 dark:border dark:border-primary/20 rounded-xl shadow-xl grid grid-cols-1 sm:grid-cols-3 gap-6">
