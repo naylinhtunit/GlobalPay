@@ -132,10 +132,9 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
     const calculatedAbsenceDed = Math.round(hourlyRate * (Number(data.absenceHours) || 0));
     const calculatedLateEarlyDed = Math.round(hourlyRate * (Number(data.lateEarlyHours) || 0));
 
-    // Dynamic Social Insurance Rates (Employee share approx)
-    const dynamicHealthIns = Math.round(baseSalary * 0.05); // Approx 5% for Health
-    const dynamicPension = Math.round(baseSalary * 0.0915); // Standard 9.15% for Welfare Pension
-    const dynamicEmpIns = Math.round(baseSalary * 0.006); // Standard 0.6% for general industries
+    const dynamicHealthIns = Math.round(baseSalary * 0.05); 
+    const dynamicPension = Math.round(baseSalary * 0.0915); 
+    const dynamicEmpIns = Math.round(baseSalary * 0.006); 
 
     const currentHealthIns = data.healthInsurance === 0 ? dynamicHealthIns : data.healthInsurance;
     const currentPension = data.pension === 0 ? dynamicPension : data.pension;
@@ -152,7 +151,6 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
     const totalSocIns = currentHealthIns + currentPension + currentEmpIns + (Number(data.nursingCareInsurance) || 0);
     const grossForTax = totalEarningsCalc - totalSocIns - (Number(data.nonTaxableCommuting) || 0);
     
-    // Improved Income Tax (Gensen Choshu) Approximation based on Tax Table
     let calculatedIncomeTax = 0;
     if (grossForTax > 0) {
       if (grossForTax < 88000) calculatedIncomeTax = 0;
@@ -274,8 +272,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
             <div key={idx} className="relative grid grid-cols-1 md:grid-cols-3 gap-6 p-4 bg-muted/30 rounded-lg border">
               {shifts.length > 1 && (
                 <Button 
-                  variant="ghost" 
-                  size="icon" 
+                  variant="ghost" size="icon" 
                   className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-background border shadow-sm hover:text-destructive"
                   onClick={() => removeShift(idx)}
                 >
@@ -362,11 +359,11 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
           </div>
           <div className="grid grid-cols-2 gap-3">
             {[
-              { label: "普通残業手当", en: "Regular OT", field: "otAllowance" },
-              { label: "深夜残業手当", en: "Late Night OT", field: "lateNightOTAllowance" },
-              { label: "夜勤手当 1", en: "Night Alw 1", field: "nightShiftAllowance" },
-              { label: "夜勤手당 2", en: "Night Alw 2", field: "nightShiftAllowanceExtra" },
-              { label: "休日勤務手当", en: "Holiday Alw", field: "holidayWorkAllowance" },
+              { label: "普通残業手当", en: "Regular OT (1.25)", field: "otAllowance" },
+              { label: "深夜残業手当", en: "Late Night OT (1.50)", field: "lateNightOTAllowance" },
+              { label: "夜勤手当 1", en: "Night Alw 1 (0.25)", field: "nightShiftAllowance" },
+              { label: "夜勤手当 2", en: "Night Alw 2 (0.30)", field: "nightShiftAllowanceExtra" },
+              { label: "休日勤務手当", en: "Holiday Alw (1.35)", field: "holidayWorkAllowance" },
               { label: "住宅手当", en: "Housing Alw", field: "housingAllowance", readOnly: false },
               { label: "通勤費", en: "Commuting", field: "nonTaxableCommuting", readOnly: false },
               { label: "欠勤控除", en: "Absence Ded", field: "absenceDeduction", color: "text-destructive" },
@@ -394,11 +391,11 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
           </div>
           <div className="grid grid-cols-2 gap-3">
             {[
-              { label: "健康保険料", en: "Health Ins", field: "healthInsurance" },
+              { label: "健康保険料", en: "Health Ins (5%)", field: "healthInsurance" },
               { label: "介護保険料", en: "Nursing Care", field: "nursingCareInsurance" },
-              { label: "厚生年金保険", en: "Welfare Pension", field: "pension" },
-              { label: "雇用保険料", en: "Employment Ins", field: "employmentInsurance" },
-              { label: "所得税", en: "Income Tax", field: "incomeTax" },
+              { label: "厚生年金保険", en: "Welfare Pension (9.15%)", field: "pension" },
+              { label: "雇用保険料", en: "Employment Ins (0.6%)", field: "employmentInsurance" },
+              { label: "所得税", en: "Income Tax (Auto-tiered)", field: "incomeTax" },
               { label: "住民税", en: "Resident Tax", field: "residentTax" },
               { label: "寮費", en: "Hostel Fee", field: "hostelFee" },
             ].map((item) => (
