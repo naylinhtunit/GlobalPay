@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from "react";
@@ -35,7 +34,7 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
             <p className="text-sm mt-4 font-bold">GlobalPay Enterprise System</p>
           </div>
           <div className="text-right space-y-2">
-            <p className="text-xl font-bold border-b border-black pb-1">{displayYear}年 {displayMonthNum}月分 給与</p>
+            <p className="text-xl font-bold border-b border-black pb-1">令和 {parseInt(displayYear) - 2018}年 {displayMonthNum}月分 給与</p>
             <div className="flex gap-4 text-xs justify-end mt-4">
               <div className="border border-black p-2 w-24 text-center">
                 <p className="text-[8px] text-gray-500">支給日 (Pay Date)</p>
@@ -96,12 +95,12 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
                 <span className="font-mono self-center">{(payTimeSalary).toLocaleString()}</span>
               </div>
               {[
-                { l: "普通残業手당", e: "Reg OT (1.25)", v: data.otAllowance },
-                { l: "深夜残業手당", e: "Late Night (1.50)", v: data.lateNightOTAllowance },
+                { l: "普通残業手当", e: "Reg OT (1.25)", v: data.otAllowance },
+                { l: "深夜残業手当", e: "Late Night (1.50)", v: data.lateNightOTAllowance },
                 { l: "~22", e: "Night Alw 1 (0.25)", v: data.nightShiftAllowance },
                 { l: "22~", e: "Night Alw 2 (0.30)", v: data.nightShiftAllowanceExtra },
                 { l: "休日勤務手当", e: "Holiday (1.35)", v: data.holidayWorkAllowance },
-                { l: "休日深夜手당", e: "Hol. Night (0.25)", v: data.holidayNightAllowance },
+                { l: "休日深夜手当", e: "Hol. Night (0.25)", v: data.holidayNightAllowance },
                 { l: "家族手当", e: "Family Alw", v: data.familyAllowance },
                 { l: "住宅手当", e: "Housing Alw", v: data.housingAllowance },
                 { l: "非課税通勤費", e: "Non-tax Comm.", v: data.nonTaxableCommuting },

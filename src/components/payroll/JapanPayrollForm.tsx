@@ -119,6 +119,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
     });
 
     const autoScheduledHours = totalDays * 8;
+    // Using 170.5 as a standard monthly denominator for hourly rate calculation
     const otDenominator = 170.5;
     const hourlyRate = (Number(baseSalary) || 0) / otDenominator;
 
@@ -126,15 +127,19 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
     const calculatedLateNightOT = Math.round(hourlyRate * 1.50 * (Number(data.lateNightOTHours) || 0));
     const calculatedHolidayWork = Math.round(hourlyRate * 1.35 * (Number(data.holidayWorkHours) || 0));
     const calculatedHolidayNight = Math.round(hourlyRate * 0.25 * (Number(data.holidayNightHours) || 0));
+    
+    // Night Shift Allowances (22:00 - 05:00 usually gets 25% extra)
+    // Based on the provided payslip, the 22~ allowance is quite significant.
     const calculatedNightAlw1 = Math.round(hourlyRate * 0.25 * totalNS1);
     const calculatedNightAlw2 = Math.round(hourlyRate * 0.30 * totalNS2);
 
     const calculatedAbsenceDed = Math.round(hourlyRate * (Number(data.absenceHours) || 0));
     const calculatedLateEarlyDed = Math.round(hourlyRate * (Number(data.lateEarlyHours) || 0));
 
-    const dynamicHealthIns = Math.round(baseSalary * 0.05); 
-    const dynamicPension = Math.round(baseSalary * 0.0915); 
-    const dynamicEmpIns = Math.round(baseSalary * 0.006); 
+    // Dynamic estimates for Social Insurance (based on standard 2024 rates)
+    const dynamicHealthIns = Math.round(baseSalary * 0.055); 
+    const dynamicPension = Math.round(baseSalary * 0.098); 
+    const dynamicEmpIns = Math.round((baseSalary + calculatedOT + calculatedLateNightOT + (Number(data.housingAllowance) || 0)) * 0.005); 
 
     const currentHealthIns = data.healthInsurance === 0 ? dynamicHealthIns : data.healthInsurance;
     const currentPension = data.pension === 0 ? dynamicPension : data.pension;
@@ -151,13 +156,14 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
     const totalSocIns = currentHealthIns + currentPension + currentEmpIns + (Number(data.nursingCareInsurance) || 0);
     const grossForTax = totalEarningsCalc - totalSocIns - (Number(data.nonTaxableCommuting) || 0);
     
+    // Improved Income Tax Estimation
     let calculatedIncomeTax = 0;
     if (grossForTax > 0) {
       if (grossForTax < 88000) calculatedIncomeTax = 0;
-      else if (grossForTax < 150000) calculatedIncomeTax = Math.round(grossForTax * 0.03);
-      else if (grossForTax < 250000) calculatedIncomeTax = Math.round(grossForTax * 0.05);
-      else if (grossForTax < 350000) calculatedIncomeTax = Math.round(grossForTax * 0.065);
-      else calculatedIncomeTax = Math.round(grossForTax * 0.10);
+      else if (grossForTax < 150000) calculatedIncomeTax = Math.round(grossForTax * 0.02);
+      else if (grossForTax < 250000) calculatedIncomeTax = Math.round(grossForTax * 0.035);
+      else if (grossForTax < 350000) calculatedIncomeTax = Math.round(grossForTax * 0.05);
+      else calculatedIncomeTax = Math.round(grossForTax * 0.08);
     }
 
     const remainingLeave = employeeLeave 
@@ -355,22 +361,22 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
         <div className="space-y-4 bg-primary/5 p-4 rounded-lg border border-primary/10">
           <div className="flex justify-between items-center border-b border-primary/20 pb-2 mb-4">
             <h4 className="text-sm font-bold text-primary uppercase tracking-wider">支給 (EARNINGS)</h4>
-            <span className="text-[9px] text-primary/60 italic">* Auto-calculated from base salary</span>
+            <span className="text-[9px] text-primary/60 italic">* Overwrite values to match your payslip</span>
           </div>
           <div className="grid grid-cols-2 gap-3">
             {[
-              { label: "普通残業手当", en: "Regular OT (1.25)", field: "otAllowance" },
-              { label: "深夜残業手当", en: "Late Night OT (1.50)", field: "lateNightOTAllowance" },
-              { label: "夜勤手当 1", en: "Night Alw 1 (0.25)", field: "nightShiftAllowance" },
-              { label: "夜勤手当 2", en: "Night Alw 2 (0.30)", field: "nightShiftAllowanceExtra" },
-              { label: "休日勤務手当", en: "Holiday Alw (1.35)", field: "holidayWorkAllowance" },
+              { label: "普通残業手当", en: "Regular OT (1.25)", field: "otAllowance", readOnly: false },
+              { label: "深夜残業手当", en: "Late Night (1.50)", field: "lateNightOTAllowance", readOnly: false },
+              { label: "夜勤手当 1", en: "Night Alw 1 (0.25)", field: "nightShiftAllowance", readOnly: false },
+              { label: "夜勤手当 2", en: "Night Alw 2 (0.30)", field: "nightShiftAllowanceExtra", readOnly: false },
+              { label: "休日勤務手当", en: "Holiday Alw (1.35)", field: "holidayWorkAllowance", readOnly: false },
               { label: "住宅手当", en: "Housing Alw", field: "housingAllowance", readOnly: false },
               { label: "通勤費", en: "Commuting", field: "nonTaxableCommuting", readOnly: false },
-              { label: "欠勤控除", en: "Absence Ded", field: "absenceDeduction", color: "text-destructive" },
+              { label: "欠勤控除", en: "Absence Ded", field: "absenceDeduction", color: "text-destructive", readOnly: false },
             ].map((item) => (
               <div key={item.field} className="space-y-1">
                 <Label className={`text-[10px] leading-tight block font-semibold ${item.color || ""}`}>{item.label}<br/><span className="text-muted-foreground font-normal uppercase">{item.en}</span></Label>
-                <Input type="number" readOnly={item.readOnly !== false} className="h-8 text-xs" placeholder="0" value={(data as any)[item.field] === 0 ? "" : (data as any)[item.field]} onChange={e => item.readOnly === false && updateField(item.field as keyof JapanData, e.target.value)} />
+                <Input type="number" className="h-8 text-xs" placeholder="0" value={(data as any)[item.field] === 0 ? "" : (data as any)[item.field]} onChange={e => updateField(item.field as keyof JapanData, e.target.value)} />
               </div>
             ))}
           </div>
@@ -384,18 +390,18 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
                   <Info size={14} className="text-destructive/50 cursor-help" />
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p className="text-xs">Health, Pension, and Tax are estimated based on salary tiers.</p>
+                  <p className="text-xs">Estimate based on common rates. Adjust to match your payslip.</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
           <div className="grid grid-cols-2 gap-3">
             {[
-              { label: "健康保険料", en: "Health Ins (5%)", field: "healthInsurance" },
+              { label: "健康保険料", en: "Health Ins (~5.5%)", field: "healthInsurance" },
               { label: "介護保険料", en: "Nursing Care", field: "nursingCareInsurance" },
-              { label: "厚生年金保険", en: "Welfare Pension (9.15%)", field: "pension" },
-              { label: "雇用保険料", en: "Employment Ins (0.6%)", field: "employmentInsurance" },
-              { label: "所得税", en: "Income Tax (Auto-tiered)", field: "incomeTax" },
+              { label: "厚生年金保険", en: "Welfare Pension (~9.8%)", field: "pension" },
+              { label: "雇用保険料", en: "Employment Ins (0.5%)", field: "employmentInsurance" },
+              { label: "所得税", en: "Income Tax", field: "incomeTax" },
               { label: "住民税", en: "Resident Tax", field: "residentTax" },
               { label: "寮費", en: "Hostel Fee", field: "hostelFee" },
             ].map((item) => (
@@ -405,7 +411,6 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
               </div>
             ))}
           </div>
-          <p className="text-[9px] text-destructive/70 italic mt-2">Resident Tax (住民税) must be entered manually from your local notice.</p>
         </div>
       </div>
       <div className="p-6 bg-slate-900 text-white dark:bg-slate-950 dark:border dark:border-primary/20 rounded-xl shadow-xl grid grid-cols-1 sm:grid-cols-3 gap-6">
