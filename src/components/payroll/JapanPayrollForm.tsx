@@ -8,7 +8,6 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export interface ShiftEntry {
   type: "day" | "night";
@@ -378,16 +377,6 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
         <div className="space-y-4 bg-card p-4 rounded-xl border shadow-sm">
           <div className="flex justify-between items-center border-b pb-2 mb-4">
             <h4 className="text-sm font-bold text-destructive uppercase tracking-wider">控除 (DEDUCTIONS)</h4>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info size={14} className="text-destructive/50 cursor-help" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p className="text-xs">Estimate based on common rates. Adjust to match your payslip.</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
           </div>
           <div className="grid grid-cols-2 gap-3">
             {[
