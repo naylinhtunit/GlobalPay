@@ -60,10 +60,6 @@ export default function Dashboard() {
           <div>
             <h2 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900">GlobalPay Overview for {country}</h2>
           </div>
-          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border shadow-sm">
-            <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">System Online</span>
-          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
