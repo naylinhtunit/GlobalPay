@@ -330,7 +330,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
         </div>
       </div>
 
-      <div className="space-y-4 bg-muted/20 p-4 rounded-lg border">
+      <div className="space-y-4 bg-card p-4 rounded-xl border shadow-sm">
         <h4 className="text-sm font-bold uppercase tracking-wider border-b pb-2">勤怠 (ATTENDANCE TOTALS)</h4>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
@@ -353,8 +353,8 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-4 bg-primary/5 p-4 rounded-lg border border-primary/10">
-          <div className="flex justify-between items-center border-b border-primary/20 pb-2 mb-4">
+        <div className="space-y-4 bg-card p-4 rounded-xl border shadow-sm">
+          <div className="flex justify-between items-center border-b pb-2 mb-4">
             <h4 className="text-sm font-bold text-primary uppercase tracking-wider">支給 (EARNINGS)</h4>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -375,8 +375,8 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
             ))}
           </div>
         </div>
-        <div className="space-y-4 bg-destructive/5 p-4 rounded-lg border border-destructive/10">
-          <div className="flex justify-between items-center border-b border-destructive/20 pb-2 mb-4">
+        <div className="space-y-4 bg-card p-4 rounded-xl border shadow-sm">
+          <div className="flex justify-between items-center border-b pb-2 mb-4">
             <h4 className="text-sm font-bold text-destructive uppercase tracking-wider">控除 (DEDUCTIONS)</h4>
             <TooltipProvider>
               <Tooltip>
