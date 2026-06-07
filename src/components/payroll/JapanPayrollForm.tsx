@@ -119,7 +119,6 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
     });
 
     const autoScheduledHours = totalDays * 8;
-    // Using 170.5 as a standard monthly denominator for hourly rate calculation
     const otDenominator = 170.5;
     const hourlyRate = (Number(baseSalary) || 0) / otDenominator;
 
@@ -128,15 +127,12 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
     const calculatedHolidayWork = Math.round(hourlyRate * 1.35 * (Number(data.holidayWorkHours) || 0));
     const calculatedHolidayNight = Math.round(hourlyRate * 0.25 * (Number(data.holidayNightHours) || 0));
     
-    // Night Shift Allowances (22:00 - 05:00 usually gets 25% extra)
-    // Based on the provided payslip, the 22~ allowance is quite significant.
     const calculatedNightAlw1 = Math.round(hourlyRate * 0.25 * totalNS1);
     const calculatedNightAlw2 = Math.round(hourlyRate * 0.30 * totalNS2);
 
     const calculatedAbsenceDed = Math.round(hourlyRate * (Number(data.absenceHours) || 0));
     const calculatedLateEarlyDed = Math.round(hourlyRate * (Number(data.lateEarlyHours) || 0));
 
-    // Dynamic estimates for Social Insurance (based on standard 2024 rates)
     const dynamicHealthIns = Math.round(baseSalary * 0.055); 
     const dynamicPension = Math.round(baseSalary * 0.098); 
     const dynamicEmpIns = Math.round((baseSalary + calculatedOT + calculatedLateNightOT + (Number(data.housingAllowance) || 0)) * 0.005); 
@@ -156,7 +152,6 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
     const totalSocIns = currentHealthIns + currentPension + currentEmpIns + (Number(data.nursingCareInsurance) || 0);
     const grossForTax = totalEarningsCalc - totalSocIns - (Number(data.nonTaxableCommuting) || 0);
     
-    // Improved Income Tax Estimation
     let calculatedIncomeTax = 0;
     if (grossForTax > 0) {
       if (grossForTax < 88000) calculatedIncomeTax = 0;
@@ -361,7 +356,6 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
         <div className="space-y-4 bg-primary/5 p-4 rounded-lg border border-primary/10">
           <div className="flex justify-between items-center border-b border-primary/20 pb-2 mb-4">
             <h4 className="text-sm font-bold text-primary uppercase tracking-wider">支給 (EARNINGS)</h4>
-            <span className="text-[9px] text-primary/60 italic">* Overwrite values to match your payslip</span>
           </div>
           <div className="grid grid-cols-2 gap-3">
             {[
@@ -372,7 +366,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
               { label: "休日勤務手当", en: "Holiday Alw (1.35)", field: "holidayWorkAllowance", readOnly: false },
               { label: "住宅手当", en: "Housing Alw", field: "housingAllowance", readOnly: false },
               { label: "通勤費", en: "Commuting", field: "nonTaxableCommuting", readOnly: false },
-              { label: "欠勤控除", en: "Absence Ded", field: "absenceDeduction", color: "text-destructive", readOnly: false },
+              { label: "欠勤控နှုတ်", en: "Absence Ded", field: "absenceDeduction", color: "text-destructive", readOnly: false },
             ].map((item) => (
               <div key={item.field} className="space-y-1">
                 <Label className={`text-[10px] leading-tight block font-semibold ${item.color || ""}`}>{item.label}<br/><span className="text-muted-foreground font-normal uppercase">{item.en}</span></Label>
