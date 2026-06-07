@@ -393,29 +393,29 @@ export default function EmployeesPage() {
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow><TableCell colSpan={6} className="text-center py-12 text-[8px] font-medium text-slate-400 dark:text-slate-500">Fetching workforce data...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center py-12 text-[10px] text-slate-400 dark:text-slate-500">Fetching workforce data...</TableCell></TableRow>
                 ) : filteredEmployees.length === 0 ? (
-                  <TableRow><TableCell colSpan={6} className="text-center py-12 text-[8px] font-medium text-slate-400 dark:text-slate-500 italic">No matching records found.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center py-12 text-[10px] text-slate-400 dark:text-slate-500 italic">No matching records found.</TableCell></TableRow>
                 ) : filteredEmployees.map((emp) => {
                   const used = calculateUsedLeave(emp.id);
                   const rem = Math.max(0, (emp.totalPaidLeave || 0) - used);
                   return (
                     <TableRow key={emp.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-slate-100 dark:border-slate-800">
-                      <TableCell className="font-mono text-[8px] text-slate-500 dark:text-slate-400">{emp.employeeNumber}</TableCell>
-                      <TableCell className="font-bold text-slate-900 dark:text-slate-100 text-[8px]">{emp.fullName}</TableCell>
-                      <TableCell className="text-[8px] font-medium text-slate-600 dark:text-slate-400">{emp.department}</TableCell>
+                      <TableCell className="font-mono text-[10px] text-slate-500 dark:text-slate-400">{emp.employeeNumber}</TableCell>
+                      <TableCell className="text-slate-900 dark:text-slate-100 text-[10px]">{emp.fullName}</TableCell>
+                      <TableCell className="text-[10px] text-slate-600 dark:text-slate-400">{emp.department}</TableCell>
                       <TableCell>
                         <div className="flex flex-col">
-                          <span className="font-black text-slate-900 dark:text-slate-100 text-[8px]">{(emp.baseSalary || 0).toLocaleString()} <span className="text-[8px] font-bold text-slate-400 dark:text-slate-500 uppercase">{emp.salaryCurrency || currency}</span></span>
+                          <span className="text-slate-900 dark:text-slate-100 text-[10px]">{(emp.baseSalary || 0).toLocaleString()} <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase">{emp.salaryCurrency || currency}</span></span>
                           {emp.salaryHistory && emp.salaryHistory.length > 1 && (
-                            <span className="text-[8px] flex items-center gap-1 font-bold text-primary uppercase tracking-tighter"><History size={14} /> {emp.salaryHistory.length} Cycles</span>
+                            <span className="text-[10px] flex items-center gap-1 text-primary uppercase tracking-tighter"><History size={14} /> {emp.salaryHistory.length} Cycles</span>
                           )}
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col">
-                          <span className="font-black text-indigo-600 dark:text-indigo-400 text-[8px]">{rem} / {emp.totalPaidLeave || 0} <span className="text-[8px] font-bold uppercase text-slate-400 dark:text-slate-500">Available</span></span>
-                          <span className="text-[8px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter">Resets Jan 1st</span>
+                          <span className="text-indigo-600 dark:text-indigo-400 text-[10px]">{rem} / {emp.totalPaidLeave || 0} <span className="text-[10px] uppercase text-slate-400 dark:text-slate-500">Available</span></span>
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-tighter">Resets Jan 1st</span>
                         </div>
                       </TableCell>
                       <TableCell className="text-right space-x-1">
