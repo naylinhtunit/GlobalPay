@@ -407,16 +407,16 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
           </div>
         </div>
       </div>
-      <div className="p-6 bg-slate-900 text-white dark:bg-slate-950 dark:border dark:border-primary/20 rounded-xl shadow-xl grid grid-cols-1 sm:grid-cols-3 gap-6">
-        <div className="text-center sm:border-r border-slate-700">
-          <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Gross Total</p>
+      <div className="p-6 bg-card border rounded-xl shadow-sm grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div className="text-center sm:border-r">
+          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest mb-1">Gross Total</p>
           <p className="text-2xl font-black">{Math.round(totalEarnings).toLocaleString()} JPY</p>
         </div>
-        <div className="text-center sm:border-r border-slate-700">
-          <p className="text-[10px] text-red-400 uppercase font-bold tracking-widest mb-1">Total Deductions</p>
-          <p className="text-2xl font-black text-red-400">-{Math.round(totalDeductions).toLocaleString()} JPY</p>
+        <div className="text-center sm:border-r">
+          <p className="text-[10px] text-destructive uppercase font-bold tracking-widest mb-1">Total Deductions</p>
+          <p className="text-2xl font-black text-destructive">-{Math.round(totalDeductions).toLocaleString()} JPY</p>
         </div>
-        <div className="text-center text-primary-foreground bg-primary/20 rounded-lg p-2">
+        <div className="text-center bg-primary/5 rounded-lg p-2 border border-primary/10">
           <p className="text-[10px] text-primary uppercase font-bold tracking-widest mb-1">Net Pay</p>
           <p className="text-3xl font-black text-primary">{Math.round(netPay).toLocaleString()} JPY</p>
         </div>
