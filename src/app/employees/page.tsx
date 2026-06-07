@@ -241,7 +241,7 @@ export default function EmployeesPage() {
       <main className="p-4 md:p-8 space-y-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-slate-100">Employees</h2>
+            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-slate-100 uppercase">Employees</h2>
             <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Manage your workforce in {country}</p>
           </div>
           <Dialog open={isModalOpen} onOpenChange={(open) => {
@@ -401,21 +401,21 @@ export default function EmployeesPage() {
                   const rem = Math.max(0, (emp.totalPaidLeave || 0) - used);
                   return (
                     <TableRow key={emp.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-slate-100 dark:border-slate-800">
-                      <TableCell className="font-mono text-[10px] text-slate-500 dark:text-slate-400">{emp.employeeNumber}</TableCell>
-                      <TableCell className="font-bold text-slate-900 dark:text-slate-100">{emp.fullName}</TableCell>
-                      <TableCell className="text-xs font-medium text-slate-600 dark:text-slate-400">{emp.department}</TableCell>
+                      <TableCell className="font-mono text-sm text-slate-500 dark:text-slate-400">{emp.employeeNumber}</TableCell>
+                      <TableCell className="font-bold text-slate-900 dark:text-slate-100 text-sm">{emp.fullName}</TableCell>
+                      <TableCell className="text-sm font-medium text-slate-600 dark:text-slate-400">{emp.department}</TableCell>
                       <TableCell>
                         <div className="flex flex-col">
-                          <span className="font-black text-slate-900 dark:text-slate-100 text-sm">{(emp.baseSalary || 0).toLocaleString()} <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">{emp.salaryCurrency || currency}</span></span>
+                          <span className="font-black text-slate-900 dark:text-slate-100 text-sm">{(emp.baseSalary || 0).toLocaleString()} <span className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase">{emp.salaryCurrency || currency}</span></span>
                           {emp.salaryHistory && emp.salaryHistory.length > 1 && (
-                            <span className="text-[9px] flex items-center gap-1 font-bold text-primary uppercase tracking-tighter"><History size={10} /> {emp.salaryHistory.length} Cycles</span>
+                            <span className="text-sm flex items-center gap-1 font-bold text-primary uppercase tracking-tighter"><History size={14} /> {emp.salaryHistory.length} Cycles</span>
                           )}
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col">
-                          <span className="font-black text-indigo-600 dark:text-indigo-400 text-sm">{rem} / {emp.totalPaidLeave || 0} <span className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500">Available</span></span>
-                          <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter">Resets Jan 1st</span>
+                          <span className="font-black text-indigo-600 dark:text-indigo-400 text-sm">{rem} / {emp.totalPaidLeave || 0} <span className="text-sm font-bold uppercase text-slate-400 dark:text-slate-500">Available</span></span>
+                          <span className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter">Resets Jan 1st</span>
                         </div>
                       </TableCell>
                       <TableCell className="text-right space-x-1">
