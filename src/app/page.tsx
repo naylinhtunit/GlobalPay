@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useMemo, useState, useEffect } from "react";
@@ -91,7 +92,6 @@ export default function Dashboard() {
                 <CardTitle className="text-sm font-bold flex items-center gap-2">
                   <Clock size={16} className="text-slate-400" /> Recent Activity
                 </CardTitle>
-                <button className="text-[11px] font-bold text-primary hover:underline">View All</button>
               </div>
             </CardHeader>
             <CardContent className="p-0">
