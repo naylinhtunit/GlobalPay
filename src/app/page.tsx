@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCountry } from "@/context/CountryContext";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
-import { Users, CreditCard, CalendarCheck, TrendingUp, ArrowUpRight, Clock } from "lucide-react";
+import { Users, CreditCard, CalendarCheck, TrendingUp, ArrowUpRight, Clock, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function Dashboard() {
@@ -58,7 +58,7 @@ export default function Dashboard() {
       <main className="p-4 md:p-8 space-y-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-slate-100">GlobalPay Overview for {country}</h2>
+            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-slate-100 uppercase">GlobalPay Overview for {country}</h2>
           </div>
         </div>
 
@@ -114,11 +114,13 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className="border-none shadow-sm bg-primary text-primary-foreground">
-            <CardHeader>
-              <CardTitle className="text-sm font-bold text-white/90">Regional Compliance</CardTitle>
+          <Card className="border-none shadow-sm overflow-hidden dark:bg-slate-900/50">
+            <CardHeader className="border-b dark:border-slate-800 bg-white/50 dark:bg-slate-900/30 py-4">
+              <CardTitle className="text-sm font-bold flex items-center gap-2 dark:text-slate-200">
+                <ShieldCheck size={16} className="text-primary" /> Regional Compliance
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 pt-6">
                <div className="space-y-4">
                   {[
                     { label: "Tax Filings", status: "Verified", progress: 100 },
@@ -127,17 +129,17 @@ export default function Dashboard() {
                   ].map((item, i) => (
                     <div key={i} className="space-y-2">
                       <div className="flex justify-between text-[11px] font-bold uppercase tracking-wider">
-                        <span className="text-white/70">{item.label}</span>
-                        <span>{item.status}</span>
+                        <span className="text-slate-500 dark:text-slate-400">{item.label}</span>
+                        <span className="text-emerald-600 dark:text-emerald-400">{item.status}</span>
                       </div>
-                      <div className="h-1.5 w-full bg-white/20 rounded-full overflow-hidden">
-                        <div className="h-full bg-white w-full" />
+                      <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                        <div className="h-full bg-primary w-full" />
                       </div>
                     </div>
                   ))}
                </div>
-               <div className="pt-4 border-t border-white/10">
-                 <p className="text-[10px] leading-relaxed opacity-70 italic font-medium">All payroll calculations are processed according to the latest regional tax laws and employment regulations.</p>
+               <div className="pt-4 border-t dark:border-slate-800">
+                 <p className="text-[10px] leading-relaxed text-slate-400 dark:text-slate-500 italic font-medium">All payroll calculations are processed according to the latest regional tax laws and employment regulations.</p>
                </div>
             </CardContent>
           </Card>
