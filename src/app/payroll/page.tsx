@@ -19,14 +19,14 @@ import {
 } from "firebase/firestore";
 import { useCountry } from "@/context/CountryContext";
 import { Button } from "@/components/ui/button";
-import { Eye, Calculator, Pencil, Trash2, Filter, Calendar, Download, Loader2, History } from "lucide-react";
+import { Eye, Calculator, Pencil, Trash2, Filter, Calendar, FileSpreadsheet, Loader2, History } from "lucide-react";
 import { 
   Dialog, 
   DialogContent, 
   DialogHeader, 
   DialogTitle, 
-  DialogTrigger,
-  DialogFooter
+  DialogTrigger, 
+  DialogFooter 
 } from "@/components/ui/dialog";
 import { 
   Select, 
@@ -173,7 +173,7 @@ export default function PayrollPage() {
     if (!selectedEmployee.salaryHistory || selectedEmployee.salaryHistory.length === 0) {
       return selectedEmployee.baseSalary || 0;
     }
-    const history = [...selectedEmployee.salaryHistory].sort((a, b) => b.effectiveMonth.localeCompare(a.effectiveMonth));
+    const history = [...selectedEmployee.salaryHistory].sort((a, b) => b.effectiveMonth.compare(a.effectiveMonth));
     const effectiveRecord = history.find(h => h.effectiveMonth <= selectedMonth);
     return effectiveRecord ? effectiveRecord.amount : (history[history.length - 1]?.amount || 0);
   }, [selectedEmployee, selectedMonth]);
@@ -398,52 +398,86 @@ export default function PayrollPage() {
     setIsPreviewOpen(true);
   };
 
-  const handleDownloadPDF = async () => {
-    if (!printRef.current || isDownloading) return;
+  const handleDownloadExcel = async () => {
+    if (!previewData || isDownloading) return;
     setIsDownloading(true);
     
     try {
-      const html2canvas = (await import('html2canvas')).default;
-      const { jsPDF } = await import('jspdf');
-
-      const element = printRef.current;
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff'
-      });
+      const { utils, writeFile } = await import('xlsx');
       
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-      });
-
-      const imgProps = pdf.getImageProperties(imgData);
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`Payslip_${previewData?.employee?.fullName || 'Employee'}_${previewData?.month}.pdf`);
+      const emp = previewData.employee;
+      const data = previewData.data;
+      const record = previewData;
       
-      toast({ title: "Success", description: "Payslip downloaded as PDF." });
+      let exportData: any[] = [
+        ["PAYSLIP REPORT", ""],
+        ["Employee Name", emp?.fullName || "N/A"],
+        ["Employee ID", emp?.employeeNumber || "N/A"],
+        ["Period", previewData.month],
+        ["Country", previewData.country],
+        ["Status", record.status],
+        ["", ""],
+      ];
+
+      if (previewData.country === "Japan") {
+        exportData.push(["ATTENDANCE", "VALUE"]);
+        exportData.push(["Work Days", data.scheduledDays]);
+        exportData.push(["Absence", data.absenceHours]);
+        exportData.push(["Paid Leave", data.paidLeaveDays]);
+        exportData.push(["", ""]);
+        
+        exportData.push(["EARNINGS", "AMOUNT (JPY)"]);
+        exportData.push(["Basic Salary", record.basicSalary]);
+        exportData.push(["Overtime Allowance", data.otAllowance]);
+        exportData.push(["Late Night Allowance", data.lateNightOTAllowance]);
+        exportData.push(["Gross Total", record.totalGrossPay]);
+        exportData.push(["", ""]);
+        
+        exportData.push(["DEDUCTIONS", "AMOUNT (JPY)"]);
+        exportData.push(["Health Insurance", data.healthInsurance]);
+        exportData.push(["Pension", data.pension]);
+        exportData.push(["Income Tax", data.incomeTax]);
+        exportData.push(["Total Deductions", record.totalDeductions]);
+        exportData.push(["", ""]);
+        
+        exportData.push(["NET PAY", record.netPay]);
+      } else {
+        exportData.push(["EARNINGS", "AMOUNT (MMK)"]);
+        exportData.push(["Basic Salary (MMK)", Math.round(record.totalGrossPay - (data.otHours * (record.basicSalary / 240) * 2) - (data.attendanceBonus || 0) - (data.mealAllowance || 0))]);
+        exportData.push(["OT Hours", data.otHours]);
+        exportData.push(["Gross Total", record.totalGrossPay]);
+        exportData.push(["", ""]);
+        
+        exportData.push(["DEDUCTIONS", "AMOUNT (MMK)"]);
+        exportData.push(["SSB", data.ssbAmount]);
+        exportData.push(["Income Tax", data.incomeTax]);
+        exportData.push(["Total Deductions", record.totalDeductions]);
+        exportData.push(["", ""]);
+        
+        exportData.push(["NET PAY", record.netPay]);
+      }
+
+      const ws = utils.aoa_to_sheet(exportData);
+      const wb = utils.book_new();
+      utils.book_append_sheet(wb, ws, "Payslip");
+      writeFile(wb, `Payslip_${emp?.fullName || 'Employee'}_${previewData.month}.xlsx`);
+      
+      toast({ title: "Success", description: "Payslip downloaded as Excel file." });
     } catch (error) {
-      console.error("PDF Download failed:", error);
-      toast({ title: "Error", description: "Failed to download PDF.", variant: "destructive" });
+      console.error("Excel Download failed:", error);
+      toast({ title: "Error", description: "Failed to download Excel.", variant: "destructive" });
     } finally {
       setIsDownloading(false);
     }
   };
 
   return (
-    <div className="md:pl-64 pt-16 md:pt-0 min-h-screen bg-background dark:bg-slate-950 transition-colors">
+    <div className="md:pl-64 pt-16 md:pt-0 min-h-screen bg-background dark:bg-slate-950 transition-colors duration-300">
       <Navbar />
       <main className="p-4 md:p-8 space-y-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-slate-100">Monthly Payroll</h2>
+            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-slate-100 uppercase">Monthly Payroll</h2>
             <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Historical audit & processing for {country}</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
@@ -617,7 +651,7 @@ export default function PayrollPage() {
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    onClick={handleDownloadPDF} 
+                    onClick={handleDownloadExcel} 
                     className="gap-2 h-10 font-bold border-slate-200 dark:border-slate-800 dark:bg-slate-800"
                     disabled={isDownloading}
                   >
@@ -627,7 +661,7 @@ export default function PayrollPage() {
                       </>
                     ) : (
                       <>
-                        <Download size={16} /> DOWNLOAD PDF
+                        <FileSpreadsheet size={16} /> DOWNLOAD EXCEL
                       </>
                     )}
                   </Button>
