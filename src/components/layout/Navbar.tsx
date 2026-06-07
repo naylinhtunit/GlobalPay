@@ -124,9 +124,6 @@ export function Navbar() {
             <Shield size={32} strokeWidth={2.5} />
             <h1 className="text-2xl font-black tracking-tighter">GlobalPay</h1>
           </div>
-          <div className="mt-3 inline-flex items-center px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Node v2.5.0</span>
-          </div>
         </div>
         <div className="flex-1 px-4">
           <NavLinks />
