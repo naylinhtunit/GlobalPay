@@ -439,16 +439,16 @@ export default function PayrollPage() {
   };
 
   return (
-    <div className="md:pl-64 pt-16 md:pt-0 min-h-screen bg-[#F8FAFC]">
+    <div className="md:pl-64 pt-16 md:pt-0 min-h-screen bg-background dark:bg-slate-950 transition-colors">
       <Navbar />
       <main className="p-4 md:p-8 space-y-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900">Monthly Payroll</h2>
-            <p className="text-slate-500 text-sm font-medium">Historical audit & processing for {country}</p>
+            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-slate-100">Monthly Payroll</h2>
+            <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Historical audit & processing for {country}</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
-            <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 shadow-sm h-11 w-full sm:w-auto">
+            <div className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 shadow-sm h-11 w-full sm:w-auto">
               <Filter size={16} className="text-slate-400 shrink-0" />
               <Select onValueChange={setFilterMonth} value={filterMonth}>
                 <SelectTrigger className="border-none shadow-none focus:ring-0 h-8 p-0 flex-1 hover:bg-transparent min-w-[120px] font-bold text-xs uppercase tracking-wider">
@@ -472,16 +472,16 @@ export default function PayrollPage() {
                   <Calculator size={18} /> New Payroll Entry
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[800px] max-h-[95vh] overflow-y-auto border-none shadow-2xl">
+              <DialogContent className="sm:max-w-[800px] max-h-[95vh] overflow-y-auto border-none shadow-2xl dark:bg-slate-900">
                 <DialogHeader>
-                  <DialogTitle className="text-xl font-black">{editingRecordId ? "Adjust Payroll" : "Process New Payroll"} - {country}</DialogTitle>
+                  <DialogTitle className="text-xl font-black dark:text-slate-100">{editingRecordId ? "Adjust Payroll" : "Process New Payroll"} - {country}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-6 py-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Select Employee</Label>
+                      <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Select Employee</Label>
                       <Select onValueChange={setSelectedEmpId} value={selectedEmpId}>
-                        <SelectTrigger className="h-11 font-bold">
+                        <SelectTrigger className="h-11 font-bold dark:bg-slate-800">
                           <SelectValue placeholder="Choose employee" />
                         </SelectTrigger>
                         <SelectContent>
@@ -492,9 +492,9 @@ export default function PayrollPage() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Payroll Month</Label>
+                      <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Payroll Month</Label>
                       <Select onValueChange={setSelectedMonth} value={selectedMonth}>
-                        <SelectTrigger className="h-11 font-bold">
+                        <SelectTrigger className="h-11 font-bold dark:bg-slate-800">
                           <SelectValue placeholder="Choose month" />
                         </SelectTrigger>
                         <SelectContent>
@@ -507,14 +507,14 @@ export default function PayrollPage() {
                   </div>
 
                   {selectedEmployee && (
-                    <div className="mt-4 p-5 border border-slate-200 rounded-2xl bg-slate-50 flex items-center gap-4 shadow-inner">
+                    <div className="mt-4 p-5 border border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50 dark:bg-slate-800/50 flex items-center gap-4 shadow-inner">
                       <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-black text-lg">
                         {selectedEmployee.fullName?.[0] || 'E'}
                       </div>
                       <div className="flex-1">
-                        <p className="text-sm font-black text-slate-900">{selectedEmployee.fullName}</p>
+                        <p className="text-sm font-black text-slate-900 dark:text-slate-100">{selectedEmployee.fullName}</p>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[10px] font-black bg-white border border-slate-200 px-2 py-0.5 rounded text-slate-500 uppercase tracking-wider">
+                          <span className="text-[10px] font-black bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-2 py-0.5 rounded text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                             Base: {historicalSalary.toLocaleString()} {selectedEmployee.salaryCurrency || currency}
                           </span>
                           {selectedEmployee.salaryHistory && selectedEmployee.salaryHistory.length > 1 && (
@@ -560,46 +560,46 @@ export default function PayrollPage() {
           </div>
         </div>
 
-        <Card className="border-none shadow-sm overflow-hidden bg-white">
+        <Card className="border-none shadow-sm overflow-hidden bg-white dark:bg-slate-900/50">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
-                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500">Period</TableHead>
-                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500">Employee Profile</TableHead>
-                  <TableHead className="hidden sm:table-cell text-[10px] font-black uppercase tracking-widest text-slate-500">Net Disbursement</TableHead>
-                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500">Status</TableHead>
-                  <TableHead className="text-right text-[10px] font-black uppercase tracking-widest text-slate-500">Actions</TableHead>
+                <TableRow className="bg-slate-50/50 dark:bg-slate-900/30 hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
+                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Period</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Employee Profile</TableHead>
+                  <TableHead className="hidden sm:table-cell text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Net Disbursement</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Status</TableHead>
+                  <TableHead className="text-right text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {payrollLoading ? (
-                  <TableRow><TableCell colSpan={5} className="text-center py-12 text-sm font-medium text-slate-400">Syncing payroll logs...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} className="text-center py-12 text-sm font-medium text-slate-400 dark:text-slate-500">Syncing payroll logs...</TableCell></TableRow>
                 ) : sortedRecords.length === 0 ? (
-                  <TableRow><TableCell colSpan={5} className="text-center py-12 text-sm font-medium text-slate-400 italic">No disbursements found for this period.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} className="text-center py-12 text-sm font-medium text-slate-400 dark:text-slate-500 italic">No disbursements found for this period.</TableCell></TableRow>
                 ) : (
                   sortedRecords.map((rec: any) => (
-                    <TableRow key={rec.id} className="hover:bg-slate-50 transition-colors border-slate-100">
-                      <TableCell className="font-bold text-xs flex items-center gap-2">
+                    <TableRow key={rec.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-slate-100 dark:border-slate-800">
+                      <TableCell className="font-bold text-xs flex items-center gap-2 dark:text-slate-300">
                         <Calendar size={14} className="text-slate-400" />
                         {rec.payPeriodStartDate?.substring(0, 7) || rec.month || 'N/A'}
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col">
-                          <span className="font-bold text-slate-900">{(employees || []).find((e: any) => e.id === rec.employeeId)?.fullName || 'Unknown'}</span>
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Code: {(employees || []).find((e: any) => e.id === rec.employeeId)?.employeeNumber || 'N/A'}</span>
+                          <span className="font-bold text-slate-900 dark:text-slate-100">{(employees || []).find((e: any) => e.id === rec.employeeId)?.fullName || 'Unknown'}</span>
+                          <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter">Code: {(employees || []).find((e: any) => e.id === rec.employeeId)?.employeeNumber || 'N/A'}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="hidden sm:table-cell font-black text-slate-900">
-                        {Math.round(rec.netPay || 0).toLocaleString()} <span className="text-[10px] font-bold text-slate-400 uppercase">{currency}</span>
+                      <TableCell className="hidden sm:table-cell font-black text-slate-900 dark:text-slate-100">
+                        {Math.round(rec.netPay || 0).toLocaleString()} <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">{currency}</span>
                       </TableCell>
                       <TableCell>
-                        <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[9px] font-black uppercase tracking-widest border border-emerald-200">{rec.status}</span>
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 text-[9px] font-black uppercase tracking-widest border border-emerald-200 dark:border-emerald-800">{rec.status}</span>
                       </TableCell>
                       <TableCell className="text-right space-x-1">
-                        <Button variant="ghost" size="icon" onClick={() => handlePreview(rec)} className="h-8 w-8 hover:bg-slate-100"><Eye size={14} className="text-slate-600" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(rec)} className="h-8 w-8 hover:bg-slate-100"><Pencil size={14} className="text-slate-600" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(rec)} className="h-8 w-8 hover:bg-red-50 text-red-400"><Trash2 size={14} /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => handlePreview(rec)} className="h-8 w-8 hover:bg-slate-100 dark:hover:bg-slate-800"><Eye size={14} className="text-slate-600 dark:text-slate-400" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(rec)} className="h-8 w-8 hover:bg-slate-100 dark:hover:bg-slate-800"><Pencil size={14} className="text-slate-600 dark:text-slate-400" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(rec)} className="h-8 w-8 hover:bg-red-50 dark:hover:bg-red-950 text-red-400"><Trash2 size={14} /></Button>
                       </TableCell>
                     </TableRow>
                   ))
@@ -610,16 +610,16 @@ export default function PayrollPage() {
         </Card>
 
         <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-          <DialogContent className="max-w-[1000px] w-[95vw] h-[95vh] overflow-y-auto p-4 md:p-6 border-none shadow-2xl">
+          <DialogContent className="max-w-[1000px] w-[95vw] h-[95vh] overflow-y-auto p-4 md:p-6 border-none shadow-2xl dark:bg-slate-900">
             <DialogHeader>
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pr-12 gap-4">
-                <DialogTitle className="text-xl font-black">Payslip Document Preview</DialogTitle>
+                <DialogTitle className="text-xl font-black dark:text-slate-100">Payslip Document Preview</DialogTitle>
                 <div className="flex gap-2">
                   <Button 
                     variant="outline" 
                     size="sm" 
                     onClick={handleDownloadPDF} 
-                    className="gap-2 h-10 font-bold border-slate-200"
+                    className="gap-2 h-10 font-bold border-slate-200 dark:border-slate-800 dark:bg-slate-800"
                     disabled={isDownloading}
                   >
                     {isDownloading ? (
@@ -635,7 +635,7 @@ export default function PayrollPage() {
                 </div>
               </div>
             </DialogHeader>
-            <div className="bg-slate-100 p-4 md:p-8 rounded-2xl mt-4 shadow-inner">
+            <div className="bg-slate-100 dark:bg-slate-800/50 p-4 md:p-8 rounded-2xl mt-4 shadow-inner">
               {previewData && (
                 <div className="bg-white text-black rounded-xl shadow-2xl p-0 overflow-hidden ring-1 ring-slate-200">
                   <PayslipDocument 
