@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useMemo, useState, useEffect } from "react";
@@ -59,8 +58,7 @@ export default function Dashboard() {
       <main className="p-4 md:p-8 space-y-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900">Welcome Back</h2>
-            <p className="text-slate-500 text-sm font-medium">GlobalPay Overview for {country}</p>
+            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900">GlobalPay Overview for {country}</h2>
           </div>
           <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border shadow-sm">
             <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
