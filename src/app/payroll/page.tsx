@@ -16,7 +16,6 @@ import {
   doc,
   serverTimestamp,
   writeBatch,
-  getDoc
 } from "firebase/firestore";
 import { useCountry } from "@/context/CountryContext";
 import { Button } from "@/components/ui/button";
@@ -448,10 +447,10 @@ export default function PayrollPage() {
             <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Historical audit & processing for {country}</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
-            <div className="flex items-center gap-2 bg-background dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 shadow-sm h-11 w-full sm:w-auto transition-colors">
-              <Filter size={16} className="text-slate-400 shrink-0" />
+            <div className="flex items-center gap-2 bg-background dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl pl-3 shadow-sm h-11 w-full sm:w-auto transition-all hover:bg-slate-50 dark:hover:bg-slate-800/50 group overflow-hidden">
+              <Filter size={16} className="text-slate-400 shrink-0 group-hover:text-primary transition-colors" />
               <Select onValueChange={setFilterMonth} value={filterMonth}>
-                <SelectTrigger className="border-none shadow-none focus:ring-0 h-8 p-0 flex-1 hover:bg-transparent min-w-[120px] font-bold text-xs uppercase tracking-wider">
+                <SelectTrigger className="border-none shadow-none focus:ring-0 h-full p-0 pr-3 flex-1 bg-transparent hover:bg-transparent min-w-[120px] font-bold text-xs uppercase tracking-wider transition-none">
                   <SelectValue placeholder="All Months" />
                 </SelectTrigger>
                 <SelectContent>
