@@ -19,7 +19,7 @@ import {
 } from "firebase/firestore";
 import { useCountry } from "@/context/CountryContext";
 import { Button } from "@/components/ui/button";
-import { Eye, Calculator, Pencil, Trash2, Filter, Calendar, FileSpreadsheet, Loader2, History } from "lucide-react";
+import { Eye, Calculator, Pencil, Trash2, Filter, Calendar, FileSpreadsheet, Loader2, History, FileDown } from "lucide-react";
 import { 
   Dialog, 
   DialogContent, 
@@ -51,6 +51,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { FirestorePermissionError } from "@/firebase/errors";
 import { errorEmitter } from "@/firebase/error-emitter";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function PayrollPage() {
   const { country, currency } = useCountry();
@@ -68,6 +69,7 @@ export default function PayrollPage() {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewData, setPreviewData] = useState<any>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isPdfDownloading, setIsPdfDownloading] = useState(false);
 
   useEffect(() => {
     const options = [];
@@ -173,7 +175,7 @@ export default function PayrollPage() {
     if (!selectedEmployee.salaryHistory || selectedEmployee.salaryHistory.length === 0) {
       return selectedEmployee.baseSalary || 0;
     }
-    const history = [...selectedEmployee.salaryHistory].sort((a, b) => b.effectiveMonth.compare(a.effectiveMonth));
+    const history = [...selectedEmployee.salaryHistory].sort((a: any, b: any) => b.effectiveMonth.localeCompare(a.effectiveMonth));
     const effectiveRecord = history.find(h => h.effectiveMonth <= selectedMonth);
     return effectiveRecord ? effectiveRecord.amount : (history[history.length - 1]?.amount || 0);
   }, [selectedEmployee, selectedMonth]);
@@ -471,6 +473,39 @@ export default function PayrollPage() {
     }
   };
 
+  const handleDownloadPdf = async () => {
+    if (!printRef.current || isPdfDownloading) return;
+    setIsPdfDownloading(true);
+    
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const { jsPDF } = await import('jspdf');
+      
+      const element = printRef.current;
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        logging: false,
+        useCORS: true,
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`Payslip_${previewData?.employee?.fullName || 'Employee'}_${previewData?.month}.pdf`);
+      
+      toast({ title: "Success", description: "Payslip downloaded as PDF file." });
+    } catch (error) {
+      console.error("PDF Download failed:", error);
+      toast({ title: "Error", description: "Failed to download PDF.", variant: "destructive" });
+    } finally {
+      setIsPdfDownloading(false);
+    }
+  };
+
   return (
     <div className="md:pl-64 pt-16 md:pt-0 min-h-screen bg-background dark:bg-slate-950 transition-colors duration-300">
       <Navbar />
@@ -648,23 +683,37 @@ export default function PayrollPage() {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pr-12 gap-4">
                 <DialogTitle className="text-xl font-black dark:text-slate-100">Payslip Document Preview</DialogTitle>
                 <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={handleDownloadExcel} 
-                    className="gap-2 h-10 font-bold border-slate-200 dark:border-slate-800 dark:bg-slate-800"
-                    disabled={isDownloading}
-                  >
-                    {isDownloading ? (
-                      <>
-                        <Loader2 size={16} className="animate-spin" /> EXPORTING...
-                      </>
-                    ) : (
-                      <>
-                        <FileSpreadsheet size={16} /> DOWNLOAD EXCEL
-                      </>
-                    )}
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          size="icon" 
+                          onClick={handleDownloadPdf} 
+                          className="h-10 w-10 font-bold border-slate-200 dark:border-slate-800 dark:bg-slate-800"
+                          disabled={isPdfDownloading}
+                        >
+                          {isPdfDownloading ? <Loader2 size={18} className="animate-spin" /> : <FileDown size={18} className="text-red-500" />}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Download PDF</TooltipContent>
+                    </Tooltip>
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          size="icon" 
+                          onClick={handleDownloadExcel} 
+                          className="h-10 w-10 font-bold border-slate-200 dark:border-slate-800 dark:bg-slate-800"
+                          disabled={isDownloading}
+                        >
+                          {isDownloading ? <Loader2 size={18} className="animate-spin" /> : <FileSpreadsheet size={18} className="text-emerald-500" />}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Download Excel</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
               </div>
             </DialogHeader>
