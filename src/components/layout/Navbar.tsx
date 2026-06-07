@@ -57,18 +57,18 @@ export function Navbar() {
   };
 
   const NavLinks = ({ onClick }: { onClick?: () => void }) => (
-    <div className="space-y-1 mt-4">
+    <div className="space-y-1.5 mt-8">
       {navItems.map((item) => (
         <Link key={item.href} href={item.href} onClick={onClick}>
           <span
             className={cn(
-              "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors cursor-pointer",
+              "flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all cursor-pointer",
               pathname === item.href
-                ? "bg-primary text-primary-foreground shadow-md"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
             )}
           >
-            <item.icon size={18} />
+            <item.icon size={16} strokeWidth={2.5} />
             {item.name}
           </span>
         </Link>
@@ -79,16 +79,16 @@ export function Navbar() {
   const CountrySwitcher = () => (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="w-full justify-start gap-2 border-primary/20 bg-background hover:bg-muted transition-all">
+        <Button variant="outline" className="w-full justify-start gap-2 border-slate-200 bg-white hover:bg-slate-50 transition-all rounded-xl h-11">
           <Globe size={16} className="text-primary" />
-          <span className="flex-1 text-left font-medium">{country}</span>
+          <span className="flex-1 text-left font-bold text-xs uppercase tracking-wider truncate">{country}</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuItem onClick={() => setCountry("Japan")} className="gap-2 cursor-pointer py-2">
+      <DropdownMenuContent align="end" className="w-56 border-none shadow-2xl rounded-xl">
+        <DropdownMenuItem onClick={() => setCountry("Japan")} className="gap-2 cursor-pointer py-3 font-bold text-xs uppercase tracking-wider">
           <span className="text-lg">🇯🇵</span> Japan (JPY)
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setCountry("Myanmar")} className="gap-2 cursor-pointer py-2">
+        <DropdownMenuItem onClick={() => setCountry("Myanmar")} className="gap-2 cursor-pointer py-3 font-bold text-xs uppercase tracking-wider">
           <span className="text-lg">🇲🇲</span> Myanmar (MMK)
         </DropdownMenuItem>
       </DropdownMenuContent>
@@ -102,44 +102,45 @@ export function Navbar() {
       <Button 
         variant="outline" 
         size="icon" 
-        className="shrink-0 border-primary/20 bg-background hover:bg-muted transition-all duration-300 relative group overflow-hidden"
+        className="shrink-0 border-slate-200 bg-white hover:bg-slate-50 transition-all rounded-xl h-11 w-11"
         onClick={() => setTheme(isDark ? "light" : "dark")}
       >
         <Sun className={cn(
-          "h-[1.2rem] w-[1.2rem] transition-all duration-500",
+          "h-5 w-5 transition-all duration-500",
           isDark ? "-rotate-90 scale-0 opacity-0" : "rotate-0 scale-100 opacity-100"
         )} />
         <Moon className={cn(
-          "absolute h-[1.2rem] w-[1.2rem] transition-all duration-500",
+          "absolute h-5 w-5 transition-all duration-500",
           isDark ? "rotate-0 scale-100 opacity-100" : "rotate-90 scale-0 opacity-0"
         )} />
-        <span className="sr-only">Toggle theme</span>
       </Button>
     );
   };
 
   return (
     <>
-      <nav className="hidden md:flex fixed left-0 top-0 h-full w-64 bg-card border-r flex flex-col z-50 shadow-sm">
+      <nav className="hidden md:flex fixed left-0 top-0 h-full w-64 bg-white border-r border-slate-100 flex flex-col z-50 shadow-sm">
         <div className="p-8">
           <div className="flex items-center gap-3 text-primary">
-            <Shield size={32} strokeWidth={2} />
-            <h1 className="text-2xl font-bold tracking-tighter">GlobalPay</h1>
+            <Shield size={32} strokeWidth={2.5} />
+            <h1 className="text-2xl font-black tracking-tighter">GlobalPay</h1>
           </div>
-          <p className="text-[10px] text-primary/70 font-bold uppercase mt-2 tracking-widest bg-primary/5 px-2 py-1 rounded inline-block">Enterprise</p>
+          <div className="mt-3 inline-flex items-center px-2 py-0.5 rounded bg-slate-100 border border-slate-200">
+            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">Node v2.5.0</span>
+          </div>
         </div>
         <div className="flex-1 px-4">
           <NavLinks />
         </div>
-        <div className="p-6 border-t space-y-4 bg-muted/20">
+        <div className="p-6 border-t border-slate-50 space-y-4 bg-slate-50/50">
           {user && (
-            <div className="px-3 py-3 flex items-center gap-3 bg-background border rounded-xl shadow-sm">
-              <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                <User size={18} />
+            <div className="px-3 py-3 flex items-center gap-3 bg-white border border-slate-100 rounded-2xl shadow-sm">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                <User size={20} strokeWidth={2.5} />
               </div>
               <div className="flex-1 overflow-hidden">
-                <p className="text-sm font-bold truncate capitalize">{user.email?.split('@')[0]}</p>
-                <p className="text-[10px] text-muted-foreground truncate">Administrator</p>
+                <p className="text-xs font-black truncate capitalize text-slate-900">{user.email?.split('@')[0]}</p>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Admin Level</p>
               </div>
             </div>
           )}
@@ -149,53 +150,53 @@ export function Navbar() {
           </div>
           <Button 
             variant="ghost" 
-            className="w-full justify-start gap-2 text-muted-foreground hover:text-destructive hover:bg-destructive/5 font-medium"
+            className="w-full justify-start gap-2 text-slate-400 hover:text-red-500 hover:bg-red-50 font-black text-xs uppercase tracking-widest rounded-xl"
             onClick={handleSignOut}
           >
-            <LogOut size={18} />
+            <LogOut size={16} strokeWidth={2.5} />
             Sign Out
           </Button>
         </div>
       </nav>
-      <header className="md:hidden fixed top-0 left-0 right-0 h-16 bg-card border-b flex items-center justify-between px-4 z-50 shadow-sm">
+      <header className="md:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b border-slate-100 flex items-center justify-between px-4 z-50 shadow-sm">
         <Link href="/">
           <div className="flex items-center gap-2 text-primary">
-            <Shield size={28} />
-            <h1 className="text-xl font-bold tracking-tight">GlobalPay</h1>
+            <Shield size={28} strokeWidth={2.5} />
+            <h1 className="text-xl font-black tracking-tight">GlobalPay</h1>
           </div>
         </Link>
         <div className="flex items-center gap-2">
           <ThemeToggle />
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="hover:bg-muted">
+              <Button variant="ghost" size="icon" className="hover:bg-slate-50">
                 <Menu size={24} />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-64 p-0 flex flex-col border-none">
-              <SheetHeader className="p-6 text-left border-b bg-muted/20">
+            <SheetContent side="left" className="w-64 p-0 flex flex-col border-none shadow-2xl">
+              <SheetHeader className="p-6 text-left border-b border-slate-50 bg-slate-50/50">
                 <SheetTitle className="flex items-center gap-2 text-primary">
-                  <Shield size={28} />
-                  <span className="text-xl font-bold">GlobalPay</span>
+                  <Shield size={28} strokeWidth={2.5} />
+                  <span className="text-xl font-black">GlobalPay</span>
                 </SheetTitle>
               </SheetHeader>
               <div className="flex-1 px-4">
                 <NavLinks onClick={() => setIsOpen(false)} />
               </div>
-              <div className="p-6 border-t space-y-4 bg-muted/20">
+              <div className="p-6 border-t border-slate-50 space-y-4 bg-slate-50/50">
                 {user && (
-                  <div className="flex items-center gap-3 px-3 py-3 bg-background border rounded-xl shadow-sm">
+                  <div className="flex items-center gap-3 px-3 py-3 bg-white border border-slate-100 rounded-2xl shadow-sm">
                     <User size={18} className="text-primary" />
-                    <p className="text-sm font-bold truncate">{user.email}</p>
+                    <p className="text-xs font-black truncate">{user.email}</p>
                   </div>
                 )}
                 <CountrySwitcher />
                 <Button 
                   variant="ghost" 
-                  className="w-full justify-start gap-2 text-muted-foreground hover:text-destructive font-medium"
+                  className="w-full justify-start gap-2 text-slate-400 hover:text-red-500 font-black text-xs uppercase tracking-widest"
                   onClick={handleSignOut}
                 >
-                  <LogOut size={18} />
+                  <LogOut size={16} strokeWidth={2.5} />
                   Sign Out
                 </Button>
               </div>

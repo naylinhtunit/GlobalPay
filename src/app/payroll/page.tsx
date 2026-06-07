@@ -37,6 +37,7 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { JapanPayrollForm, type JapanData } from "@/components/payroll/JapanPayrollForm";
 import { MyanmarPayrollForm, type MyanmarData } from "@/components/payroll/MyanmarPayrollForm";
 import { PayslipDocument } from "@/components/payroll/PayslipDocument";
@@ -168,23 +169,16 @@ export default function PayrollPage() {
     return (employees || []).find((e: any) => e.id === selectedEmpId);
   }, [employees, selectedEmpId]);
 
-  // Salary History Logic: Find the effective salary for the chosen payroll month
   const historicalSalary = useMemo(() => {
     if (!selectedEmployee || !selectedMonth) return 0;
-    
-    // Migration: If no history exists, use baseSalary
     if (!selectedEmployee.salaryHistory || selectedEmployee.salaryHistory.length === 0) {
       return selectedEmployee.baseSalary || 0;
     }
-
-    // Sort history to find the most recent record that is NOT later than the selected month
     const history = [...selectedEmployee.salaryHistory].sort((a, b) => b.effectiveMonth.localeCompare(a.effectiveMonth));
     const effectiveRecord = history.find(h => h.effectiveMonth <= selectedMonth);
-    
     return effectiveRecord ? effectiveRecord.amount : (history[history.length - 1]?.amount || 0);
   }, [selectedEmployee, selectedMonth]);
 
-  // Yearly Leave Logic: Calculate already used leave for this year, excluding current editing record
   const currentYearLeaveUsed = useMemo(() => {
     if (!selectedEmpId || !payrollRecords || !selectedMonth) return 0;
     const year = selectedMonth.substring(0, 4);
@@ -272,7 +266,7 @@ export default function PayrollPage() {
     let grossPay = 0;
     let deductions = 0;
     let netPay = 0;
-    const baseSalary = historicalSalary; // Use the salary from date, not current
+    const baseSalary = historicalSalary; 
 
     if (country === "Japan") {
       grossPay = baseSalary + 
@@ -328,7 +322,7 @@ export default function PayrollPage() {
       totalGrossPay: Math.round(grossPay),
       totalDeductions: Math.round(deductions),
       netPay: Math.round(netPay),
-      paidLeaveDays: Number(japanData.paidLeaveDays || 0), // Persist leave count for yearly calculation
+      paidLeaveDays: Number(japanData.paidLeaveDays || 0), 
       japanData: country === "Japan" ? japanData : null,
       myanmarData: country === "Myanmar" ? myanmarData : null,
       updatedAt: serverTimestamp()
@@ -445,19 +439,19 @@ export default function PayrollPage() {
   };
 
   return (
-    <div className="md:pl-64 pt-16 md:pt-0 min-h-screen bg-background">
+    <div className="md:pl-64 pt-16 md:pt-0 min-h-screen bg-[#F8FAFC]">
       <Navbar />
-      <main className="p-4 md:p-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+      <main className="p-4 md:p-8 space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl md:text-3xl font-bold text-primary">Monthly Payroll</h2>
-            <p className="text-muted-foreground">Process payments based on historical salary and yearly leave</p>
+            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900">Monthly Payroll</h2>
+            <p className="text-slate-500 text-sm font-medium">Historical audit & processing for {country}</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
-            <div className="flex items-center gap-2 bg-card border rounded-lg px-3 shadow-sm h-10 w-full sm:w-auto">
-              <Filter size={16} className="text-muted-foreground shrink-0" />
+            <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 shadow-sm h-11 w-full sm:w-auto">
+              <Filter size={16} className="text-slate-400 shrink-0" />
               <Select onValueChange={setFilterMonth} value={filterMonth}>
-                <SelectTrigger className="border-none shadow-none focus:ring-0 h-8 p-0 flex-1 hover:bg-transparent min-w-[120px]">
+                <SelectTrigger className="border-none shadow-none focus:ring-0 h-8 p-0 flex-1 hover:bg-transparent min-w-[120px] font-bold text-xs uppercase tracking-wider">
                   <SelectValue placeholder="All Months" />
                 </SelectTrigger>
                 <SelectContent>
@@ -474,20 +468,20 @@ export default function PayrollPage() {
               if (!open) resetForm();
             }}>
               <DialogTrigger asChild>
-                <Button onClick={resetForm} className="gap-2 bg-primary shadow-lg">
+                <Button onClick={resetForm} className="gap-2 bg-primary shadow-md hover:shadow-lg transition-all font-bold h-11">
                   <Calculator size={18} /> New Payroll Entry
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[800px] max-h-[95vh] overflow-y-auto">
+              <DialogContent className="sm:max-w-[800px] max-h-[95vh] overflow-y-auto border-none shadow-2xl">
                 <DialogHeader>
-                  <DialogTitle>{editingRecordId ? "Edit Payroll" : "Process Payroll"} - {country}</DialogTitle>
+                  <DialogTitle className="text-xl font-black">{editingRecordId ? "Adjust Payroll" : "Process New Payroll"} - {country}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-6 py-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Select Employee</Label>
+                      <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Select Employee</Label>
                       <Select onValueChange={setSelectedEmpId} value={selectedEmpId}>
-                        <SelectTrigger>
+                        <SelectTrigger className="h-11 font-bold">
                           <SelectValue placeholder="Choose employee" />
                         </SelectTrigger>
                         <SelectContent>
@@ -498,9 +492,9 @@ export default function PayrollPage() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>Payroll Month</Label>
+                      <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Payroll Month</Label>
                       <Select onValueChange={setSelectedMonth} value={selectedMonth}>
-                        <SelectTrigger>
+                        <SelectTrigger className="h-11 font-bold">
                           <SelectValue placeholder="Choose month" />
                         </SelectTrigger>
                         <SelectContent>
@@ -513,19 +507,19 @@ export default function PayrollPage() {
                   </div>
 
                   {selectedEmployee && (
-                    <div className="mt-4 p-4 border rounded-lg bg-primary/5 flex items-center gap-4">
-                      <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
+                    <div className="mt-4 p-5 border border-slate-200 rounded-2xl bg-slate-50 flex items-center gap-4 shadow-inner">
+                      <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-black text-lg">
                         {selectedEmployee.fullName?.[0] || 'E'}
                       </div>
                       <div className="flex-1">
-                        <p className="text-sm font-bold text-primary">{selectedEmployee.fullName}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[10px] font-bold bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
+                        <p className="text-sm font-black text-slate-900">{selectedEmployee.fullName}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[10px] font-black bg-white border border-slate-200 px-2 py-0.5 rounded text-slate-500 uppercase tracking-wider">
                             Base: {historicalSalary.toLocaleString()} {selectedEmployee.salaryCurrency || currency}
                           </span>
                           {selectedEmployee.salaryHistory && selectedEmployee.salaryHistory.length > 1 && (
-                            <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded flex items-center gap-1">
-                              <History size={10} /> History Applied
+                            <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded font-black flex items-center gap-1 uppercase tracking-wider">
+                              <History size={10} /> Historical Rate Applied
                             </span>
                           )}
                         </div>
@@ -556,8 +550,8 @@ export default function PayrollPage() {
                   )}
                   
                   <DialogFooter>
-                    <Button onClick={handleGenerate} className="w-full h-12 text-base shadow-md" disabled={!selectedEmpId}>
-                      {editingRecordId ? "Update Payslip" : "Generate Payslip"}
+                    <Button onClick={handleGenerate} className="w-full h-12 text-sm font-black shadow-lg" disabled={!selectedEmpId}>
+                      {editingRecordId ? "UPDATE PAYSLIP" : "PROCESS PAYSLIP"}
                     </Button>
                   </DialogFooter>
                 </div>
@@ -566,52 +560,46 @@ export default function PayrollPage() {
           </div>
         </div>
 
-        <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
+        <Card className="border-none shadow-sm overflow-hidden bg-white">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/30">
-                  <TableHead>Month</TableHead>
-                  <TableHead>Employee</TableHead>
-                  <TableHead className="hidden sm:table-cell">Net Pay</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
+                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500">Period</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500">Employee Profile</TableHead>
+                  <TableHead className="hidden sm:table-cell text-[10px] font-black uppercase tracking-widest text-slate-500">Net Disbursement</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500">Status</TableHead>
+                  <TableHead className="text-right text-[10px] font-black uppercase tracking-widest text-slate-500">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {payrollLoading ? (
-                  <TableRow><TableCell colSpan={5} className="text-center py-8">Loading records...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} className="text-center py-12 text-sm font-medium text-slate-400">Syncing payroll logs...</TableCell></TableRow>
                 ) : sortedRecords.length === 0 ? (
-                  <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No records found for the selected period.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} className="text-center py-12 text-sm font-medium text-slate-400 italic">No disbursements found for this period.</TableCell></TableRow>
                 ) : (
                   sortedRecords.map((rec: any) => (
-                    <TableRow key={rec.id} className="hover:bg-muted/10 transition-colors">
-                      <TableCell className="font-medium flex items-center gap-2">
-                        <Calendar size={14} className="text-muted-foreground" />
+                    <TableRow key={rec.id} className="hover:bg-slate-50 transition-colors border-slate-100">
+                      <TableCell className="font-bold text-xs flex items-center gap-2">
+                        <Calendar size={14} className="text-slate-400" />
                         {rec.payPeriodStartDate?.substring(0, 7) || rec.month || 'N/A'}
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col">
-                          <span className="font-semibold">{(employees || []).find((e: any) => e.id === rec.employeeId)?.fullName || 'Unknown'}</span>
-                          <span className="text-[10px] text-muted-foreground">ID: {(employees || []).find((e: any) => e.id === rec.employeeId)?.employeeNumber || 'N/A'}</span>
+                          <span className="font-bold text-slate-900">{(employees || []).find((e: any) => e.id === rec.employeeId)?.fullName || 'Unknown'}</span>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Code: {(employees || []).find((e: any) => e.id === rec.employeeId)?.employeeNumber || 'N/A'}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="hidden sm:table-cell font-mono font-bold">
-                        {Math.round(rec.netPay || 0).toLocaleString()} <span className="text-[10px] font-normal text-muted-foreground">{currency}</span>
+                      <TableCell className="hidden sm:table-cell font-black text-slate-900">
+                        {Math.round(rec.netPay || 0).toLocaleString()} <span className="text-[10px] font-bold text-slate-400 uppercase">{currency}</span>
                       </TableCell>
                       <TableCell>
-                        <span className="px-2 py-0.5 rounded-full bg-green-500/10 text-green-600 text-[10px] font-bold border border-green-500/20">{rec.status}</span>
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[9px] font-black uppercase tracking-widest border border-emerald-200">{rec.status}</span>
                       </TableCell>
                       <TableCell className="text-right space-x-1">
-                        <Button variant="ghost" size="icon" onClick={() => handlePreview(rec)} title="View Payslip" className="h-8 w-8">
-                          <Eye size={14} />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(rec)} title="Edit" className="h-8 w-8">
-                          <Pencil size={14} />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(rec)} title="Delete" className="h-8 w-8 text-destructive hover:bg-destructive/10">
-                          <Trash2 size={14} />
-                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handlePreview(rec)} className="h-8 w-8 hover:bg-slate-100"><Eye size={14} className="text-slate-600" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(rec)} className="h-8 w-8 hover:bg-slate-100"><Pencil size={14} className="text-slate-600" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(rec)} className="h-8 w-8 hover:bg-red-50 text-red-400"><Trash2 size={14} /></Button>
                       </TableCell>
                     </TableRow>
                   ))
@@ -619,37 +607,37 @@ export default function PayrollPage() {
               </TableBody>
             </Table>
           </div>
-        </div>
+        </Card>
 
         <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-          <DialogContent className="max-w-[1000px] w-[95vw] h-[95vh] overflow-y-auto p-4 md:p-6">
+          <DialogContent className="max-w-[1000px] w-[95vw] h-[95vh] overflow-y-auto p-4 md:p-6 border-none shadow-2xl">
             <DialogHeader>
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pr-12 gap-4">
-                <DialogTitle>Payslip Preview</DialogTitle>
+                <DialogTitle className="text-xl font-black">Payslip Document Preview</DialogTitle>
                 <div className="flex gap-2">
                   <Button 
                     variant="outline" 
                     size="sm" 
                     onClick={handleDownloadPDF} 
-                    className="gap-2 h-9 min-w-[140px]"
+                    className="gap-2 h-10 font-bold border-slate-200"
                     disabled={isDownloading}
                   >
                     {isDownloading ? (
                       <>
-                        <Loader2 size={16} className="animate-spin" /> Downloading...
+                        <Loader2 size={16} className="animate-spin" /> EXPORTING...
                       </>
                     ) : (
                       <>
-                        <Download size={16} /> Download PDF
+                        <Download size={16} /> DOWNLOAD PDF
                       </>
                     )}
                   </Button>
                 </div>
               </div>
             </DialogHeader>
-            <div className="bg-muted p-2 md:p-8 rounded-lg mt-4 shadow-inner">
+            <div className="bg-slate-100 p-4 md:p-8 rounded-2xl mt-4 shadow-inner">
               {previewData && (
-                <div className="overflow-x-auto bg-white text-black rounded shadow-xl p-4">
+                <div className="bg-white text-black rounded-xl shadow-2xl p-0 overflow-hidden ring-1 ring-slate-200">
                   <PayslipDocument 
                     ref={printRef}
                     country={previewData.country} 
