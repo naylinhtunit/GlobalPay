@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -65,7 +64,7 @@ export function Navbar() {
               "flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all cursor-pointer",
               pathname === item.href
                 ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100"
             )}
           >
             <item.icon size={16} strokeWidth={2.5} />
@@ -79,16 +78,16 @@ export function Navbar() {
   const CountrySwitcher = () => (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="w-full justify-start gap-2 border-slate-200 bg-white hover:bg-slate-50 transition-all rounded-xl h-11">
+        <Button variant="outline" className="w-full justify-start gap-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all rounded-xl h-11">
           <Globe size={16} className="text-primary" />
-          <span className="flex-1 text-left font-bold text-xs uppercase tracking-wider truncate">{country}</span>
+          <span className="flex-1 text-left font-bold text-xs uppercase tracking-wider truncate dark:text-slate-200">{country}</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56 border-none shadow-2xl rounded-xl">
-        <DropdownMenuItem onClick={() => setCountry("Japan")} className="gap-2 cursor-pointer py-3 font-bold text-xs uppercase tracking-wider">
+      <DropdownMenuContent align="end" className="w-56 border-none shadow-2xl rounded-xl dark:bg-slate-900">
+        <DropdownMenuItem onClick={() => setCountry("Japan")} className="gap-2 cursor-pointer py-3 font-bold text-xs uppercase tracking-wider dark:hover:bg-slate-800">
           <span className="text-lg">🇯🇵</span> Japan (JPY)
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setCountry("Myanmar")} className="gap-2 cursor-pointer py-3 font-bold text-xs uppercase tracking-wider">
+        <DropdownMenuItem onClick={() => setCountry("Myanmar")} className="gap-2 cursor-pointer py-3 font-bold text-xs uppercase tracking-wider dark:hover:bg-slate-800">
           <span className="text-lg">🇲🇲</span> Myanmar (MMK)
         </DropdownMenuItem>
       </DropdownMenuContent>
@@ -96,13 +95,13 @@ export function Navbar() {
   );
 
   const ThemeToggle = () => {
-    if (!mounted) return <div className="h-10 w-10" />;
+    if (!mounted) return <div className="h-11 w-11" />;
     const isDark = resolvedTheme === "dark";
     return (
       <Button 
         variant="outline" 
         size="icon" 
-        className="shrink-0 border-slate-200 bg-white hover:bg-slate-50 transition-all rounded-xl h-11 w-11"
+        className="shrink-0 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all rounded-xl h-11 w-11"
         onClick={() => setTheme(isDark ? "light" : "dark")}
       >
         <Sun className={cn(
@@ -119,28 +118,28 @@ export function Navbar() {
 
   return (
     <>
-      <nav className="hidden md:flex fixed left-0 top-0 h-full w-64 bg-white border-r border-slate-100 flex flex-col z-50 shadow-sm">
+      <nav className="hidden md:flex fixed left-0 top-0 h-full w-64 bg-background dark:bg-slate-950 border-r border-slate-100 dark:border-slate-900 flex flex-col z-50 shadow-sm transition-colors duration-300">
         <div className="p-8">
           <div className="flex items-center gap-3 text-primary">
             <Shield size={32} strokeWidth={2.5} />
             <h1 className="text-2xl font-black tracking-tighter">GlobalPay</h1>
           </div>
-          <div className="mt-3 inline-flex items-center px-2 py-0.5 rounded bg-slate-100 border border-slate-200">
-            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">Node v2.5.0</span>
+          <div className="mt-3 inline-flex items-center px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Node v2.5.0</span>
           </div>
         </div>
         <div className="flex-1 px-4">
           <NavLinks />
         </div>
-        <div className="p-6 border-t border-slate-50 space-y-4 bg-slate-50/50">
+        <div className="p-6 border-t border-slate-50 dark:border-slate-900 space-y-4 bg-slate-50/50 dark:bg-slate-900/30">
           {user && (
-            <div className="px-3 py-3 flex items-center gap-3 bg-white border border-slate-100 rounded-2xl shadow-sm">
+            <div className="px-3 py-3 flex items-center gap-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm">
               <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
                 <User size={20} strokeWidth={2.5} />
               </div>
               <div className="flex-1 overflow-hidden">
-                <p className="text-xs font-black truncate capitalize text-slate-900">{user.email?.split('@')[0]}</p>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Admin Level</p>
+                <p className="text-xs font-black truncate capitalize text-slate-900 dark:text-slate-100">{user.email?.split('@')[0]}</p>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">Admin Level</p>
               </div>
             </div>
           )}
@@ -150,7 +149,7 @@ export function Navbar() {
           </div>
           <Button 
             variant="ghost" 
-            className="w-full justify-start gap-2 text-slate-400 hover:text-red-500 hover:bg-red-50 font-black text-xs uppercase tracking-widest rounded-xl"
+            className="w-full justify-start gap-2 text-slate-400 dark:text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 font-black text-xs uppercase tracking-widest rounded-xl"
             onClick={handleSignOut}
           >
             <LogOut size={16} strokeWidth={2.5} />
@@ -158,7 +157,7 @@ export function Navbar() {
           </Button>
         </div>
       </nav>
-      <header className="md:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b border-slate-100 flex items-center justify-between px-4 z-50 shadow-sm">
+      <header className="md:hidden fixed top-0 left-0 right-0 h-16 bg-background dark:bg-slate-950 border-b border-slate-100 dark:border-slate-900 flex items-center justify-between px-4 z-50 shadow-sm">
         <Link href="/">
           <div className="flex items-center gap-2 text-primary">
             <Shield size={28} strokeWidth={2.5} />
@@ -169,12 +168,12 @@ export function Navbar() {
           <ThemeToggle />
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="hover:bg-slate-50">
+              <Button variant="ghost" size="icon" className="hover:bg-slate-50 dark:hover:bg-slate-900">
                 <Menu size={24} />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-64 p-0 flex flex-col border-none shadow-2xl">
-              <SheetHeader className="p-6 text-left border-b border-slate-50 bg-slate-50/50">
+            <SheetContent side="left" className="w-64 p-0 flex flex-col border-none shadow-2xl dark:bg-slate-950">
+              <SheetHeader className="p-6 text-left border-b border-slate-50 dark:border-slate-900 bg-slate-50/50 dark:bg-slate-900/30">
                 <SheetTitle className="flex items-center gap-2 text-primary">
                   <Shield size={28} strokeWidth={2.5} />
                   <span className="text-xl font-black">GlobalPay</span>
@@ -183,17 +182,17 @@ export function Navbar() {
               <div className="flex-1 px-4">
                 <NavLinks onClick={() => setIsOpen(false)} />
               </div>
-              <div className="p-6 border-t border-slate-50 space-y-4 bg-slate-50/50">
+              <div className="p-6 border-t border-slate-50 dark:border-slate-900 space-y-4 bg-slate-50/50 dark:bg-slate-900/30">
                 {user && (
-                  <div className="flex items-center gap-3 px-3 py-3 bg-white border border-slate-100 rounded-2xl shadow-sm">
+                  <div className="flex items-center gap-3 px-3 py-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm">
                     <User size={18} className="text-primary" />
-                    <p className="text-xs font-black truncate">{user.email}</p>
+                    <p className="text-xs font-black truncate dark:text-slate-200">{user.email}</p>
                   </div>
                 )}
                 <CountrySwitcher />
                 <Button 
                   variant="ghost" 
-                  className="w-full justify-start gap-2 text-slate-400 hover:text-red-500 font-black text-xs uppercase tracking-widest"
+                  className="w-full justify-start gap-2 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 font-black text-xs uppercase tracking-widest"
                   onClick={handleSignOut}
                 >
                   <LogOut size={16} strokeWidth={2.5} />

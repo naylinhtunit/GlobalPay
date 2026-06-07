@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
@@ -237,13 +236,13 @@ export default function EmployeesPage() {
   );
 
   return (
-    <div className="md:pl-64 pt-16 md:pt-0 min-h-screen bg-[#F8FAFC]">
+    <div className="md:pl-64 pt-16 md:pt-0 min-h-screen bg-background dark:bg-slate-950 transition-colors">
       <Navbar />
       <main className="p-4 md:p-8 space-y-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900">Employees</h2>
-            <p className="text-slate-500 text-sm font-medium">Manage your workforce in {country}</p>
+            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-slate-100">Employees</h2>
+            <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Manage your workforce in {country}</p>
           </div>
           <Dialog open={isModalOpen} onOpenChange={(open) => {
             setIsModalOpen(open);
@@ -254,37 +253,37 @@ export default function EmployeesPage() {
                 <Plus size={18} /> Add Employee
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px] max-h-[95vh] overflow-y-auto border-none shadow-2xl">
+            <DialogContent className="sm:max-w-[600px] max-h-[95vh] overflow-y-auto border-none shadow-2xl dark:bg-slate-900">
               <DialogHeader>
-                <DialogTitle className="text-xl font-black">{editingId ? "Edit Employee Profile" : "Create New Employee"}</DialogTitle>
+                <DialogTitle className="text-xl font-black dark:text-slate-100">{editingId ? "Edit Employee Profile" : "Create New Employee"}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-6 py-4">
-                <div className="space-y-4 border-b pb-6">
+                <div className="space-y-4 border-b dark:border-slate-800 pb-6">
                   <div className="space-y-2">
-                    <Label htmlFor="fullName" className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                    <Label htmlFor="fullName" className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                       <UserCircle size={14} /> Full Name
                     </Label>
-                    <Input id="fullName" required value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})} className="h-11 bg-slate-50 border-slate-200" />
+                    <Input id="fullName" required value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})} className="h-11 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700" />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="code" className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                      <Label htmlFor="code" className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                         <Hash size={14} /> Employee Code
                       </Label>
-                      <Input id="code" required value={formData.employeeNumber} onChange={e => setFormData({...formData, employeeNumber: e.target.value})} className="h-11 bg-slate-50 border-slate-200" />
+                      <Input id="code" required value={formData.employeeNumber} onChange={e => setFormData({...formData, employeeNumber: e.target.value})} className="h-11 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700" />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="dept" className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                      <Label htmlFor="dept" className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                         <Briefcase size={14} /> Department
                       </Label>
-                      <Input id="dept" required value={formData.department} onChange={e => setFormData({...formData, department: e.target.value})} className="h-11 bg-slate-50 border-slate-200" />
+                      <Input id="dept" required value={formData.department} onChange={e => setFormData({...formData, department: e.target.value})} className="h-11 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700" />
                     </div>
                   </div>
                 </div>
 
-                <div className="space-y-4 bg-slate-50 p-5 rounded-2xl border border-slate-200 shadow-inner">
+                <div className="space-y-4 bg-slate-50 dark:bg-slate-800/50 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-inner">
                   <div className="flex justify-between items-center">
-                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                    <h3 className="text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-widest flex items-center gap-2">
                       <Banknote size={16} className="text-primary" /> Salary Management
                     </h3>
                     {editingId && (
@@ -300,12 +299,12 @@ export default function EmployeesPage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="sm:col-span-2 space-y-2">
-                      <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Monthly Base Salary</Label>
+                      <Label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Monthly Base Salary</Label>
                       <div className="relative">
                         <Input 
                           type="number" 
                           required 
-                          className="h-11 pl-10 text-lg font-black"
+                          className="h-11 pl-10 text-lg font-black dark:bg-slate-800"
                           value={formData.baseSalary === 0 ? "" : formData.baseSalary} 
                           onChange={e => setFormData({...formData, baseSalary: e.target.value === "" ? 0 : Number(e.target.value)})} 
                         />
@@ -313,11 +312,11 @@ export default function EmployeesPage() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Effective Date</Label>
+                      <Label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Effective Date</Label>
                       <Input 
                         type="month" 
                         required
-                        className="h-11 font-bold text-sm"
+                        className="h-11 font-bold text-sm dark:bg-slate-800"
                         value={formData.effectiveMonth}
                         onChange={e => setFormData({...formData, effectiveMonth: e.target.value})}
                       />
@@ -326,13 +325,13 @@ export default function EmployeesPage() {
 
                   {showHistory && formData.salaryHistory.length > 0 && (
                     <div className="mt-4 space-y-2 animate-in slide-in-from-top-2">
-                      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
                         <Table>
                           <TableBody>
                             {formData.salaryHistory.map((h, i) => (
-                              <TableRow key={i} className="text-[11px] border-slate-100">
-                                <TableCell className="font-bold text-slate-500">{h.effectiveMonth}</TableCell>
-                                <TableCell className="text-right font-black text-slate-900">{h.amount.toLocaleString()} {formData.salaryCurrency || currency}</TableCell>
+                              <TableRow key={i} className="text-[11px] border-slate-100 dark:border-slate-700">
+                                <TableCell className="font-bold text-slate-500 dark:text-slate-400">{h.effectiveMonth}</TableCell>
+                                <TableCell className="text-right font-black text-slate-900 dark:text-slate-100">{h.amount.toLocaleString()} {formData.salaryCurrency || currency}</TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
@@ -344,23 +343,23 @@ export default function EmployeesPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Annual Leave Balance</Label>
+                    <Label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Annual Leave Balance</Label>
                     <Input 
                       type="number" 
-                      className="h-11 font-bold"
+                      className="h-11 font-bold dark:bg-slate-800"
                       value={formData.totalPaidLeave === 0 ? "" : formData.totalPaidLeave} 
                       onChange={e => setFormData({...formData, totalPaidLeave: e.target.value === "" ? 0 : Number(e.target.value)})} 
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="hireDate" className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Joining Date</Label>
-                    <Input id="hireDate" type="date" required value={formData.hireDate} onChange={e => setFormData({...formData, hireDate: e.target.value})} className="h-11 font-bold" />
+                    <Label htmlFor="hireDate" className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Joining Date</Label>
+                    <Input id="hireDate" type="date" required value={formData.hireDate} onChange={e => setFormData({...formData, hireDate: e.target.value})} className="h-11 font-bold dark:bg-slate-800" />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Official Email</Label>
-                  <Input id="email" type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="h-11" />
+                  <Label htmlFor="email" className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Official Email</Label>
+                  <Input id="email" type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="h-11 dark:bg-slate-800" />
                 </div>
 
                 <DialogFooter className="pt-4">
@@ -373,41 +372,41 @@ export default function EmployeesPage() {
           </Dialog>
         </div>
 
-        <Card className="border-none shadow-sm overflow-hidden bg-white">
-          <CardHeader className="p-4 border-b bg-slate-50/50">
+        <Card className="border-none shadow-sm overflow-hidden bg-white dark:bg-slate-900/50">
+          <CardHeader className="p-4 border-b dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30">
             <div className="relative max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <Input placeholder="Search records..." className="pl-9 h-9 text-sm bg-white border-slate-200" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={16} />
+              <Input placeholder="Search records..." className="pl-9 h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
             </div>
           </CardHeader>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
-                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500">ID</TableHead>
-                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500">Full Name</TableHead>
-                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500">Department</TableHead>
-                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500">Salary Profile</TableHead>
-                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500">Leave Balance</TableHead>
-                  <TableHead className="text-right text-[10px] font-black uppercase tracking-widest text-slate-500">Actions</TableHead>
+                <TableRow className="bg-slate-50/50 dark:bg-slate-900/30 hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
+                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">ID</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Full Name</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Department</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Salary Profile</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Leave Balance</TableHead>
+                  <TableHead className="text-right text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow><TableCell colSpan={6} className="text-center py-12 text-sm font-medium text-slate-400">Fetching workforce data...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center py-12 text-sm font-medium text-slate-400 dark:text-slate-500">Fetching workforce data...</TableCell></TableRow>
                 ) : filteredEmployees.length === 0 ? (
-                  <TableRow><TableCell colSpan={6} className="text-center py-12 text-sm font-medium text-slate-400 italic">No matching records found.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center py-12 text-sm font-medium text-slate-400 dark:text-slate-500 italic">No matching records found.</TableCell></TableRow>
                 ) : filteredEmployees.map((emp) => {
                   const used = calculateUsedLeave(emp.id);
                   const rem = Math.max(0, (emp.totalPaidLeave || 0) - used);
                   return (
-                    <TableRow key={emp.id} className="hover:bg-slate-50 transition-colors border-slate-100">
-                      <TableCell className="font-mono text-[10px] text-slate-500">{emp.employeeNumber}</TableCell>
-                      <TableCell className="font-bold text-slate-900">{emp.fullName}</TableCell>
-                      <TableCell className="text-xs font-medium text-slate-600">{emp.department}</TableCell>
+                    <TableRow key={emp.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-slate-100 dark:border-slate-800">
+                      <TableCell className="font-mono text-[10px] text-slate-500 dark:text-slate-400">{emp.employeeNumber}</TableCell>
+                      <TableCell className="font-bold text-slate-900 dark:text-slate-100">{emp.fullName}</TableCell>
+                      <TableCell className="text-xs font-medium text-slate-600 dark:text-slate-400">{emp.department}</TableCell>
                       <TableCell>
                         <div className="flex flex-col">
-                          <span className="font-black text-slate-900 text-sm">{(emp.baseSalary || 0).toLocaleString()} <span className="text-[10px] font-bold text-slate-400 uppercase">{emp.salaryCurrency || currency}</span></span>
+                          <span className="font-black text-slate-900 dark:text-slate-100 text-sm">{(emp.baseSalary || 0).toLocaleString()} <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">{emp.salaryCurrency || currency}</span></span>
                           {emp.salaryHistory && emp.salaryHistory.length > 1 && (
                             <span className="text-[9px] flex items-center gap-1 font-bold text-primary uppercase tracking-tighter"><History size={10} /> {emp.salaryHistory.length} Cycles</span>
                           )}
@@ -415,13 +414,13 @@ export default function EmployeesPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col">
-                          <span className="font-black text-indigo-600 text-sm">{rem} / {emp.totalPaidLeave || 0} <span className="text-[10px] font-bold uppercase text-slate-400">Available</span></span>
-                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Resets Jan 1st</span>
+                          <span className="font-black text-indigo-600 dark:text-indigo-400 text-sm">{rem} / {emp.totalPaidLeave || 0} <span className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500">Available</span></span>
+                          <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter">Resets Jan 1st</span>
                         </div>
                       </TableCell>
                       <TableCell className="text-right space-x-1">
-                        <Button variant="ghost" size="icon" onClick={() => openEdit(emp)} className="h-8 w-8 hover:bg-slate-100"><Pencil size={14} className="text-slate-600" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(emp.id)} className="h-8 w-8 hover:bg-red-50 text-red-400"><Trash2 size={14} /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(emp)} className="h-8 w-8 hover:bg-slate-100 dark:hover:bg-slate-800"><Pencil size={14} className="text-slate-600 dark:text-slate-400" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(emp.id)} className="h-8 w-8 hover:bg-red-50 dark:hover:bg-red-950 text-red-400"><Trash2 size={14} /></Button>
                       </TableCell>
                     </TableRow>
                   );
