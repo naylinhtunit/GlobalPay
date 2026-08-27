@@ -30,7 +30,7 @@ export default function LoginPage() {
     try {
       await signInWithEmailAndPassword(auth, loginEmail, password);
       toast({ title: "Login Successful", description: "Welcome back to GlobalPay." });
-      router.push("/");
+      router.push("/dashboard");
     } catch (error: any) {
       console.error(error);
       const reason = error?.code || error?.message || "Unknown error";

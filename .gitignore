@@ -32,3 +32,20 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# tauri / rust build - large binaries
+/src-tauri/target/
+
+# android build
+/android/app/build/
+/android/.gradle/
+/android/build/
+
+# large download artifacts - exceeded GitHub 100MB limit
+# keep public/downloads/.gitkeep but ignore binaries
+/public/downloads/*.apk
+/public/downloads/*.dmg
+/public/downloads/*.exe
+public/downloads/*.apk
+public/downloads/*.dmg
+public/downloads/*.exe

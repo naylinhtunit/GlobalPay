@@ -153,9 +153,6 @@ export default function LandingPage() {
                   Get Started — Login <ArrowRight size={18} className="ml-2" />
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="rounded-xl h-12 px-8 font-bold">
-                <a href="#download">Download Apps</a>
-              </Button>
             </div>
             <div className="flex items-center gap-6 pt-2 text-xs text-muted-foreground">
               <span className="flex items-center gap-1.5">
@@ -259,49 +256,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Download */}
-      <section id="download" className="container mx-auto max-w-7xl px-4 md:px-6 py-16">
-        <div className="rounded-3xl bg-slate-900 dark:bg-black text-white p-8 md:p-12 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-transparent" />
-          <div className="relative grid lg:grid-cols-2 gap-8 items-center">
-            <div>
-              <h2 className="text-3xl md:text-4xl font-black tracking-tight">Download GlobalPay</h2>
-              <p className="text-slate-300 mt-3">Web, Android, macOS & Windows — one account everywhere. PWA ready, installable.</p>
-              <div className="flex flex-wrap gap-3 mt-6">
-                <Button asChild className="rounded-xl bg-white text-slate-900 hover:bg-slate-100 font-bold h-11">
-                  <a href="/downloads/GlobalPay.apk" download>
-                    <Smartphone size={18} className="mr-2" /> Android APK
-                  </a>
-                </Button>
-                <Button asChild variant="outline" className="rounded-xl border-white text-white hover:bg-white/10 font-bold h-11 bg-transparent">
-                  <a href="/downloads/GlobalPay.dmg" download>
-                    <Monitor size={18} className="mr-2" /> macOS .dmg
-                  </a>
-                </Button>
-                <Button asChild variant="outline" className="rounded-xl border-white text-white hover:bg-white/10 font-bold h-11 bg-transparent">
-                  <a href="/downloads/GlobalPay.exe" download>
-                    <Laptop size={18} className="mr-2" /> Windows .exe
-                  </a>
-                </Button>
-              </div>
-              <p className="text-xs text-slate-400 mt-3">Unsigned builds — allow in Security settings on first open. APK direct download.</p>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              {[
-                { name: "Android", sub: "APK", icon: Smartphone },
-                { name: "macOS", sub: "DMG", icon: Monitor },
-                { name: "Windows", sub: "EXE", icon: Laptop },
-              ].map((p) => (
-                <div key={p.name} className="rounded-2xl bg-white/10 backdrop-blur border border-white/10 p-6 text-center">
-                  <p.icon size={28} className="mx-auto" />
-                  <p className="font-black mt-3">{p.name}</p>
-                  <p className="text-xs text-slate-400">{p.sub} • Unsigned</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
+
 
       {/* Footer */}
       <footer className="border-t py-8">
@@ -309,14 +264,6 @@ export default function LandingPage() {
           <div className="flex items-center gap-2 font-black text-foreground">
             <Shield size={20} className="text-primary" /> GlobalPay
             <span className="font-normal text-muted-foreground">© 2026 GlobalPay Enterprise</span>
-          </div>
-          <div className="flex gap-6">
-            <Link href="/login" className="hover:text-foreground">
-              Login
-            </Link>
-            <a href="#download" className="hover:text-foreground">
-              Download
-            </a>
           </div>
         </div>
       </footer>

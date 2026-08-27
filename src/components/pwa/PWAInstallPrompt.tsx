@@ -5,13 +5,20 @@ import React, { useState, useEffect } from "react";
 import { Download, X, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { usePathname } from "next/navigation";
 
 export function PWAInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
+  const pathname = usePathname();
+
+  const isNative = typeof window !== "undefined" && ((window as any).Capacitor?.isNativePlatform?.() || (window as any).__TAURI__ || (window as any).__TAURI_INTERNALS__ || (navigator as any).userAgent?.includes("Electron"));
 
   useEffect(() => {
+    // Only show on web landing page
+    if (pathname !== "/" || isNative) return;
+
     // Check if already installed or running as standalone
     const checkStandalone = () => {
       if (typeof window === 'undefined') return false;
@@ -43,7 +50,7 @@ export function PWAInstallPrompt() {
     });
 
     return () => window.removeEventListener("beforeinstallprompt", handler);
-  }, []);
+  }, [pathname, isNative]);
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
@@ -60,7 +67,9 @@ export function PWAInstallPrompt() {
     setShowPrompt(false);
   };
 
-  if (!showPrompt || isStandalone) return null;
+  // Only on web landing page — not in native apps, not on other routes, not when already installed
+  if (pathname !== "/" || isNative || isStandalone) return null;
+  if (!showPrompt) return null;
 
   return (
     <div className="fixed bottom-6 left-0 right-0 z-[100] px-4 animate-in slide-in-from-bottom-10 duration-500">
