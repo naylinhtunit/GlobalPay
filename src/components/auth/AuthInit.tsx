@@ -13,14 +13,22 @@ export function AuthInit() {
   useEffect(() => {
     if (!auth) return;
 
+    const isNative = typeof window !== "undefined" && ((window as any).Capacitor?.isNativePlatform?.() || (window as any).__TAURI__ || (window as any).__TAURI_INTERNALS__ || (navigator as any).userAgent?.includes("Electron"));
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      // Redirect to login if not authenticated and not on the login page
-      if (!user && pathname !== "/login") {
-        router.push("/login");
-      } 
-      // Redirect to home if authenticated and on the login page
-      else if (user && pathname === "/login") {
-        router.push("/");
+      // Landing "/" is public on web — do not force login
+      const isPublicLanding = pathname === "/";
+      if (!user && pathname !== "/login" && !isPublicLanding) {
+        // In native apps, landing is hidden — redirect "/" to /login
+        if (isNative && pathname === "/") {
+          router.push("/login");
+        } else if (!isPublicLanding) {
+          router.push("/login");
+        }
+      } else if (user && pathname === "/login") {
+        router.push("/dashboard");
+      } else if (user && isPublicLanding && !isNative) {
+        // Keep authenticated web users on landing until they click Login — do not auto-redirect
       }
     });
 

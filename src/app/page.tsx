@@ -1,150 +1,325 @@
 "use client";
 
-import React, { useMemo, useState, useEffect } from "react";
-import { Navbar } from "@/components/layout/Navbar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useCountry } from "@/context/CountryContext";
-import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
-import { collection, query, where } from "firebase/firestore";
-import { Users, CreditCard, CalendarCheck, TrendingUp, ArrowUpRight, Clock, ShieldCheck } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Shield,
+  Download,
+  Smartphone,
+  Monitor,
+  Laptop,
+  CheckCircle2,
+  Users,
+  FileText,
+  Calculator,
+  Globe,
+  Lock,
+  Zap,
+  ArrowRight,
+  ChevronDown,
+  Building2,
+  FileSpreadsheet,
+} from "lucide-react";
 
-export default function Dashboard() {
-  const { country, currency } = useCountry();
-  const { user } = useUser();
-  const firestore = useFirestore();
-  const [mounted, setMounted] = useState(false);
+function isNativeApp() {
+  if (typeof window === "undefined") return false;
+  // Capacitor
+  if ((window as any).Capacitor?.isNativePlatform?.()) return true;
+  // Tauri
+  if ((window as any).__TAURI__ || (window as any).__TAURI_INTERNALS__) return true;
+  // Electron
+  if ((navigator as any).userAgent?.includes("Electron")) return true;
+  return false;
+}
+
+export default function LandingPage() {
+  const router = useRouter();
+  const [isNative, setIsNative] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    if (isNativeApp()) {
+      setIsNative(true);
+      router.replace("/login");
+    }
+  }, [router]);
 
-  const empQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return query(
-      collection(firestore, "employees"), 
-      where("country", "==", country),
-      where("companyId", "==", user.uid)
-    );
-  }, [firestore, country, user]);
-
-  const payrollQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return query(
-      collection(firestore, "payrollRecords"), 
-      where("country", "==", country),
-      where("companyId", "==", user.uid)
-    );
-  }, [firestore, country, user]);
-
-  const { data: employees } = useCollection(empQuery);
-  const { data: payrollRecords } = useCollection(payrollQuery);
-
-  const sortedRecentRecords = useMemo(() => {
-    if (!payrollRecords) return [];
-    return [...payrollRecords].sort((a: any, b: any) => 
-      (b.payPeriodStartDate || "").localeCompare(a.payPeriodStartDate || "")
-    ).slice(0, 3);
-  }, [payrollRecords]);
-
-  const employeeCount = employees?.length || 0;
-  const totalPayroll = (employees || []).reduce((acc, emp: any) => acc + (emp.baseSalary || 0), 0);
-
-  if (!mounted) return null;
+  if (isNative) return null;
 
   return (
-    <div className="md:pl-64 pt-16 md:pt-0 min-h-screen bg-background dark:bg-slate-950 transition-colors">
-      <Navbar />
-      <main className="p-4 md:p-8 space-y-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-slate-100 uppercase">GlobalPay Overview for {country}</h2>
+    <div className="min-h-screen bg-white dark:bg-slate-950">
+      {/* Header */}
+      <header className="sticky top-0 z-50 w-full border-b bg-white/80 dark:bg-slate-950/80 backdrop-blur supports-[backdrop-filter]:bg-white/60">
+        <div className="container mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-6">
+          <div className="flex items-center gap-2 text-primary">
+            <Shield size={28} strokeWidth={2.5} />
+            <span className="text-xl font-black tracking-tight">GlobalPay</span>
+          </div>
+          <div className="flex items-center gap-2 md:gap-3">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-2 font-bold text-xs md:text-sm h-9 rounded-xl">
+                  <Download size={16} />
+                  <span className="hidden sm:inline">Download</span>
+                  <ChevronDown size={14} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64 rounded-xl p-2">
+                <DropdownMenuItem asChild className="p-0">
+                  <a
+                    href="/downloads/GlobalPay.apk"
+                    download
+                    className="flex items-center gap-3 w-full px-3 py-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg"
+                  >
+                    <div className="h-9 w-9 rounded-lg bg-green-500/10 flex items-center justify-center">
+                      <Smartphone size={18} className="text-green-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-bold">Android App</p>
+                      <p className="text-[11px] text-muted-foreground">APK Direct Download</p>
+                    </div>
+                    <Download size={14} className="text-muted-foreground" />
+                  </a>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild className="p-0">
+                  <a
+                    href="/downloads/GlobalPay.dmg"
+                    download
+                    className="flex items-center gap-3 w-full px-3 py-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg"
+                  >
+                    <div className="h-9 w-9 rounded-lg bg-slate-900/10 dark:bg-white/10 flex items-center justify-center">
+                      <Monitor size={18} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-bold">macOS App</p>
+                      <p className="text-[11px] text-muted-foreground">.dmg Unsigned</p>
+                    </div>
+                    <Download size={14} className="text-muted-foreground" />
+                  </a>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild className="p-0">
+                  <a
+                    href="/downloads/GlobalPay.exe"
+                    download
+                    className="flex items-center gap-3 w-full px-3 py-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg"
+                  >
+                    <div className="h-9 w-9 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                      <Laptop size={18} className="text-blue-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-bold">Windows App</p>
+                      <p className="text-[11px] text-muted-foreground">.exe Unsigned</p>
+                    </div>
+                    <Download size={14} className="text-muted-foreground" />
+                  </a>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button asChild className="font-bold rounded-xl h-9 px-5">
+              <Link href="/login">Login</Link>
+            </Button>
           </div>
         </div>
+      </header>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-          {[
-            { title: "Active Employees", value: employeeCount, sub: `In ${country} region`, icon: Users, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-950/30" },
-            { title: "Total Base Salary", value: `${totalPayroll.toLocaleString()} ${currency}`, sub: "Monthly total", icon: CreditCard, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-950/30" },
-            { title: "Payroll Runs", value: payrollRecords?.length || 0, sub: "Historical records", icon: CalendarCheck, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-950/30" },
-            { title: "Compliance", value: "100%", sub: "All regions", icon: TrendingUp, color: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-50 dark:bg-indigo-950/30" },
-          ].map((stat, idx) => (
-            <Card key={idx} className="border-none shadow-sm hover:shadow-md transition-all duration-300 dark:bg-slate-900/50">
-              <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                <CardTitle className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">{stat.title}</CardTitle>
-                <div className={cn("p-2 rounded-lg", stat.bg)}>
-                  <stat.icon className={cn("h-4 w-4", stat.color)} />
+      {/* Hero */}
+      <section className="container mx-auto max-w-7xl px-4 md:px-6 py-12 md:py-20">
+        <div className="grid lg:grid-cols-2 gap-10 items-center">
+          <div className="space-y-6">
+            <div className="inline-flex items-center gap-2 rounded-full border bg-slate-50 dark:bg-slate-900 px-3 py-1 text-xs font-bold">
+              <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+              Trusted by teams in Japan & Myanmar
+            </div>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight leading-[1.1]">
+              Global Payroll,
+              <span className="text-primary"> Simplified.</span>
+            </h1>
+            <p className="text-lg text-muted-foreground leading-relaxed max-w-xl">
+              Specialized payroll for <span className="font-bold text-foreground">Japan (JPY)</span> &{" "}
+              <span className="font-bold text-foreground">Myanmar (MMK)</span>. Compliance, payslips,
+              and workforce management — all in one secure platform.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button asChild size="lg" className="rounded-xl h-12 px-8 font-bold text-base">
+                <Link href="/login">
+                  Get Started — Login <ArrowRight size={18} className="ml-2" />
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="lg" className="rounded-xl h-12 px-8 font-bold">
+                <a href="#download">Download Apps</a>
+              </Button>
+            </div>
+            <div className="flex items-center gap-6 pt-2 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1.5">
+                <CheckCircle2 size={16} className="text-green-600" /> No credit card
+              </span>
+              <span className="flex items-center gap-1.5">
+                <CheckCircle2 size={16} className="text-green-600" /> Secure & Compliant
+              </span>
+            </div>
+          </div>
+
+          <div className="relative">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-blue-500/20 rounded-3xl blur-2xl" />
+            <Card className="relative overflow-hidden rounded-3xl border-2 shadow-2xl">
+              <div className="bg-slate-900 text-white px-4 py-3 flex items-center gap-2">
+                <div className="flex gap-1.5">
+                  <span className="h-3 w-3 rounded-full bg-red-500" />
+                  <span className="h-3 w-3 rounded-full bg-yellow-500" />
+                  <span className="h-3 w-3 rounded-full bg-green-500" />
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-black text-slate-900 dark:text-slate-100">{stat.value}</div>
-                <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1">{stat.sub}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-          <Card className="lg:col-span-2 border-none shadow-sm overflow-hidden dark:bg-slate-900/50">
-            <CardHeader className="border-b dark:border-slate-800 bg-white/50 dark:bg-slate-900/30 py-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-bold flex items-center gap-2 dark:text-slate-200">
-                  <Clock size={16} className="text-slate-400" /> Recent Activity
-                </CardTitle>
+                <span className="text-xs font-mono text-slate-400 ml-3">GlobalPay Dashboard — Preview</span>
               </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="divide-y dark:divide-slate-800">
-                {sortedRecentRecords.map((rec: any, i) => (
-                  <div key={rec.id} className="flex items-center gap-4 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                    <div className="h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold text-xs">
-                      {i + 1}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">Payroll for {(employees || []).find(e => e.id === rec.employeeId)?.fullName || 'Employee'}</p>
-                      <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500">{rec.payPeriodStartDate?.substring(0, 7) || 'Date N/A'}</p>
-                    </div>
-                    <ArrowUpRight size={14} className="text-slate-300 dark:text-slate-600" />
-                  </div>
-                ))}
-                {sortedRecentRecords.length === 0 && (
-                   <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-12 italic">No recent activity recorded.</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-none shadow-sm overflow-hidden dark:bg-slate-900/50">
-            <CardHeader className="border-b dark:border-slate-800 bg-white/50 dark:bg-slate-900/30 py-4">
-              <CardTitle className="text-sm font-bold flex items-center gap-2 dark:text-slate-200">
-                <ShieldCheck size={16} className="text-primary" /> Regional Compliance
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6 pt-6">
-               <div className="space-y-4">
+              <CardContent className="p-6 space-y-4 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-950">
+                <div className="grid grid-cols-3 gap-3">
                   {[
-                    { label: "Tax Filings", status: "Verified", progress: 100 },
-                    { label: "Social Security", status: "Active", progress: 100 },
-                    { label: "Labor Standards", status: "Compliant", progress: 100 }
-                  ].map((item, i) => (
-                    <div key={i} className="space-y-2">
-                      <div className="flex justify-between text-[11px] font-bold uppercase tracking-wider">
-                        <span className="text-slate-500 dark:text-slate-400">{item.label}</span>
-                        <span className="text-emerald-600 dark:text-emerald-400">{item.status}</span>
-                      </div>
-                      <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                        <div className="h-full bg-primary w-full" />
-                      </div>
+                    { label: "Employees", value: "248", icon: Users, color: "text-blue-600" },
+                    { label: "Payroll Runs", value: "1,240", icon: FileSpreadsheet, color: "text-emerald-600" },
+                    { label: "Compliance", value: "100%", icon: Shield, color: "text-primary" },
+                  ].map((s) => (
+                    <div key={s.label} className="rounded-2xl bg-white dark:bg-slate-900 border p-3 shadow-sm">
+                      <s.icon size={16} className={s.color} />
+                      <p className="text-lg font-black mt-2">{s.value}</p>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{s.label}</p>
                     </div>
                   ))}
-               </div>
-               <div className="pt-4 border-t dark:border-slate-800">
-                 <p className="text-[10px] leading-relaxed text-slate-400 dark:text-slate-500 italic font-medium">All payroll calculations are processed according to the latest regional tax laws and employment regulations.</p>
-               </div>
-            </CardContent>
-          </Card>
+                </div>
+                <div className="rounded-2xl bg-primary text-primary-foreground p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs opacity-80">Net Pay (This Month)</p>
+                    <p className="text-2xl font-black">¥ 248,517</p>
+                  </div>
+                  <Calculator size={28} className="opacity-60" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      </main>
+      </section>
+
+      {/* Features */}
+      <section className="bg-slate-50 dark:bg-slate-900/50 border-y">
+        <div className="container mx-auto max-w-7xl px-4 md:px-6 py-16">
+          <div className="text-center max-w-2xl mx-auto mb-10">
+            <h2 className="text-3xl font-black tracking-tight">Built for Japan & Myanmar</h2>
+            <p className="text-muted-foreground mt-3">Everything you need to run compliant payroll across borders.</p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              {
+                icon: Building2,
+                title: "Japan Payroll (JPY)",
+                desc: "170.5h divisor, OT 1.25/1.50, Holiday 1.35, Night Alw, Health/Pension/Employment insurance, Income & Resident tax.",
+              },
+              {
+                icon: Globe,
+                title: "Myanmar Payroll (MMK)",
+                desc: "OT ×2, SSB, progressive income tax, USD↔MMK exchange, attendance & meal allowances.",
+              },
+              {
+                icon: Lock,
+                title: "Secure & Compliant",
+                desc: "Firebase Auth, Firestore rules, historical salary rates, audit logs, encrypted payslips (PDF/Excel).",
+              },
+              {
+                icon: FileText,
+                title: "Payslip Generation",
+                desc: "Professional payslips with attendance, earnings, deductions, and net pay — download as PDF or Excel.",
+              },
+              {
+                icon: Zap,
+                title: "Calendar & Holidays",
+                desc: "Company holidays auto-detected, AI calendar scan (Gemini), Sat/Sun holiday split with shift auto-calc.",
+              },
+              {
+                icon: Users,
+                title: "Employee Management",
+                desc: "Profiles, salary history, paid leave tracking, department assignment, multi-country support.",
+              },
+            ].map((f) => (
+              <Card key={f.title} className="rounded-2xl border-none shadow-sm hover:shadow-md transition-shadow">
+                <CardContent className="p-6">
+                  <div className="h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
+                    <f.icon size={22} className="text-primary" />
+                  </div>
+                  <h3 className="font-black">{f.title}</h3>
+                  <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{f.desc}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Download */}
+      <section id="download" className="container mx-auto max-w-7xl px-4 md:px-6 py-16">
+        <div className="rounded-3xl bg-slate-900 dark:bg-black text-white p-8 md:p-12 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-transparent" />
+          <div className="relative grid lg:grid-cols-2 gap-8 items-center">
+            <div>
+              <h2 className="text-3xl md:text-4xl font-black tracking-tight">Download GlobalPay</h2>
+              <p className="text-slate-300 mt-3">Web, Android, macOS & Windows — one account everywhere. PWA ready, installable.</p>
+              <div className="flex flex-wrap gap-3 mt-6">
+                <Button asChild className="rounded-xl bg-white text-slate-900 hover:bg-slate-100 font-bold h-11">
+                  <a href="/downloads/GlobalPay.apk" download>
+                    <Smartphone size={18} className="mr-2" /> Android APK
+                  </a>
+                </Button>
+                <Button asChild variant="outline" className="rounded-xl border-white text-white hover:bg-white/10 font-bold h-11 bg-transparent">
+                  <a href="/downloads/GlobalPay.dmg" download>
+                    <Monitor size={18} className="mr-2" /> macOS .dmg
+                  </a>
+                </Button>
+                <Button asChild variant="outline" className="rounded-xl border-white text-white hover:bg-white/10 font-bold h-11 bg-transparent">
+                  <a href="/downloads/GlobalPay.exe" download>
+                    <Laptop size={18} className="mr-2" /> Windows .exe
+                  </a>
+                </Button>
+              </div>
+              <p className="text-xs text-slate-400 mt-3">Unsigned builds — allow in Security settings on first open. APK direct download.</p>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              {[
+                { name: "Android", sub: "APK", icon: Smartphone },
+                { name: "macOS", sub: "DMG", icon: Monitor },
+                { name: "Windows", sub: "EXE", icon: Laptop },
+              ].map((p) => (
+                <div key={p.name} className="rounded-2xl bg-white/10 backdrop-blur border border-white/10 p-6 text-center">
+                  <p.icon size={28} className="mx-auto" />
+                  <p className="font-black mt-3">{p.name}</p>
+                  <p className="text-xs text-slate-400">{p.sub} • Unsigned</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t py-8">
+        <div className="container mx-auto max-w-7xl px-4 md:px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2 font-black text-foreground">
+            <Shield size={20} className="text-primary" /> GlobalPay
+            <span className="font-normal text-muted-foreground">© 2026 GlobalPay Enterprise</span>
+          </div>
+          <div className="flex gap-6">
+            <Link href="/login" className="hover:text-foreground">
+              Login
+            </Link>
+            <a href="#download" className="hover:text-foreground">
+              Download
+            </a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

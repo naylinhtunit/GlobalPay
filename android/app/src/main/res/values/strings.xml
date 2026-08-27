@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">GlobalPay</string>
+    <string name="title_activity_main">GlobalPay</string>
+    <string name="package_name">com.globalpay.app</string>
+    <string name="custom_url_scheme">com.globalpay.app</string>
+</resources>

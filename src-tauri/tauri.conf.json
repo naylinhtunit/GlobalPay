@@ -1,0 +1,51 @@
+{
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devUrl": "http://localhost:9002",
+    "frontendDist": "../out"
+  },
+  "bundle": {
+    "active": true,
+    "category": "Business",
+    "copyright": "GlobalPay Enterprise",
+    "targets": ["dmg", "nsis", "app"],
+    "icon": [
+      "icons/icon.png"
+    ],
+    "resources": [],
+    "externalBin": [],
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "wix": null
+    },
+    "macOS": {
+      "entitlements": null,
+      "exceptionDomain": "",
+      "frameworks": [],
+      "providerShortName": null,
+      "signingIdentity": null
+    }
+  },
+  "productName": "GlobalPay",
+  "mainBinaryName": "GlobalPay",
+  "version": "1.0.0",
+  "identifier": "com.globalpay.desktop",
+  "plugins": {},
+  "app": {
+    "windows": [
+      {
+        "title": "GlobalPay",
+        "url": "/login",
+        "width": 1280,
+        "height": 800,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  }
+}

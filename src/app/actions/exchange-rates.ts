@@ -1,9 +1,8 @@
 
-'use server';
-
 /**
- * Server Action to fetch exchange rates from Central Bank of Myanmar.
- * This bypasses CORS restrictions that occur when fetching from the client.
+ * Fetch exchange rates from Central Bank of Myanmar.
+ * Client-side fetch for static export / Tauri compatibility.
+ * Note: May be blocked by CORS in browser; Tauri handles gracefully.
  */
 export async function getCbmRates() {
   try {

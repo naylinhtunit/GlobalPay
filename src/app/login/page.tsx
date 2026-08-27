@@ -16,6 +16,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
   const auth = useAuth();
   const router = useRouter();
   const { toast } = useToast();
@@ -32,9 +33,11 @@ export default function LoginPage() {
       router.push("/");
     } catch (error: any) {
       console.error(error);
+      const reason = error?.code || error?.message || "Unknown error";
+      setErrorMsg(reason);
       toast({
         title: "Login Failed",
-        description: "Invalid credentials. Please check your username and password.",
+        description: `(${reason}) Please check your username and password.`,
         variant: "destructive",
       });
     } finally {
@@ -81,6 +84,9 @@ export default function LoginPage() {
             <Button type="submit" className="w-full h-12 text-base font-semibold gap-2 mt-4 transition-all hover:scale-[1.01]" disabled={isLoading}>
               {isLoading ? "Signing in..." : <><LogIn size={20} /> Sign In</>}
             </Button>
+            {errorMsg && (
+              <p className="mt-4 text-sm font-medium text-destructive text-center break-words">{errorMsg}</p>
+            )}
           </form>
           <div className="mt-10 pt-6 border-t border-border text-center">
             <p className="text-xs font-medium text-muted-foreground tracking-wider uppercase">Authorized Access Only</p>
