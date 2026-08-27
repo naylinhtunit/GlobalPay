@@ -94,8 +94,13 @@ export default function PayrollPage() {
     lateEarlyHours: 0,
     regularOTHours: 0,
     lateNightOTHours: 0,
-    holidayWorkHours: 0,
-    holidayNightHours: 0,
+    saturdayHolidayHours: 0,
+    sundayHolidayHours: 0,
+    saturdayHolidayMorningHours: 0,
+    saturdayHolidayAfternoonHours: 0,
+    sundayHolidayMorningHours: 0,
+    sundayHolidayAfternoonHours: 0,
+    holidayShiftType: "morning",
     nightShiftHours: 0,
     nightShiftHoursExtra: 0,
     paidLeaveDays: 0,
@@ -212,8 +217,13 @@ export default function PayrollPage() {
       lateEarlyHours: 0,
       regularOTHours: 0,
       lateNightOTHours: 0,
-      holidayWorkHours: 0,
-      holidayNightHours: 0,
+      saturdayHolidayHours: 0,
+      sundayHolidayHours: 0,
+      saturdayHolidayMorningHours: 0,
+      saturdayHolidayAfternoonHours: 0,
+      sundayHolidayMorningHours: 0,
+      sundayHolidayAfternoonHours: 0,
+      holidayShiftType: "morning",
       nightShiftHours: 0,
       nightShiftHoursExtra: 0,
       paidLeaveDays: 0,
@@ -362,7 +372,28 @@ export default function PayrollPage() {
     setSelectedMonth(record.payPeriodStartDate?.substring(0, 7) || record.month || "");
     
     if (record.country === "Japan") {
-      setJapanData({ ...record.japanData });
+      const jd = { ...record.japanData };
+      // Migrate legacy single Sat field + shiftType to new split fields
+      if (jd.saturdayHolidayMorningHours === undefined && jd.saturdayHolidayAfternoonHours === undefined && jd.saturdayHolidayHours) {
+        if (jd.holidayShiftType === "afternoon") {
+          jd.saturdayHolidayAfternoonHours = jd.saturdayHolidayHours;
+          jd.saturdayHolidayMorningHours = 0;
+        } else {
+          jd.saturdayHolidayMorningHours = jd.saturdayHolidayHours;
+          jd.saturdayHolidayAfternoonHours = 0;
+        }
+      }
+      jd.saturdayHolidayMorningHours = jd.saturdayHolidayMorningHours ?? 0;
+      jd.saturdayHolidayAfternoonHours = jd.saturdayHolidayAfternoonHours ?? 0;
+      jd.sundayHolidayMorningHours = jd.sundayHolidayMorningHours ?? 0;
+      jd.sundayHolidayAfternoonHours = jd.sundayHolidayAfternoonHours ?? 0;
+      // Migrate legacy Sunday single field
+      if (jd.sundayHolidayMorningHours === 0 && jd.sundayHolidayAfternoonHours === 0 && jd.sundayHolidayHours) {
+        jd.sundayHolidayMorningHours = jd.sundayHolidayHours;
+      }
+      jd.sundayHolidayHours = jd.sundayHolidayHours ?? 0;
+      jd.holidayShiftType = jd.holidayShiftType ?? "morning";
+      setJapanData(jd);
     } else {
       setMyanmarData({
         ...record.myanmarData,

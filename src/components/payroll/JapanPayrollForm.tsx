@@ -22,8 +22,13 @@ export interface JapanData {
   lateEarlyHours: number;
   regularOTHours: number;
   lateNightOTHours: number;
-  holidayWorkHours: number;
-  holidayNightHours: number;
+  saturdayHolidayHours: number;
+  sundayHolidayHours: number;
+  saturdayHolidayMorningHours?: number;
+  saturdayHolidayAfternoonHours?: number;
+  sundayHolidayMorningHours?: number;
+  sundayHolidayAfternoonHours?: number;
+  holidayShiftType?: "morning" | "afternoon";
   nightShiftHours: number;
   nightShiftHoursExtra: number;
   paidLeaveDays: number;
@@ -123,8 +128,31 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
 
     const calculatedOT = Math.round(hourlyRate * 1.25 * (Number(data.regularOTHours) || 0));
     const calculatedLateNightOT = Math.round(hourlyRate * 1.50 * (Number(data.lateNightOTHours) || 0));
-    const calculatedHolidayWork = Math.round(hourlyRate * 1.35 * (Number(data.holidayWorkHours) || 0));
-    const calculatedHolidayNight = Math.round(hourlyRate * 0.25 * (Number(data.holidayNightHours) || 0));
+
+    // Backward compat: support both old (single Sat/Sun field + shiftType) and new (split morning/afternoon)
+    const satMorning = Number((data as any).saturdayHolidayMorningHours ?? 0) || 0;
+    const satAfternoon = Number((data as any).saturdayHolidayAfternoonHours ?? 0) || 0;
+    const hasNewSatFields = (data as any).saturdayHolidayMorningHours !== undefined || (data as any).saturdayHolidayAfternoonHours !== undefined;
+    const legacySatHours = Number(data.saturdayHolidayHours) || 0;
+    const legacySatMorning = !hasNewSatFields && data.holidayShiftType === "morning" ? legacySatHours : 0;
+    const legacySatAfternoon = !hasNewSatFields && data.holidayShiftType === "afternoon" ? legacySatHours : 0;
+    const effectiveSatMorning = hasNewSatFields ? satMorning : legacySatMorning;
+    const effectiveSatAfternoon = hasNewSatFields ? satAfternoon : legacySatAfternoon;
+
+    const sunMorning = Number((data as any).sundayHolidayMorningHours ?? 0) || 0;
+    const sunAfternoon = Number((data as any).sundayHolidayAfternoonHours ?? 0) || 0;
+    const hasNewSunFields = (data as any).sundayHolidayMorningHours !== undefined || (data as any).sundayHolidayAfternoonHours !== undefined;
+    const legacySunHours = Number(data.sundayHolidayHours) || 0;
+    const effectiveSunMorning = hasNewSunFields ? sunMorning : 0;
+    const effectiveSunAfternoon = hasNewSunFields ? sunAfternoon : 0;
+    const effectiveSunHours = hasNewSunFields ? sunMorning + sunAfternoon : legacySunHours;
+
+    const totalHolidayHours = effectiveSatMorning + effectiveSatAfternoon + effectiveSunHours;
+
+    const calculatedHolidayWork = Math.round(hourlyRate * 1.35 * totalHolidayHours);
+
+    const holidayNS1Hours = Math.round((effectiveSatAfternoon + effectiveSunAfternoon) * 0.5);
+    const calculatedHolidayNightAlw = Math.round(hourlyRate * 0.25 * holidayNS1Hours);
     
     const calculatedNightAlw1 = Math.round(hourlyRate * 0.25 * totalNS1);
     const calculatedNightAlw2 = Math.round(hourlyRate * 0.30 * totalNS2);
@@ -142,7 +170,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
     
     const totalEarningsCalc = (Number(baseSalary) || 0) + calculatedOT + calculatedLateNightOT + 
                              calculatedNightAlw1 + calculatedNightAlw2 + 
-                             calculatedHolidayWork + calculatedHolidayNight + 
+                             calculatedHolidayWork + calculatedHolidayNightAlw + 
                              (Number(data.familyAllowance) || 0) + (Number(data.housingAllowance) || 0) + 
                              (Number(data.nonTaxableCommuting) || 0) + (Number(data.taxableCommuting) || 0) + 
                              (Number(data.prevMonthAdj) || 0) + (Number(data.leaveAllowance) || 0) -
@@ -188,7 +216,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
         nightShiftAllowance: calculatedNightAlw1,
         nightShiftAllowanceExtra: calculatedNightAlw2,
         holidayWorkAllowance: calculatedHolidayWork,
-        holidayNightAllowance: calculatedHolidayNight,
+        holidayNightAllowance: calculatedHolidayNightAlw,
         absenceDeduction: calculatedAbsenceDed,
         lateEarlyDeduction: calculatedLateEarlyDed,
         healthInsurance: currentHealthIns,
@@ -198,7 +226,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
         remainingPaidLeave: remainingLeave
       });
     }
-  }, [shifts, baseSalary, data.regularOTHours, data.lateNightOTHours, data.holidayWorkHours, data.holidayNightHours, data.absenceHours, data.lateEarlyHours, data.paidLeaveDays, employeeLeave]);
+  }, [shifts, baseSalary, data.regularOTHours, data.lateNightOTHours, data.saturdayHolidayHours, (data as any).saturdayHolidayMorningHours, (data as any).saturdayHolidayAfternoonHours, data.sundayHolidayHours, (data as any).sundayHolidayMorningHours, (data as any).sundayHolidayAfternoonHours, data.holidayShiftType, data.absenceHours, data.lateEarlyHours, data.paidLeaveDays, employeeLeave]);
 
   const updateShift = (index: number, field: keyof ShiftEntry, value: any) => {
     const newShifts = [...shifts];
@@ -331,24 +359,27 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
 
       <div className="space-y-4 bg-card p-4 rounded-xl border shadow-sm">
         <h4 className="text-sm font-bold uppercase tracking-wider border-b pb-2">勤怠 (ATTENDANCE TOTALS)</h4>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {[
             { label: "所定就労日", en: "Total Days", field: "scheduledDays", color: "text-primary font-bold", readOnly: true },
             { label: "欠勤日時間", en: "Absence", field: "absenceHours" },
             { label: "遅刻早退", en: "Late/Early", field: "lateEarlyHours" },
             { label: "普通残業", en: "Regular OT", field: "regularOTHours" },
             { label: "深夜残業", en: "Late Night OT", field: "lateNightOTHours" },
-            { label: "休日勤務", en: "Holiday Work", field: "holidayWorkHours" },
-            { label: "休日深夜", en: "Holiday Night", field: "holidayNightHours" },
+            { label: "土曜休日(朝)", en: "Sat Morn 8-17", field: "saturdayHolidayMorningHours" },
+            { label: "土曜休日(昼)", en: "Sat Aft 12-21", field: "saturdayHolidayAfternoonHours" },
+            { label: "日曜休日(朝)", en: "Sun Morn 8-17", field: "sundayHolidayMorningHours" },
+            { label: "日曜休日(昼)", en: "Sun Aft 12-21", field: "sundayHolidayAfternoonHours" },
             { label: "有休日数", en: "Paid Leave", field: "paidLeaveDays" },
             { label: "有休残日数", en: "Rem. Leave", field: "remainingPaidLeave", readOnly: true },
           ].map((item) => (
             <div key={item.field} className="space-y-1">
               <Label className={`text-[10px] leading-tight block font-semibold ${item.color || ""}`}>{item.label}<br/><span className="text-muted-foreground font-normal">{item.en}</span></Label>
-              <Input type="number" readOnly={item.readOnly} className={`h-8 text-xs ${item.readOnly ? 'bg-muted/50' : ''}`} placeholder="0" value={(data as any)[item.field] === 0 ? "" : (data as any)[item.field]} onChange={e => !item.readOnly && updateField(item.field as keyof JapanData, e.target.value)} />
+              <Input type="number" readOnly={item.readOnly} className={`h-8 text-xs ${item.readOnly ? 'bg-muted/50' : ''}`} placeholder="0" value={(data as any)[item.field] == null || (data as any)[item.field] === 0 ? "" : (data as any)[item.field]} onChange={e => !item.readOnly && updateField(item.field as keyof JapanData, e.target.value)} />
             </div>
           ))}
         </div>
+        <div className="text-[10px] text-muted-foreground mt-2">※ (朝) 8:00-17:00 = Night Alw မပါ၊ (昼) 12:00-21:00 = 50%ကို Night Alw 0.25 auto တွက် (ဥပမာ 8နာရီ → 4နာရီ Night Alw) — 土/日 အတူတူ</div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -363,13 +394,14 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
               { label: "夜勤手当 1", en: "Night Alw 1 (0.25)", field: "nightShiftAllowance", readOnly: false },
               { label: "夜勤手当 2", en: "Night Alw 2 (0.30)", field: "nightShiftAllowanceExtra", readOnly: false },
               { label: "休日勤務手当", en: "Holiday Alw (1.35)", field: "holidayWorkAllowance", readOnly: false },
+              { label: "休日深夜手当", en: "Hol. Night Alw (0.25)", field: "holidayNightAllowance", readOnly: false },
               { label: "住宅手当", en: "Housing Alw", field: "housingAllowance", readOnly: false },
               { label: "通勤費", en: "Commuting", field: "nonTaxableCommuting", readOnly: false },
               { label: "欠勤控နှုတ်", en: "Absence Ded", field: "absenceDeduction", color: "text-destructive", readOnly: false },
             ].map((item) => (
               <div key={item.field} className="space-y-1">
                 <Label className={`text-[10px] leading-tight block font-semibold ${item.color || ""}`}>{item.label}<br/><span className="text-muted-foreground font-normal uppercase">{item.en}</span></Label>
-                <Input type="number" className="h-8 text-xs" placeholder="0" value={(data as any)[item.field] === 0 ? "" : (data as any)[item.field]} onChange={e => updateField(item.field as keyof JapanData, e.target.value)} />
+                <Input type="number" className="h-8 text-xs" placeholder="0" value={(data as any)[item.field] == null || (data as any)[item.field] === 0 ? "" : (data as any)[item.field]} onChange={e => updateField(item.field as keyof JapanData, e.target.value)} />
               </div>
             ))}
           </div>
@@ -390,7 +422,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
             ].map((item) => (
               <div key={item.field} className="space-y-1">
                 <Label className="text-[10px] leading-tight block font-semibold">{item.label}<br/><span className="text-muted-foreground font-normal uppercase">{item.en}</span></Label>
-                <Input type="number" className="h-8 text-xs" placeholder="0" value={(data as any)[item.field] === 0 ? "" : (data as any)[item.field]} onChange={e => updateField(item.field as keyof JapanData, e.target.value)} />
+                <Input type="number" className="h-8 text-xs" placeholder="0" value={(data as any)[item.field] == null || (data as any)[item.field] === 0 ? "" : (data as any)[item.field]} onChange={e => updateField(item.field as keyof JapanData, e.target.value)} />
               </div>
             ))}
           </div>
