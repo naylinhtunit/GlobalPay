@@ -9,7 +9,9 @@ const config: CapacitorConfig = {
     androidScheme: 'https',
     // Native apps start on the sign-in screen instead of briefly rendering the
     // public website landing page and redirecting after JavaScript initializes.
-    appStartPath: '/login/'
+    // Use the exported HTML file explicitly. Capacitor's local server treats a
+    // path without a file extension as an SPA route and serves the root page.
+    appStartPath: '/login/index.html'
   }
 };
 
