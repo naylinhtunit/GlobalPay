@@ -75,8 +75,9 @@ export default function LandingPage() {
               <DropdownMenuContent align="end" className="w-64 rounded-xl p-2">
                 <DropdownMenuItem asChild className="p-0">
                   <a
-                    href="/downloads/GlobalPay.apk"
-                    download
+                    href="https://github.com/naylinhtunit/GlobalPay/releases/download/v1.0.0/GlobalPay.apk"
+                    target="_blank"
+                    rel="noopener"
                     className="flex items-center gap-3 w-full px-3 py-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg"
                   >
                     <div className="h-9 w-9 rounded-lg bg-green-500/10 flex items-center justify-center">
@@ -91,8 +92,9 @@ export default function LandingPage() {
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild className="p-0">
                   <a
-                    href="/downloads/GlobalPay.dmg"
-                    download
+                    href="https://github.com/naylinhtunit/GlobalPay/releases/download/v1.0.0/GlobalPay.dmg"
+                    target="_blank"
+                    rel="noopener"
                     className="flex items-center gap-3 w-full px-3 py-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg"
                   >
                     <div className="h-9 w-9 rounded-lg bg-slate-900/10 dark:bg-white/10 flex items-center justify-center">
@@ -107,8 +109,9 @@ export default function LandingPage() {
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild className="p-0">
                   <a
-                    href="/downloads/GlobalPay.exe"
-                    download
+                    href="https://github.com/naylinhtunit/GlobalPay/releases/download/v1.0.0/GlobalPay.exe"
+                    target="_blank"
+                    rel="noopener"
                     className="flex items-center gap-3 w-full px-3 py-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg"
                   >
                     <div className="h-9 w-9 rounded-lg bg-blue-500/10 flex items-center justify-center">
