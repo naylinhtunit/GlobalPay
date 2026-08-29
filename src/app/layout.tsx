@@ -91,6 +91,9 @@ export default function RootLayout({
             </CountryProvider>
           </FirebaseClientProvider>
         </ThemeProvider>
+        <Script id="native-redirect" strategy="beforeInteractive">
+          {`if(typeof window!=='undefined'&&((window.Capacitor?.isNativePlatform?.()||window.__TAURI__||window.__TAURI_INTERNALS__||navigator.userAgent.includes('Electron'))&&(location.pathname==='/'||location.pathname==='/index.html'))location.replace('/login');`}
+        </Script>
         <Script id="register-sw" strategy="afterInteractive">
           {`
             if ('serviceWorker' in navigator) {

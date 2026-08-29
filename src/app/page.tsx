@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -43,14 +43,11 @@ function isNativeApp() {
 
 export default function LandingPage() {
   const router = useRouter();
-  const [isNative, setIsNative] = useState(false);
+  const [isNative] = useState(() => isNativeApp());
 
-  useEffect(() => {
-    if (isNativeApp()) {
-      setIsNative(true);
-      router.replace("/login");
-    }
-  }, [router]);
+  useLayoutEffect(() => {
+    if (isNative) router.replace("/login");
+  }, [isNative, router]);
 
   if (isNative) return null;
 
