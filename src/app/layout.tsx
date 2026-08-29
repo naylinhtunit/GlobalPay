@@ -66,6 +66,12 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Immediate redirect for native apps to avoid landing flash - runs before React */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `if(typeof window!=='undefined'&&((window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform())||window.__TAURI__||window.__TAURI_INTERNALS__||(navigator&&navigator.userAgent&&navigator.userAgent.includes('Capacitor')))&&(location.pathname==='/'||location.pathname==='/index.html')){location.replace('/login');}`,
+          }}
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
