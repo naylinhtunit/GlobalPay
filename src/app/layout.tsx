@@ -6,6 +6,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { AuthInit } from '@/components/auth/AuthInit';
 import { PWAInstallPrompt } from '@/components/pwa/PWAInstallPrompt';
+import { AppUpdater } from '@/components/updater/AppUpdater';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import Script from 'next/script';
 
@@ -85,6 +86,7 @@ export default function RootLayout({
               <AuthInit />
               {children}
               <PWAInstallPrompt />
+              <AppUpdater />
               <Toaster />
             </CountryProvider>
           </FirebaseClientProvider>
