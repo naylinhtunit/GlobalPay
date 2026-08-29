@@ -8,7 +8,7 @@ import { Capacitor } from "@capacitor/core";
 import { App } from "@capacitor/app";
 
 const GITHUB_REPO = "naylinhtunit/GlobalPay";
-const CURRENT_VERSION_FALLBACK = "1.0.2"; // keep in sync with latest release tag
+const CURRENT_VERSION_FALLBACK = "1.0.3"; // keep in sync with latest release tag
 
 function normalizeTag(tag: string) {
   return tag.replace(/^v/, "").trim();
@@ -21,11 +21,29 @@ export function AppUpdater() {
   const [currentVersion, setCurrentVersion] = useState<string>(CURRENT_VERSION_FALLBACK);
 
   useEffect(() => {
-    // Only in native Android (Capacitor)
     if (typeof window === "undefined") return;
-    const platform = Capacitor.getPlatform();
-    const isNative = Capacitor.isNativePlatform();
-    if (!isNative || platform !== "android") return;
+
+    // Detect native platform: Capacitor Android OR Tauri desktop
+    const capPlatform = (() => {
+      try { return Capacitor.getPlatform(); } catch { return "web"; }
+    })();
+    const isCapNative = (() => {
+      try { return Capacitor.isNativePlatform(); } catch { return false; }
+    })();
+    const isTauri = typeof (window as any).__TAURI__ !== "undefined" || typeof (window as any).__TAURI_INTERNALS__ !== "undefined";
+    const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+
+    let assetName: string | null = null;
+    if (isCapNative && capPlatform === "android") {
+      assetName = "GlobalPay.apk";
+    } else if (isTauri) {
+      // Detect OS for Tauri: use UA
+      if (/Mac/i.test(ua) || /Darwin/i.test(ua)) assetName = "GlobalPay.dmg";
+      else if (/Win/i.test(ua)) assetName = "GlobalPay.exe";
+      else assetName = "GlobalPay.dmg"; // fallback to dmg
+    } else {
+      return; // not a native app - no update check
+    }
 
     let cancelled = false;
 
@@ -33,8 +51,16 @@ export function AppUpdater() {
       try {
         // Get current app version
         try {
-          const info = await App.getInfo();
-          if (info?.version) setCurrentVersion(info.version);
+          if (isCapNative) {
+            const info = await App.getInfo();
+            if (info?.version) setCurrentVersion(info.version);
+          } else if (isTauri) {
+            const tauriApp: any = (window as any).__TAURI__?.app;
+            if (tauriApp?.getVersion) {
+              const v = await tauriApp.getVersion();
+              if (v) setCurrentVersion(v);
+            }
+          }
         } catch {
           // fallback
         }
@@ -46,8 +72,8 @@ export function AppUpdater() {
         if (!res.ok) return;
         const data = await res.json();
         const tag = data?.tag_name as string | undefined;
-        const apkAsset = (data?.assets as any[])?.find((a: any) => a.name === "GlobalPay.apk");
-        if (!tag || !apkAsset) return;
+        const asset = (data?.assets as any[])?.find((a: any) => a.name === assetName);
+        if (!tag || !asset) return;
 
         const latest = normalizeTag(tag);
         const current = normalizeTag(currentVersion);
@@ -59,7 +85,7 @@ export function AppUpdater() {
         if (latest !== current) {
           if (!cancelled) {
             setLatestTag(tag);
-            setDownloadUrl(apkAsset.browser_download_url || `https://github.com/${GITHUB_REPO}/releases/download/${tag}/GlobalPay.apk`);
+            setDownloadUrl(asset.browser_download_url || `https://github.com/${GITHUB_REPO}/releases/download/${tag}/${assetName}`);
             setShow(true);
           }
         }
