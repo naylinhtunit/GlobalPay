@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Shield, LayoutDashboard, Users, FileText, LogOut, User, Globe, Sun, Moon, Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCountry } from "@/context/CountryContext";
@@ -25,6 +25,36 @@ import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
+const NAV_ITEMS = [
+  { name: "Dashboard", mobileName: "Home", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Employees", mobileName: "Employees", href: "/employees", icon: Users },
+  { name: "Payroll", mobileName: "Payroll", href: "/payroll", icon: FileText },
+  { name: "Calendar", mobileName: "Calendar", href: "/calendar", icon: CalendarIcon },
+];
+
+type SwipeStart = {
+  x: number;
+  y: number;
+  time: number;
+};
+
+function shouldIgnoreSwipeTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return true;
+  if (target.closest('a, button, input, textarea, select, [role="dialog"], [role="slider"], [data-no-page-swipe]')) {
+    return true;
+  }
+
+  let element: HTMLElement | null = target;
+  while (element && element !== document.body) {
+    const style = window.getComputedStyle(element);
+    const canScrollHorizontally = /(auto|scroll)/.test(style.overflowX) && element.scrollWidth > element.clientWidth;
+    if (canScrollHorizontally) return true;
+    element = element.parentElement;
+  }
+
+  return false;
+}
+
 export function Navbar() {
   const { country, setCountry } = useCountry();
   const { user } = useUser();
@@ -35,17 +65,65 @@ export function Navbar() {
   const [mounted, setMounted] = useState(false);
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
+  const swipeStart = useRef<SwipeStart | null>(null);
 
   useEffect(() => setMounted(true), []);
 
-  const navItems = [
-    { name: "Dashboard", mobileName: "Home", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Employees", mobileName: "Employees", href: "/employees", icon: Users },
-    { name: "Payroll", mobileName: "Payroll", href: "/payroll", icon: FileText },
-    { name: "Calendar", mobileName: "Calendar", href: "/calendar", icon: CalendarIcon },
-  ];
-
   const currentPath = pathname.replace(/\/index\.html$/, "").replace(/\/+$/, "") || "/";
+
+  useEffect(() => {
+    const handlePointerDown = (event: PointerEvent) => {
+      if (window.innerWidth >= 768 || !event.isPrimary || shouldIgnoreSwipeTarget(event.target)) {
+        swipeStart.current = null;
+        return;
+      }
+
+      // Leave the screen edges to Android's system back gesture.
+      if (event.clientX < 24 || event.clientX > window.innerWidth - 24) {
+        swipeStart.current = null;
+        return;
+      }
+
+      swipeStart.current = { x: event.clientX, y: event.clientY, time: event.timeStamp };
+    };
+
+    const handlePointerUp = (event: PointerEvent) => {
+      const start = swipeStart.current;
+      swipeStart.current = null;
+      if (!start || window.innerWidth >= 768 || !event.isPrimary) return;
+
+      const deltaX = event.clientX - start.x;
+      const deltaY = event.clientY - start.y;
+      const elapsed = event.timeStamp - start.time;
+      const threshold = Math.max(64, window.innerWidth * 0.18);
+
+      if (elapsed > 800 || Math.abs(deltaX) < threshold || Math.abs(deltaX) < Math.abs(deltaY) * 1.4) return;
+
+      const currentIndex = NAV_ITEMS.findIndex((item) => item.href === currentPath);
+      if (currentIndex < 0) return;
+
+      const targetIndex = deltaX < 0 ? currentIndex + 1 : currentIndex - 1;
+      const targetRoute = NAV_ITEMS[targetIndex];
+      if (!targetRoute) return;
+
+      if (typeof navigator.vibrate === "function") navigator.vibrate(8);
+      router.push(targetRoute.href);
+    };
+
+    const cancelSwipe = () => {
+      swipeStart.current = null;
+    };
+
+    window.addEventListener("pointerdown", handlePointerDown, { passive: true });
+    window.addEventListener("pointerup", handlePointerUp, { passive: true });
+    window.addEventListener("pointercancel", cancelSwipe, { passive: true });
+
+    return () => {
+      window.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", cancelSwipe);
+    };
+  }, [currentPath, router]);
 
   const handleSignOut = async () => {
     try {
@@ -60,7 +138,7 @@ export function Navbar() {
 
   const NavLinks = ({ onClick }: { onClick?: () => void }) => (
     <div className="space-y-1.5 mt-8">
-      {navItems.map((item) => (
+      {NAV_ITEMS.map((item) => (
         <Link key={item.href} href={item.href} onClick={onClick}>
           <span
             className={cn(
@@ -214,7 +292,7 @@ export function Navbar() {
         className="mobile-bottom-nav md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200/80 dark:border-slate-800 bg-background/95 dark:bg-slate-950/95 backdrop-blur-xl shadow-[0_-8px_30px_rgba(15,23,42,0.08)]"
       >
         <div className="grid grid-cols-4 h-[4.5rem] px-2">
-          {navItems.map((item) => {
+          {NAV_ITEMS.map((item) => {
             const isActive = currentPath === item.href;
             return (
               <Link
