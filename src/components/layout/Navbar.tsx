@@ -13,13 +13,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -31,6 +24,7 @@ const NAV_ITEMS = [
   { name: "Payroll", mobileName: "Payroll", href: "/payroll", icon: FileText },
   { name: "Calendar", mobileName: "Calendar", href: "/calendar", icon: CalendarIcon },
 ];
+const MOBILE_NAV_ITEMS = [...NAV_ITEMS, { name: "Account", mobileName: "Account", href: "/account", icon: User }];
 
 type SwipeStart = {
   x: number;
@@ -64,7 +58,6 @@ export function Navbar() {
   const { setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const { toast } = useToast();
-  const [isOpen, setIsOpen] = useState(false);
   const swipeStart = useRef<SwipeStart | null>(null);
 
   useEffect(() => setMounted(true), []);
@@ -123,11 +116,11 @@ export function Navbar() {
 
       if (elapsed > 800 || Math.abs(deltaX) < threshold || Math.abs(deltaX) < Math.abs(deltaY) * 1.4) return;
 
-      const currentIndex = NAV_ITEMS.findIndex((item) => item.href === currentPath);
+      const currentIndex = MOBILE_NAV_ITEMS.findIndex((item) => item.href === currentPath);
       if (currentIndex < 0) return;
 
       const targetIndex = deltaX < 0 ? currentIndex + 1 : currentIndex - 1;
-      const targetRoute = NAV_ITEMS[targetIndex];
+      const targetRoute = MOBILE_NAV_ITEMS[targetIndex];
       if (!targetRoute) return;
 
       if (typeof navigator.vibrate === "function") navigator.vibrate(8);
@@ -291,81 +284,25 @@ export function Navbar() {
               </Link>
             );
           })}
-          <Sheet open={isOpen} onOpenChange={setIsOpen}>
-            <SheetTrigger asChild>
-              <button
-                type="button"
-                aria-label="Open account settings"
-                aria-expanded={isOpen}
+          {(() => {
+            const isActive = currentPath === "/account";
+            return (
+              <Link
+                href="/account"
+                aria-current={isActive ? "page" : undefined}
                 className={cn(
                   "relative flex flex-col items-center justify-center gap-1 rounded-2xl transition-colors active:scale-95",
-                  isOpen ? "text-primary" : "text-slate-400 dark:text-slate-500"
+                  isActive ? "text-primary" : "text-slate-400 dark:text-slate-500"
                 )}
               >
-                <span className={cn(
-                  "flex h-8 min-w-12 items-center justify-center rounded-2xl transition-all",
-                  isOpen && "bg-primary/10 dark:bg-primary/20"
-                )}>
-                  <User size={21} strokeWidth={isOpen ? 2.7 : 2.1} />
+                <span className={cn("flex h-8 min-w-12 items-center justify-center rounded-2xl transition-all", isActive && "bg-primary/10 dark:bg-primary/20")}>
+                  <User size={21} strokeWidth={isActive ? 2.7 : 2.1} />
                 </span>
                 <span className="text-[10px] font-extrabold leading-none">Account</span>
-                {isOpen && <span className="absolute bottom-1 h-1 w-1 rounded-full bg-primary" />}
-              </button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-[85%] max-w-sm p-0 flex flex-col border-none shadow-2xl dark:bg-slate-950">
-              <SheetHeader className="p-6 text-left border-b border-slate-50 dark:border-slate-900 bg-slate-50/50 dark:bg-slate-900/30">
-                <SheetTitle className="flex items-center gap-2 text-primary">
-                  <Shield size={28} strokeWidth={2.5} />
-                  <span className="text-xl font-black">Account</span>
-                </SheetTitle>
-              </SheetHeader>
-              <div className="flex-1 p-6 space-y-5">
-                {user && (
-                  <div className="flex items-center gap-3 px-3 py-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm">
-                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                      <User size={19} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-black truncate dark:text-slate-200">{user.email}</p>
-                      <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider mt-0.5">Admin Level</p>
-                    </div>
-                  </div>
-                )}
-                <div className="space-y-2">
-                  <p className="px-1 text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Country</p>
-                  <CountrySwitcher />
-                </div>
-                <div className="space-y-2">
-                  <p className="px-1 text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Appearance</p>
-                  <Button
-                    variant="outline"
-                    className="w-full h-11 justify-between border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-xl"
-                    onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-                    disabled={!mounted}
-                  >
-                    <span className="flex items-center gap-2 text-xs font-bold">
-                      {resolvedTheme === "dark" ? <Moon size={17} /> : <Sun size={17} />}
-                      Dark Mode
-                    </span>
-                    <span className={cn(
-                      "text-[10px] font-black uppercase tracking-wider",
-                      resolvedTheme === "dark" ? "text-primary" : "text-muted-foreground"
-                    )}>
-                      {resolvedTheme === "dark" ? "On" : "Off"}
-                    </span>
-                  </Button>
-                </div>
-                <Button 
-                  variant="ghost" 
-                  className="w-full justify-start gap-2 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 font-black text-xs uppercase tracking-widest rounded-xl h-11"
-                  onClick={handleSignOut}
-                >
-                  <LogOut size={16} strokeWidth={2.5} />
-                  Sign Out
-                </Button>
-              </div>
-            </SheetContent>
-          </Sheet>
+                {isActive && <span className="absolute bottom-1 h-1 w-1 rounded-full bg-primary" />}
+              </Link>
+            );
+          })()}
         </div>
       </nav>
     </>
