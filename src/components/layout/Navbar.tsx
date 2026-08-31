@@ -72,30 +72,54 @@ export function Navbar() {
   const currentPath = pathname.replace(/\/index\.html$/, "").replace(/\/+$/, "") || "/";
 
   useEffect(() => {
-    const handlePointerDown = (event: PointerEvent) => {
-      if (window.innerWidth >= 768 || !event.isPrimary || shouldIgnoreSwipeTarget(event.target)) {
+    const handleTouchStart = (event: TouchEvent) => {
+      if (window.innerWidth >= 768 || event.touches.length !== 1 || shouldIgnoreSwipeTarget(event.target)) {
         swipeStart.current = null;
         return;
       }
+
+      const touch = event.touches[0];
 
       // Leave the screen edges to Android's system back gesture.
-      if (event.clientX < 24 || event.clientX > window.innerWidth - 24) {
+      if (touch.clientX < 24 || touch.clientX > window.innerWidth - 24) {
         swipeStart.current = null;
         return;
       }
 
-      swipeStart.current = { x: event.clientX, y: event.clientY, time: event.timeStamp };
+      swipeStart.current = { x: touch.clientX, y: touch.clientY, time: event.timeStamp };
     };
 
-    const handlePointerUp = (event: PointerEvent) => {
+    const handleTouchMove = (event: TouchEvent) => {
+      const start = swipeStart.current;
+      if (!start || event.touches.length !== 1) return;
+
+      const touch = event.touches[0];
+      const deltaX = touch.clientX - start.x;
+      const deltaY = touch.clientY - start.y;
+
+      // Once the gesture is clearly vertical, leave it to normal page scrolling.
+      if (Math.abs(deltaY) > 16 && Math.abs(deltaY) > Math.abs(deltaX)) {
+        swipeStart.current = null;
+        return;
+      }
+
+      // Android WebView otherwise turns the gesture into scrolling and cancels
+      // the event before touchend can perform the tab navigation.
+      if (event.cancelable && Math.abs(deltaX) > 12 && Math.abs(deltaX) > Math.abs(deltaY) * 1.15) {
+        event.preventDefault();
+      }
+    };
+
+    const handleTouchEnd = (event: TouchEvent) => {
       const start = swipeStart.current;
       swipeStart.current = null;
-      if (!start || window.innerWidth >= 768 || !event.isPrimary) return;
+      if (!start || window.innerWidth >= 768 || event.changedTouches.length !== 1) return;
 
-      const deltaX = event.clientX - start.x;
-      const deltaY = event.clientY - start.y;
+      const touch = event.changedTouches[0];
+      const deltaX = touch.clientX - start.x;
+      const deltaY = touch.clientY - start.y;
       const elapsed = event.timeStamp - start.time;
-      const threshold = Math.max(64, window.innerWidth * 0.18);
+      const threshold = Math.max(56, window.innerWidth * 0.16);
 
       if (elapsed > 800 || Math.abs(deltaX) < threshold || Math.abs(deltaX) < Math.abs(deltaY) * 1.4) return;
 
@@ -114,14 +138,16 @@ export function Navbar() {
       swipeStart.current = null;
     };
 
-    window.addEventListener("pointerdown", handlePointerDown, { passive: true });
-    window.addEventListener("pointerup", handlePointerUp, { passive: true });
-    window.addEventListener("pointercancel", cancelSwipe, { passive: true });
+    window.addEventListener("touchstart", handleTouchStart, { passive: true });
+    window.addEventListener("touchmove", handleTouchMove, { passive: false });
+    window.addEventListener("touchend", handleTouchEnd, { passive: true });
+    window.addEventListener("touchcancel", cancelSwipe, { passive: true });
 
     return () => {
-      window.removeEventListener("pointerdown", handlePointerDown);
-      window.removeEventListener("pointerup", handlePointerUp);
-      window.removeEventListener("pointercancel", cancelSwipe);
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("touchend", handleTouchEnd);
+      window.removeEventListener("touchcancel", cancelSwipe);
     };
   }, [currentPath, router]);
 
