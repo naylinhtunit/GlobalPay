@@ -72,3 +72,13 @@
     @apply bg-background text-foreground font-body transition-colors duration-300;
   }
 }
+
+@media (max-width: 767px) {
+  .mobile-app-content {
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+  }
+
+  .mobile-bottom-nav {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}

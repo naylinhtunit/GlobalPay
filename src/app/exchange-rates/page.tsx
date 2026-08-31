@@ -51,7 +51,7 @@ export default function ExchangeRatesPage() {
 
   if (country !== "Myanmar") {
     return (
-      <div className="md:pl-64 pt-16 md:pt-0 min-h-screen flex items-center justify-center p-8 bg-background text-foreground">
+      <div className="mobile-app-content md:pl-64 pt-16 md:pt-0 min-h-screen flex items-center justify-center p-8 bg-background text-foreground">
         <Navbar />
         <Card className="max-w-md w-full border-primary/20">
           <CardContent className="pt-6 text-center">
@@ -69,7 +69,7 @@ export default function ExchangeRatesPage() {
   const weightedRateUSD = referenceRateUSD > 3000 ? referenceRateUSD : 3662;
 
   return (
-    <div className="md:pl-64 pt-16 md:pt-0 min-h-screen bg-background text-foreground">
+    <div className="mobile-app-content md:pl-64 pt-16 md:pt-0 min-h-screen bg-background text-foreground">
       <Navbar />
       <main className="p-4 md:p-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
