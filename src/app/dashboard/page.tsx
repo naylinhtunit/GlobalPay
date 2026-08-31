@@ -53,7 +53,7 @@ export default function Dashboard() {
   if (!mounted) return null;
 
   return (
-    <div className="mobile-app-content md:pl-64 pt-16 md:pt-0 min-h-screen bg-background dark:bg-slate-950 transition-colors">
+    <div className="mobile-app-content md:pl-64 min-h-screen bg-background dark:bg-slate-950 transition-colors">
       <Navbar />
       <main className="p-4 md:p-8 space-y-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
