@@ -39,7 +39,7 @@ export function Navbar() {
   useEffect(() => setMounted(true), []);
 
   const navItems = [
-    { name: "Dashboard", href: "/", icon: LayoutDashboard },
+    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Employees", href: "/employees", icon: Users },
     { name: "Payroll", href: "/payroll", icon: FileText },
     { name: "Calendar", href: "/calendar", icon: CalendarIcon },
@@ -47,6 +47,7 @@ export function Navbar() {
 
   const handleSignOut = async () => {
     try {
+      if (!auth) throw new Error("Authentication service is not ready");
       await signOut(auth);
       toast({ title: "Signed Out", description: "Logged out successfully." });
       router.replace("/login");

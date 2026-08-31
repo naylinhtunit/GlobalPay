@@ -1,9 +1,9 @@
 
 "use client";
 
-import React, { useState } from "react";
-import { useAuth } from "@/firebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import React, { useEffect, useState } from "react";
+import { useAuth, useUser } from "@/firebase";
+import { browserLocalPersistence, setPersistence, signInWithEmailAndPassword } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,8 +18,15 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const auth = useAuth();
+  const { user, isUserLoading } = useUser();
   const router = useRouter();
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (!isUserLoading && user) {
+      router.replace("/dashboard");
+    }
+  }, [isUserLoading, router, user]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,9 +35,11 @@ export default function LoginPage() {
     const loginEmail = email.includes("@") ? email : `${email}@globalpay.com`;
 
     try {
+      if (!auth) throw new Error("Authentication service is not ready");
+      await setPersistence(auth, browserLocalPersistence);
       await signInWithEmailAndPassword(auth, loginEmail, password);
       toast({ title: "Login Successful", description: "Welcome back to GlobalPay." });
-      router.push("/dashboard");
+      router.replace("/dashboard");
     } catch (error: any) {
       console.error(error);
       const reason = error?.code || error?.message || "Unknown error";
@@ -44,6 +53,15 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   };
+
+  // Do not flash the login form while Firebase restores a persisted session.
+  if (isUserLoading || user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Shield className="w-14 h-14 text-primary animate-pulse" strokeWidth={1.5} />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
