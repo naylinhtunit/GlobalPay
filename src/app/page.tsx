@@ -72,7 +72,7 @@ export default function LandingPage() {
               <DropdownMenuContent align="end" className="w-64 rounded-xl p-2">
                 <DropdownMenuItem asChild className="p-0">
                   <a
-                    href="https://github.com/naylinhtunit/GlobalPay/releases/latest/download/GlobalPay.apk"
+                    href="https://github.com/naylinhtunit/GlobalPay-Releases/releases/latest/download/GlobalPay.apk"
                     target="_blank"
                     rel="noopener"
                     className="flex items-center gap-3 w-full px-3 py-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg"
@@ -89,7 +89,7 @@ export default function LandingPage() {
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild className="p-0">
                   <a
-                    href="https://github.com/naylinhtunit/GlobalPay/releases/latest/download/GlobalPay.dmg"
+                    href="https://github.com/naylinhtunit/GlobalPay-Releases/releases/latest/download/GlobalPay.dmg"
                     target="_blank"
                     rel="noopener"
                     className="flex items-center gap-3 w-full px-3 py-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg"
@@ -106,7 +106,7 @@ export default function LandingPage() {
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild className="p-0">
                   <a
-                    href="https://github.com/naylinhtunit/GlobalPay/releases/latest/download/GlobalPay.exe"
+                    href="https://github.com/naylinhtunit/GlobalPay-Releases/releases/latest/download/GlobalPay.exe"
                     target="_blank"
                     rel="noopener"
                     className="flex items-center gap-3 w-full px-3 py-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg"
