@@ -2,6 +2,8 @@
 
 Available in the shared web/PWA, Android (Capacitor) and desktop (Tauri) frontend from v1.0.19.
 
+v1.0.20 adds compatible non-secret UI/template ID generation for WebViews and HTTP previews where `crypto.randomUUID` is unavailable. It uses `getRandomValues` where available, with a non-security uniqueness fallback for older runtimes. IDs are not authentication tokens.
+
 ## Using the form
 
 - Regular shift blocks count ordinary workdays only. Four initial templates are 08–17, 12–21, 19–04 and 21–06. Start/end times are directly editable in each block; break times and company allowance hours are under the block's advanced details. These edits are saved only in that payroll's custom shift snapshot, not the company defaults. Check unpaid breaks and allowance hours when changing times.

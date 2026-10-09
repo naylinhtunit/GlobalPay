@@ -5,6 +5,7 @@ const { APP_VERSION, isNewerVersion } = require('../src/lib/app-version.ts');
 const fs = require('node:fs');
 const path = require('node:path');
 const { normalizeNumberInput } = require('../src/lib/number-input.ts');
+const { createLocalId } = require('../src/lib/local-id.ts');
 
 const rows = (date, id, rateId) => splitShift(date, defaults.shifts.find(s => s.id === id)).map((s, i) => ({ ...s, id: String(i), rateId }));
 
@@ -152,4 +153,19 @@ test('custom holiday clock times calculate actual paid/night hours without chang
   assert.deepEqual(calculateHolidayPay(entries, defaults, 1000), { work: 10500, night: 1375, hours: 7, nightHours: 5.5 });
   assert.equal(groupHolidayEntries(entries).length, 1);
   assert.equal(defaults.shifts[3].start, '21:00');
+});
+
+test('local IDs support WebViews and HTTP previews without crypto.randomUUID', () => {
+  assert.equal(createLocalId({ randomUUID: () => 'native-uuid' }), 'native-uuid');
+  assert.equal(createLocalId({ getRandomValues: bytes => bytes.fill(0) }), '00000000-0000-4000-8000-000000000000');
+  const ids = Array.from({ length: 1000 }, () => createLocalId(null));
+  assert.equal(new Set(ids).size, ids.length);
+  assert.ok(ids.every(id => id.startsWith('local-')));
+});
+
+test('two added holiday shifts automatically aggregate monthly attendance and night subset', () => {
+  const morning = [...rows('2026-10-10', 'day-08', 'company-150'), ...rows('2026-10-12', 'day-08', 'company-150')];
+  assert.deepEqual(calculateHolidayPay(morning, defaults, 1000), { work: 24000, night: 0, hours: 16, nightHours: 0 });
+  const night = [...rows('2026-10-10', 'night-21', 'company-150'), ...rows('2026-10-12', 'night-21', 'company-150')];
+  assert.deepEqual(calculateHolidayPay(night, defaults, 1000), { work: 24000, night: 3000, hours: 16, nightHours: 12 });
 });

@@ -1,5 +1,7 @@
 "use client";
 
+import { createLocalId } from "@/lib/local-id";
+
 import React, { useEffect, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -263,7 +265,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
     const shift = shifts[index];
     const original = getPreset(shift);
     if (!original) return;
-    const preset = { ...original, id: shift.customized ? original.id : crypto.randomUUID(), [field]: value };
+    const preset = { ...original, id: shift.customized ? original.id : createLocalId(), [field]: value };
     const next = [...shifts];
     next[index] = { ...shift, startTime: preset.start, presetId: preset.id, preset, customized: true };
     onChange({ ...data, shifts: next });

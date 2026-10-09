@@ -1,6 +1,6 @@
 [package]
 name = "globalpay"
-version = "1.0.19"
+version = "1.0.20"
 description = "GlobalPay Desktop"
 authors = ["GlobalPay Enterprise"]
 license = ""

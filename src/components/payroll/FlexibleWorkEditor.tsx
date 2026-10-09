@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import { useCompanyPayrollSettings } from "@/hooks/useCompanyPayrollSettings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { createLocalId } from "@/lib/local-id";
 import { DEFAULT_PAYROLL_POLICY, groupHolidayEntries, splitShift, validateHolidayEntries, validatePolicy, type HolidayWorkEntry, type PayrollPolicy, type ShiftPreset } from "@/lib/japan-payroll";
 
 const selectClass = "h-10 w-full min-w-0 rounded-md border bg-background px-2 text-sm";
-const newId = () => crypto.randomUUID();
+const newId = createLocalId;
 
 export function FlexibleWorkEditor({ policy, entries, month, onChange, holidays }: {
   policy?: PayrollPolicy;

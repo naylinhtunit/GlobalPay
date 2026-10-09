@@ -4,11 +4,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { createLocalId } from "@/lib/local-id";
 import { useToast } from "@/hooks/use-toast";
 import { useCompanyPayrollSettings } from "@/hooks/useCompanyPayrollSettings";
 import { validatePolicy, type PayrollPolicy } from "@/lib/japan-payroll";
 
-const newId = () => crypto.randomUUID();
+const newId = createLocalId;
 
 export function PayrollSettings() {
   const { policy, isLoading, isLoaded, error: loadError, savePolicy } = useCompanyPayrollSettings();
