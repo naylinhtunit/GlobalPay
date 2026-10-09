@@ -1,9 +1,12 @@
+"use client"
+
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
+import { normalizeNumberInput } from "@/lib/number-input"
 
 const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
-  ({ className, type, ...props }, ref) => {
+  ({ className, type, onChange, onFocus, onBlur, ...props }, ref) => {
     return (
       <input
         type={type}
@@ -13,6 +16,23 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
         )}
         ref={ref}
         {...props}
+        onChange={event => {
+          if (type === "number") {
+            const normalized = normalizeNumberInput(event.currentTarget.value)
+            if (normalized !== event.currentTarget.value) event.currentTarget.value = normalized
+          }
+          onChange?.(event)
+        }}
+        onFocus={event => {
+          if (type === "number" && event.currentTarget.value === "0") event.currentTarget.select()
+          onFocus?.(event)
+        }}
+        onBlur={event => {
+          if (type === "number" && event.currentTarget.value !== "" && Number.isFinite(Number(event.currentTarget.value))) {
+            event.currentTarget.value = String(Number(event.currentTarget.value))
+          }
+          onBlur?.(event)
+        }}
       />
     )
   }

@@ -4,6 +4,7 @@ const { DEFAULT_PAYROLL_POLICY: defaults, splitShift, calculateHolidayPay, norma
 const { APP_VERSION, isNewerVersion } = require('../src/lib/app-version.ts');
 const fs = require('node:fs');
 const path = require('node:path');
+const { normalizeNumberInput } = require('../src/lib/number-input.ts');
 
 const rows = (date, id, rateId) => splitShift(date, defaults.shifts.find(s => s.id === id)).map((s, i) => ({ ...s, id: String(i), rateId }));
 
@@ -106,4 +107,10 @@ test('legacy aggregate hours auto-fill without losing values or reviving cleared
   assert.equal(cleared.sundayHolidayHours, 0);
   assert.equal(cleared.sundayHolidayMorningHours, 0);
   assert.equal(normalizeLegacyHolidayFields(cleared).sundayHolidayHours, 0);
+});
+
+test('numeric form fields remove leading zeros without damaging decimal/negative edits', () => {
+  for (const [raw, expected] of [['02', '2'], ['0002', '2'], ['00', '0'], ['00.5', '0.5'], ['0.5', '0.5'], ['0.', '0.'], ['-02', '-2'], ['-0.5', '-0.5'], ['', ''], ['2', '2']]) {
+    assert.equal(normalizeNumberInput(raw), expected);
+  }
 });
