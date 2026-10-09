@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Country } from "@/context/CountryContext";
-import { getHolidayAttendance } from "@/lib/japan-payroll";
+import { getHolidayAttendance, hasLegacyHolidayHours, splitHolidayHours } from "@/lib/japan-payroll";
 
 interface Props {
   country: Country;
@@ -71,10 +71,12 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
                 { l: "遅刻早退", e: "Late/Early", v: data.lateEarlyHours },
                 { l: "普通残業", e: "Regular OT", v: data.regularOTHours },
                 { l: "深夜残業", e: "Late Night OT", v: data.lateNightOTHours },
+                ...(hasLegacyHolidayHours(data) ? [
                 { l: "土曜休日(朝)", e: "Sat Hol Morn", v: data.saturdayHolidayMorningHours ?? data.saturdayHolidayHours ?? 0 },
                 { l: "土曜休日(昼)", e: "Sat Hol Aft", v: data.saturdayHolidayAfternoonHours ?? 0 },
                 { l: "日曜休日(朝)", e: "Sun Hol Morn", v: data.sundayHolidayMorningHours ?? data.sundayHolidayHours ?? 0 },
                 { l: "日曜休日(昼)", e: "Sun Hol Aft", v: data.sundayHolidayAfternoonHours ?? 0 },
+                ] : []),
                 { l: "休日・深夜以外", e: "Holiday Day Hrs", v: holidayHours.day },
                 { l: "休日深夜", e: "Holiday Night Hrs", v: holidayHours.night },
                 { l: "休日合計（日中＋深夜）", e: "Holiday Total (Day + Night)", v: holidayHours.total },
@@ -178,10 +180,11 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
         </div>
         {data.holidayEntries?.length > 0 && <div className="mt-4 text-[9px] break-inside-avoid">
           <h3 className="font-bold mb-1">休日勤務の内訳 / Holiday work details</h3>
-          <table className="w-full border-collapse"><thead><tr>{["Date", "Shift", "Paid hrs", "Night hrs", "Rate"].map(label => <th key={label} className="border border-gray-400 p-1 text-left">{label}</th>)}</tr></thead>
+          <table className="w-full border-collapse"><thead><tr>{["Date", "Shift", "Day hrs", "Night hrs", "Total hrs", "Rate"].map(label => <th key={label} className="border border-gray-400 p-1 text-left">{label}</th>)}</tr></thead>
             <tbody>{data.holidayEntries.map((entry: { id: string; date: string; shiftName: string; hours: number; nightHours: number; rateId: string }) => {
               const rate = data.workPolicy?.holidayRates?.find((r: { id: string }) => r.id === entry.rateId);
-              return <tr key={entry.id}><td className="border border-gray-400 p-1">{entry.date}</td><td className="border border-gray-400 p-1">{entry.shiftName}</td><td className="border border-gray-400 p-1">{entry.hours}</td><td className="border border-gray-400 p-1">{entry.nightHours}</td><td className="border border-gray-400 p-1">{rate?.name} ×{rate?.multiplier}</td></tr>;
+              const hours = splitHolidayHours(entry.hours, entry.nightHours);
+              return <tr key={entry.id}><td className="border border-gray-400 p-1">{entry.date}</td><td className="border border-gray-400 p-1">{entry.shiftName}</td><td className="border border-gray-400 p-1">{hours.day}</td><td className="border border-gray-400 p-1">{hours.night}</td><td className="border border-gray-400 p-1">{hours.total}</td><td className="border border-gray-400 p-1">{rate?.name} ×{rate?.multiplier}</td></tr>;
             })}</tbody></table>
           <p className="mt-1">Hourly divisor: {data.workPolicy?.hourlyDivisor}; night premium: +{data.workPolicy?.nightPremium}. Policy snapshot at payroll creation.</p>
         </div>}

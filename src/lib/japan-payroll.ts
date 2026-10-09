@@ -8,6 +8,7 @@ export interface ShiftPreset {
   breakMinutes: number;
   allowance1Hours: number;
   allowance2Hours: number;
+  holidayRateId?: string;
 }
 
 export interface HolidayRate {
@@ -24,6 +25,7 @@ export interface PayrollPolicy {
   nightPremium: number;
   shifts: ShiftPreset[];
   holidayRates: HolidayRate[];
+  defaultHolidayRateId?: string;
 }
 
 export interface HolidayWorkEntry {
@@ -85,6 +87,28 @@ export function getHolidayAttendance(data: LegacyHolidayFields & { holidayTotalH
   );
 }
 
+export function hasLegacyHolidayHours(data: LegacyHolidayFields) {
+  const legacy = normalizeLegacyHolidayFields(data);
+  return legacy.saturdayHolidayHours > 0 || legacy.sundayHolidayHours > 0;
+}
+
+/** Never guess an employer's rate from weekday/nighttime. Explicit defaults win over past selections. */
+export function suggestHolidayRate(policy: PayrollPolicy, shift: ShiftPreset, entries: HolidayWorkEntry[]) {
+  const valid = (id?: string) => id && policy.holidayRates.some(rate => rate.id === id) ? id : "";
+  const configured = valid(shift.holidayRateId) || valid(policy.defaultHolidayRateId);
+  if (configured) return configured;
+  const label = `${shift.name} ${shift.start}–${shift.end}`;
+  const previous = [...groupHolidayEntries(entries)].reverse().find(group => group[0].shiftName.replace(/ \(\+1 day\)$/, "") === label);
+  if (previous) {
+    const ids = new Set(previous.map(entry => valid(entry.rateId)));
+    if (ids.size === 1 && [...ids][0]) return [...ids][0];
+    // Mixed/unselected date rates must not be silently flattened into one rate.
+    return "";
+  }
+  // Editable company-policy example, not a statutory classification inferred from a date.
+  return valid(DEFAULT_PAYROLL_POLICY.defaultHolidayRateId);
+}
+
 /** Explicit split zeros mean cleared hours; never resurrect a stale aggregate on edit. */
 export function normalizeLegacyHolidayFields(data: LegacyHolidayFields) {
   const satSplit = data.saturdayHolidayMorningHours != null || data.saturdayHolidayAfternoonHours != null;
@@ -100,6 +124,7 @@ export function normalizeLegacyHolidayFields(data: LegacyHolidayFields) {
 
 export const DEFAULT_PAYROLL_POLICY: PayrollPolicy = {
   version: 1,
+  defaultHolidayRateId: "company-150",
   hourlyDivisor: 170.5,
   nightPremium: 0.25,
   shifts: [
@@ -167,6 +192,7 @@ export function validatePolicy(policy: PayrollPolicy): string | null {
   if (!Number.isFinite(policy.nightPremium) || policy.nightPremium < 0.25) return "22:00–05:00 night premium must be at least 0.25.";
   if (!policy.shifts.length || !policy.holidayRates.length) return "Keep at least one shift and one holiday rate.";
   if (new Set(policy.shifts.map(s => s.id)).size !== policy.shifts.length || new Set(policy.holidayRates.map(r => r.id)).size !== policy.holidayRates.length) return "Duplicate policy IDs.";
+  if ([policy.defaultHolidayRateId, ...policy.shifts.map(shift => shift.holidayRateId)].some(id => id && !policy.holidayRates.some(rate => rate.id === id))) return "Choose an available default holiday rate.";
   for (const shift of policy.shifts) {
     if (!shift.name.trim()) return "Every shift needs a name.";
     try {

@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { DEFAULT_PAYROLL_POLICY: defaults, splitShift, splitHolidayHours, getHolidayAttendance, groupHolidayEntries, calculateHolidayPay, normalizeLegacyHolidayFields, validatePolicy, validateHolidayEntries, nextDate } = require('../src/lib/japan-payroll.ts');
+const { DEFAULT_PAYROLL_POLICY: defaults, splitShift, splitHolidayHours, getHolidayAttendance, hasLegacyHolidayHours, suggestHolidayRate, groupHolidayEntries, calculateHolidayPay, normalizeLegacyHolidayFields, validatePolicy, validateHolidayEntries, nextDate } = require('../src/lib/japan-payroll.ts');
 const { APP_VERSION, isNewerVersion } = require('../src/lib/app-version.ts');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -193,4 +193,34 @@ test('holiday display preserves legacy fallback and explicit cleared aggregate t
   assert.deepEqual(getHolidayAttendance({ saturdayHolidayHours: 8, holidayShiftType: 'afternoon' }), { day: 4, night: 4, total: 8 });
   assert.deepEqual(getHolidayAttendance({ saturdayHolidayHours: 8, holidayTotalHours: 0, holidayNightHours: 0 }), { day: 0, night: 0, total: 0 });
   assert.deepEqual(getHolidayAttendance({}), { day: 0, night: 0, total: 0 });
+});
+
+test('legacy holiday controls are only shown when preserved legacy hours exist', () => {
+  assert.equal(hasLegacyHolidayHours({}), false);
+  assert.equal(hasLegacyHolidayHours({ saturdayHolidayHours: 8 }), true);
+  assert.equal(hasLegacyHolidayHours({ sundayHolidayAfternoonHours: 8 }), true);
+  assert.equal(hasLegacyHolidayHours({ saturdayHolidayHours: 8, saturdayHolidayMorningHours: 0, saturdayHolidayAfternoonHours: 0 }), false);
+});
+
+test('holiday rates prefill editable company or shift defaults without changing existing entries', () => {
+  const policy = structuredClone(defaults);
+  assert.equal(suggestHolidayRate(policy, policy.shifts[0], []), 'company-150');
+  assert.equal(suggestHolidayRate(policy, policy.shifts[3], []), 'company-150');
+  policy.defaultHolidayRateId = 'company-135';
+  policy.shifts[3].holidayRateId = 'company-ot';
+  assert.equal(suggestHolidayRate(policy, policy.shifts[0], []), 'company-135');
+  assert.equal(suggestHolidayRate(policy, policy.shifts[3], []), 'company-ot');
+  const entries = rows('2026-10-12', 'night-21', 'statutory');
+  const original = JSON.stringify(entries);
+  assert.equal(suggestHolidayRate(policy, policy.shifts[3], entries), 'company-ot');
+  assert.equal(JSON.stringify(entries), original);
+  assert.equal(calculateHolidayPay(entries, policy, 1000).work, 10800);
+  const oldPolicy = structuredClone(defaults);
+  delete oldPolicy.defaultHolidayRateId;
+  assert.equal(suggestHolidayRate(oldPolicy, oldPolicy.shifts[3], entries), 'statutory');
+  entries[1].rateId = 'company-ot';
+  assert.equal(suggestHolidayRate(oldPolicy, oldPolicy.shifts[3], entries), '');
+  assert.equal(suggestHolidayRate(oldPolicy, oldPolicy.shifts[0], entries), 'company-150');
+  policy.defaultHolidayRateId = 'removed-rate';
+  assert.match(validatePolicy(policy), /available default holiday rate/);
 });

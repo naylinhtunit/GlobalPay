@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
 import { FlexibleWorkEditor } from "./FlexibleWorkEditor";
-import { DEFAULT_PAYROLL_POLICY, calculateHolidayPay, getHolidayAttendance, normalizeLegacyHolidayFields, splitShift, validatePolicy, type HolidayWorkEntry, type PayrollPolicy, type ShiftPreset } from "@/lib/japan-payroll";
+import { DEFAULT_PAYROLL_POLICY, calculateHolidayPay, getHolidayAttendance, hasLegacyHolidayHours, normalizeLegacyHolidayFields, splitShift, validatePolicy, type HolidayWorkEntry, type PayrollPolicy, type ShiftPreset } from "@/lib/japan-payroll";
 
 export interface ShiftEntry {
   type: "day" | "night";
@@ -419,11 +419,11 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
           </div>
           <p className="text-xs text-muted-foreground">နေ့ပိုင်း {holidayAttendance.day} + ညပိုင်း {holidayAttendance.night} = စုစုပေါင်း {holidayAttendance.total} နာရီ။ နားချိန်နုတ်ပြီး ဖြစ်သည်။ နေ့ပိုင်း = 22:00–05:00 ပြင်ပ အလုပ်ချိန်။ ညပိုင်းနာရီအတွက် holiday အလုပ်ခနှင့် ညပိုင်းအပိုကြေး နှစ်မျိုးလုံး တွက်သည်။</p>
         </div>
-        <details className="border-t pt-3">
+        {hasLegacyHolidayHours(data) && <details className="border-t pt-3">
           <summary className="text-xs cursor-pointer">Legacy holiday fields / အဟောင်း payslip အတွက်သာ</summary>
           <p className="text-xs text-muted-foreground my-2">မူလ Sat/Sun စုစုပေါင်းများကို 1.35 နှင့် afternoon 50% allowance အတိုင်း ထိန်းထားသည်။ အပေါ်က ရက်စွဲပါ row တွေနဲ့ ထပ်မထည့်ပါနှင့်။ အသစ်ရေးမည်ဆိုလျှင် ဒီ fields ကို 0 ထားပါ။</p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">{(["saturdayHolidayMorningHours", "saturdayHolidayAfternoonHours", "sundayHolidayMorningHours", "sundayHolidayAfternoonHours"] as const).map((field, i) => <label className="text-xs space-y-1" key={field}>{["Sat morning", "Sat afternoon", "Sun morning", "Sun afternoon"][i]}<Input type="number" min="0" step="0.01" value={data[field] || 0} onChange={e => updateField(field, e.target.value)} /></label>)}</div>
-        </details>
+        </details>}
         {((data.saturdayHolidayMorningHours || 0) + (data.saturdayHolidayAfternoonHours || 0) + (data.sundayHolidayMorningHours || 0) + (data.sundayHolidayAfternoonHours || 0) > 0) && <p className="text-xs text-orange-700">Legacy hours ပါဝင်နေသည်။ ရက်စွဲပါ entry တွေ ထည့်မည်ဆိုလျှင် အလုပ်ချိန် မထပ်အောင် စစ်ဆေးပါ။</p>}
       </div>
 
