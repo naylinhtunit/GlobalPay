@@ -355,7 +355,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
                   onChange({ ...data, shifts: next });
                 }}>
                   {policy.shifts.map(s => <option key={s.id} value={s.id}>{s.name} {s.start}–{s.end}</option>)}
-                  {!policy.shifts.some(s => s.id === getPreset(shift)?.id) && <option value={getPreset(shift)?.id}>{getPreset(shift)?.name} (စိတ်ကြိုက်ပြင်ထားသည်)</option>}
+                  {!policy.shifts.some(s => s.id === getPreset(shift)?.id) && <option value={getPreset(shift)?.id}>{getPreset(shift)?.name} {getPreset(shift)?.start}–{getPreset(shift)?.end} (ပြင်ထားသည်)</option>}
                 </select>
               </div>
               <div className="space-y-3">
