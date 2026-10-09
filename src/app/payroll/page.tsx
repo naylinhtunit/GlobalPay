@@ -40,7 +40,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { JapanPayrollForm, type JapanData } from "@/components/payroll/JapanPayrollForm";
 import { MyanmarPayrollForm, type MyanmarData } from "@/components/payroll/MyanmarPayrollForm";
 import { PayslipDocument } from "@/components/payroll/PayslipDocument";
-import { DEFAULT_PAYROLL_POLICY, validateHolidayEntries, validatePolicy } from "@/lib/japan-payroll";
+import { DEFAULT_PAYROLL_POLICY, normalizeLegacyHolidayFields, validateHolidayEntries, validatePolicy } from "@/lib/japan-payroll";
 import { 
   Table, 
   TableBody, 
@@ -385,7 +385,7 @@ export default function PayrollPage() {
     setSelectedMonth(record.payPeriodStartDate?.substring(0, 7) || record.month || "");
     
     if (record.country === "Japan") {
-      const jd = { ...record.japanData };
+      const jd = { ...record.japanData, ...normalizeLegacyHolidayFields(record.japanData) };
       // Legacy payslips use their original policy, not new company defaults.
       jd.workPolicy = jd.workPolicy || structuredClone(DEFAULT_PAYROLL_POLICY);
       jd.holidayEntries = jd.holidayEntries || [];

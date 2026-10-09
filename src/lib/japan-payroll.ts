@@ -35,6 +35,29 @@ export interface HolidayWorkEntry {
   rateId: string;
 }
 
+interface LegacyHolidayFields {
+  saturdayHolidayHours?: number;
+  sundayHolidayHours?: number;
+  saturdayHolidayMorningHours?: number;
+  saturdayHolidayAfternoonHours?: number;
+  sundayHolidayMorningHours?: number;
+  sundayHolidayAfternoonHours?: number;
+  holidayShiftType?: "morning" | "afternoon";
+}
+
+/** Explicit split zeros mean cleared hours; never resurrect a stale aggregate on edit. */
+export function normalizeLegacyHolidayFields(data: LegacyHolidayFields) {
+  const satSplit = data.saturdayHolidayMorningHours != null || data.saturdayHolidayAfternoonHours != null;
+  const sunSplit = data.sundayHolidayMorningHours != null || data.sundayHolidayAfternoonHours != null;
+  const saturdayHolidayMorningHours = satSplit ? data.saturdayHolidayMorningHours || 0 : data.holidayShiftType === "afternoon" ? 0 : data.saturdayHolidayHours || 0;
+  const saturdayHolidayAfternoonHours = satSplit ? data.saturdayHolidayAfternoonHours || 0 : data.holidayShiftType === "afternoon" ? data.saturdayHolidayHours || 0 : 0;
+  const sundayHolidayMorningHours = sunSplit ? data.sundayHolidayMorningHours || 0 : data.sundayHolidayHours || 0;
+  const sundayHolidayAfternoonHours = sunSplit ? data.sundayHolidayAfternoonHours || 0 : 0;
+  return { saturdayHolidayMorningHours, saturdayHolidayAfternoonHours, sundayHolidayMorningHours, sundayHolidayAfternoonHours,
+    saturdayHolidayHours: saturdayHolidayMorningHours + saturdayHolidayAfternoonHours,
+    sundayHolidayHours: sundayHolidayMorningHours + sundayHolidayAfternoonHours };
+}
+
 export const DEFAULT_PAYROLL_POLICY: PayrollPolicy = {
   version: 1,
   hourlyDivisor: 170.5,

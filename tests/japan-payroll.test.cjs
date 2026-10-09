@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { DEFAULT_PAYROLL_POLICY: defaults, splitShift, calculateHolidayPay, validatePolicy, validateHolidayEntries, nextDate } = require('../src/lib/japan-payroll.ts');
+const { DEFAULT_PAYROLL_POLICY: defaults, splitShift, calculateHolidayPay, normalizeLegacyHolidayFields, validatePolicy, validateHolidayEntries, nextDate } = require('../src/lib/japan-payroll.ts');
 const { APP_VERSION, isNewerVersion } = require('../src/lib/app-version.ts');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -95,4 +95,15 @@ test('updater only offers newer versions, never downgrades', () => {
   assert.equal(isNewerVersion('v1.0.18', '1.0.19'), false);
   assert.equal(isNewerVersion('v1.0.19', '1.0.19'), false);
   assert.equal(isNewerVersion('invalid', '1.0.19'), false);
+});
+
+test('legacy aggregate hours auto-fill without losing values or reviving cleared split hours', () => {
+  const old = { saturdayHolidayHours: 8, sundayHolidayHours: 6, holidayShiftType: 'afternoon' };
+  const normalized = normalizeLegacyHolidayFields(old);
+  assert.deepEqual(normalized, { saturdayHolidayMorningHours: 0, saturdayHolidayAfternoonHours: 8, sundayHolidayMorningHours: 6, sundayHolidayAfternoonHours: 0, saturdayHolidayHours: 8, sundayHolidayHours: 6 });
+  assert.deepEqual(old, { saturdayHolidayHours: 8, sundayHolidayHours: 6, holidayShiftType: 'afternoon' });
+  const cleared = normalizeLegacyHolidayFields({ ...old, sundayHolidayMorningHours: 0, sundayHolidayAfternoonHours: 0 });
+  assert.equal(cleared.sundayHolidayHours, 0);
+  assert.equal(cleared.sundayHolidayMorningHours, 0);
+  assert.equal(normalizeLegacyHolidayFields(cleared).sundayHolidayHours, 0);
 });

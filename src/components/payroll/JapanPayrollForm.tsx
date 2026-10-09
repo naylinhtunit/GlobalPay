@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
 import { FlexibleWorkEditor } from "./FlexibleWorkEditor";
-import { DEFAULT_PAYROLL_POLICY, calculateHolidayPay, splitShift, type HolidayWorkEntry, type PayrollPolicy, type ShiftPreset } from "@/lib/japan-payroll";
+import { DEFAULT_PAYROLL_POLICY, calculateHolidayPay, normalizeLegacyHolidayFields, splitShift, type HolidayWorkEntry, type PayrollPolicy, type ShiftPreset } from "@/lib/japan-payroll";
 
 export interface ShiftEntry {
   type: "day" | "night";
@@ -86,7 +86,7 @@ interface Props {
 export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, selectedMonth }: Props) {
   const { user } = useUser();
   const firestore = useFirestore();
-  const shifts = useMemo<ShiftEntry[]>(() => data.shifts || [{ type: "day", startTime: "08:00", days: 0 }], [data.shifts]);
+  const shifts = useMemo<ShiftEntry[]>(() => data.shifts || [{ type: "day", startTime: "08:00", days: data.scheduledDays || 0 }], [data.shifts, data.scheduledDays]);
   const policy = data.workPolicy || DEFAULT_PAYROLL_POLICY;
   const getPreset = (shift: ShiftEntry) => policy.shifts.find(s => shift.presetId ? s.id === shift.presetId : s.start === shift.startTime) || shift.preset || DEFAULT_PAYROLL_POLICY.shifts.find(s => s.start === shift.startTime) || policy.shifts[0];
 
@@ -123,6 +123,15 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
       try { autoScheduledHours += splitShift("2026-01-01", preset).reduce((sum, row) => sum + row.hours, 0) * d; } catch { /* Validation blocks saving an invalid template. */ }
     });
 
+    const legacyShiftSummary = !data.shifts && data.scheduledDays > 0;
+    if (legacyShiftSummary) {
+      // Old records without shift times retain their saved attendance/allowances.
+      // Only an explicit shift selection/day edit opts into template recalculation.
+      totalNS1 = data.nightShiftHours || 0;
+      totalNS2 = data.nightShiftHoursExtra || 0;
+      autoScheduledHours = data.scheduledHours ?? totalDays * 8;
+    }
+
     const otDenominator = policy.hourlyDivisor > 0 ? policy.hourlyDivisor : 170.5;
     const hourlyRate = (Number(baseSalary) || 0) / otDenominator;
 
@@ -155,8 +164,8 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
     const holidayNS1Hours = Math.round((effectiveSatAfternoon + effectiveSunAfternoon) * 0.5);
     const calculatedHolidayNightAlw = Math.round(hourlyRate * 0.25 * holidayNS1Hours) + flexibleHoliday.night;
     
-    const calculatedNightAlw1 = Math.round(hourlyRate * 0.25 * totalNS1);
-    const calculatedNightAlw2 = Math.round(hourlyRate * 0.30 * totalNS2);
+    const calculatedNightAlw1 = legacyShiftSummary ? data.nightShiftAllowance || 0 : Math.round(hourlyRate * 0.25 * totalNS1);
+    const calculatedNightAlw2 = legacyShiftSummary ? data.nightShiftAllowanceExtra || 0 : Math.round(hourlyRate * 0.30 * totalNS2);
 
     const calculatedAbsenceDed = Math.round(hourlyRate * (Number(data.absenceHours) || 0));
     const calculatedLateEarlyDed = Math.round(hourlyRate * (Number(data.lateEarlyHours) || 0));
@@ -219,7 +228,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
     if (needsUpdate) {
       onChange({
         ...data,
-        shifts,
+        ...(data.shifts ? { shifts } : {}),
         scheduledDays: totalDays,
         scheduledHours: autoScheduledHours,
         nightShiftHours: totalNS1,
@@ -263,7 +272,8 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
 
   const updateField = (field: keyof JapanData, value: string) => {
     const numValue = value === "" ? 0 : Number(value);
-    onChange({ ...data, [field]: numValue, ...(field === "incomeTax" ? { incomeTaxOverride: numValue } : {}) });
+    const next = { ...data, [field]: numValue, ...(field === "incomeTax" ? { incomeTaxOverride: numValue } : {}) };
+    onChange(field.startsWith("saturdayHoliday") || field.startsWith("sundayHoliday") ? { ...next, ...normalizeLegacyHolidayFields(next) } : next);
   };
 
   const totalEarnings = (Number(baseSalary) || 0) + 
@@ -312,6 +322,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
           </Button>
         </div>
         <div className="space-y-6">
+          {!data.shifts && data.scheduledDays > 0 && <p className="text-xs text-orange-700">အဟောင်းမှတ်တမ်းတွင် shift အချိန်မပါသောကြောင့် မူလရက်/နာရီနှင့် allowance များကို ထိန်းထားသည်။ Shift သို့မဟုတ် days ကို ရွေးပြင်မှ template အတိုင်း ပြန်တွက်မည်။</p>}
           {shifts.map((shift, idx) => (
             <div key={idx} className="relative grid grid-cols-1 md:grid-cols-3 gap-6 p-4 bg-muted/30 rounded-lg border">
               {shifts.length > 1 && (
