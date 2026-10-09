@@ -143,3 +143,13 @@ test('company holiday 1.50 is distinct from statutory holiday and monthly overti
   assert.equal(validateHolidayEntries(entries, defaults, '2026-10'), null);
   assert.deepEqual(calculateHolidayPay(entries, defaults, 1000), { work: 12000, night: 0, hours: 8, nightHours: 0 });
 });
+
+test('custom holiday clock times calculate actual paid/night hours without changing regular templates', () => {
+  const shift = { ...defaults.shifts[3], start: '22:30', end: '06:30', breakStart: '02:00', breakMinutes: 60 };
+  const entries = splitShift('2026-10-12', shift).map((row, i) => ({ ...row, id: String(i), groupId: 'custom-night', rateId: 'company-150' }));
+  assert.deepEqual(entries.map(row => [row.hours, row.nightHours]), [[1.5, 1.5], [5.5, 4]]);
+  assert.equal(validateHolidayEntries(entries, defaults, '2026-10'), null);
+  assert.deepEqual(calculateHolidayPay(entries, defaults, 1000), { work: 10500, night: 1375, hours: 7, nightHours: 5.5 });
+  assert.equal(groupHolidayEntries(entries).length, 1);
+  assert.equal(defaults.shifts[3].start, '21:00');
+});

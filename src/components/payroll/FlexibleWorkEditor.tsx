@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useCompanyPayrollSettings } from "@/hooks/useCompanyPayrollSettings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { DEFAULT_PAYROLL_POLICY, groupHolidayEntries, splitShift, validateHolidayEntries, validatePolicy, type HolidayWorkEntry, type PayrollPolicy } from "@/lib/japan-payroll";
+import { DEFAULT_PAYROLL_POLICY, groupHolidayEntries, splitShift, validateHolidayEntries, validatePolicy, type HolidayWorkEntry, type PayrollPolicy, type ShiftPreset } from "@/lib/japan-payroll";
 
 const selectClass = "h-10 w-full min-w-0 rounded-md border bg-background px-2 text-sm";
 const newId = () => crypto.randomUUID();
@@ -18,9 +18,20 @@ export function FlexibleWorkEditor({ policy, entries, month, onChange, holidays 
 }) {
   const [date, setDate] = useState(`${month || new Date().toISOString().slice(0, 7)}-01`);
   const [shiftId, setShiftId] = useState("day-08");
+  const [customShift, setCustomShift] = useState<ShiftPreset | null>(null);
   const [error, setError] = useState("");
   const { policy: savedPolicy, isLoading, isLoaded, error: loadError } = useCompanyPayrollSettings();
   const current = policy || DEFAULT_PAYROLL_POLICY;
+  const selectedShift = customShift || current.shifts.find(s => s.id === shiftId) || current.shifts[0];
+  const editShift = (field: keyof ShiftPreset, value: string | number) => {
+    if (selectedShift) setCustomShift({ ...selectedShift, [field]: value });
+  };
+  let preview: ReturnType<typeof splitShift> = [];
+  let shiftProblem = "";
+  try {
+    preview = splitShift(date, selectedShift);
+    if (!preview.length) shiftProblem = "နားချိန်နုတ်ပြီး အလုပ်ချိန် ကျန်ရပါမည်။";
+  } catch (e) { shiftProblem = (e as Error).message; }
 
   useEffect(() => {
     if (policy || isLoading || !isLoaded || loadError) return;
@@ -32,11 +43,11 @@ export function FlexibleWorkEditor({ policy, entries, month, onChange, holidays 
   const addWork = () => {
     const problem = validatePolicy(current);
     if (problem) { setError(problem); return; }
-    const shift = current.shifts.find(s => s.id === shiftId) || current.shifts[0];
+    if (shiftProblem) { setError(shiftProblem); return; }
     if (!month || !date.startsWith(`${month}-`)) { setError("Choose a start date in the payroll month."); return; }
     try {
       const groupId = newId();
-      const rows = splitShift(date, shift).map(row => ({ ...row, id: newId(), groupId, rateId: "" }));
+      const rows = splitShift(date, selectedShift).map(row => ({ ...row, id: newId(), groupId, rateId: "" }));
       onChange(current, [...entries, ...rows]);
       setError("");
     } catch (e) { setError((e as Error).message); }
@@ -48,10 +59,21 @@ export function FlexibleWorkEditor({ policy, entries, month, onChange, holidays 
   return <div className="space-y-4 rounded-xl border bg-card p-4">
     <h4 className="font-bold">休日勤務 / ပိတ်ရက် အလုပ်ဆင်းခြင်း</h4>
     <p className="text-sm text-muted-foreground">ရက်စွဲနဲ့ အဆိုင်းကို ရွေးပြီး ထည့်ပါ။ မည်သည့်ပိတ်ရက်မဆို ထည့်နိုင်သည်။ Rate ကို ကုမ္ပဏီစည်းမျဉ်းအတိုင်း ရွေးပါ။</p>
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
       <label className="space-y-1 text-xs">Work date / ရက်စွဲ<Input aria-label="Holiday work date" type="date" value={date} onChange={e => setDate(e.target.value)} /></label>
-      <label className="space-y-1 text-xs">Shift / အဆိုင်း<select aria-label="Holiday shift" className={selectClass} value={current.shifts.some(s => s.id === shiftId) ? shiftId : current.shifts[0]?.id || ""} onChange={e => setShiftId(e.target.value)}>{current.shifts.map(s => <option key={s.id} value={s.id}>{s.name} {s.start}–{s.end}</option>)}</select></label>
-      <Button type="button" variant="outline" onClick={addWork}>+ Add holiday work / ထည့်မည်</Button>
+      <label className="space-y-1 text-xs">Shift / အဆိုင်း<select aria-label="Holiday shift" className={selectClass} value={customShift ? "__custom__" : selectedShift?.id || ""} onChange={e => { if (e.target.value === "__custom__") return; setShiftId(e.target.value); setCustomShift(null); setError(""); }}>{current.shifts.map(s => <option key={s.id} value={s.id}>{s.name} {s.start}–{s.end}</option>)}{customShift && <option value="__custom__">{customShift.name} {customShift.start}–{customShift.end} (ပြင်ထားသည်)</option>}</select></label>
+    </div>
+    <div className="grid grid-cols-2 gap-3">
+      <label className="space-y-1 text-xs">စချိန်<Input aria-label="Holiday shift start" type="time" value={selectedShift?.start || ""} onChange={e => editShift("start", e.target.value)} /></label>
+      <label className="space-y-1 text-xs">ဆုံးချိန်<Input aria-label="Holiday shift end" type="time" value={selectedShift?.end || ""} onChange={e => editShift("end", e.target.value)} /></label>
+    </div>
+    <details className="text-xs" open={!!customShift && !!shiftProblem}><summary className="cursor-pointer text-muted-foreground">နားချိန် ပြင်ဆင်ရန် (တစ်ဆိုင်းအတွက်)</summary><div className="grid grid-cols-2 gap-3 pt-3">
+      <label className="space-y-1">နားချိန် စ<Input aria-label="Holiday break start" type="time" value={selectedShift?.breakStart || ""} onChange={e => editShift("breakStart", e.target.value)} /></label>
+      <label className="space-y-1">နားချိန် (မိနစ်)<Input aria-label="Holiday break minutes" type="number" min="0" step="1" value={selectedShift?.breakMinutes ?? 0} onChange={e => editShift("breakMinutes", Number(e.target.value))} /></label>
+    </div><p className="pt-2 text-muted-foreground">ဥပမာ နားချိန် စ 12:00၊ မိနစ် 60 = 12:00–13:00 နားသည်။ လအတွက် စုစုပေါင်းမဟုတ်ပါ။</p></details>
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <p className="text-sm text-muted-foreground" aria-live="polite">{shiftProblem || `နားချိန်နုတ်ပြီး ${Math.round(preview.reduce((sum, row) => sum + row.hours, 0) * 100) / 100} နာရီ · ညပိုင်း ${Math.round(preview.reduce((sum, row) => sum + row.nightHours, 0) * 100) / 100} နာရီ`}</p>
+      <Button type="button" variant="outline" disabled={!!shiftProblem || (!policy && (isLoading || !isLoaded || !!loadError))} onClick={addWork}>+ Add holiday work / ထည့်မည်</Button>
     </div>
     {holidays.filter(h => h.date.startsWith(month || "")).length > 0 && <details className="text-sm"><summary className="cursor-pointer text-muted-foreground">Calendar ပိတ်ရက်များမှ ရွေးရန်</summary><div className="flex flex-wrap gap-2 pt-2">{holidays.filter(h => h.date.startsWith(month || "")).map(h => <Button type="button" size="sm" variant="secondary" key={h.date} onClick={() => setDate(h.date)}>{h.date} {h.title}</Button>)}</div></details>}
     {entries.length === 0 && <p className="text-sm text-muted-foreground">ပိတ်ရက် အလုပ်ဆင်းထားပါက ရက်စွဲနဲ့ shift ကို ရွေးပြီး ထည့်ပါ။</p>}
