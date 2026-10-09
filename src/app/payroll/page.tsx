@@ -547,6 +547,11 @@ export default function PayrollPage() {
         scale: 2,
         logging: false,
         useCORS: true,
+        windowWidth: 1200,
+        onclone: (_document, clonedElement) => {
+          clonedElement.style.width = '1000px';
+          clonedElement.style.maxWidth = '1000px';
+        },
       });
       
       const imgData = canvas.toDataURL('image/png');
@@ -555,7 +560,12 @@ export default function PayrollPage() {
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
       
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      // Dated holiday details can extend beyond a single A4 page. Keep every row.
+      for (let offset = 0; offset < pdfHeight; offset += pageHeight) {
+        if (offset > 0) pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, -offset, pdfWidth, pdfHeight, 'payslip');
+      }
       pdf.save(`Payslip_${previewData?.employee?.fullName || 'Employee'}_${previewData?.month}.pdf`);
       
       toast({ title: "Success", description: "Payslip downloaded as PDF file." });
