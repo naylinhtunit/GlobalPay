@@ -1,6 +1,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { DEFAULT_PAYROLL_POLICY: defaults, splitShift, calculateHolidayPay, validatePolicy, validateHolidayEntries, nextDate } = require('../src/lib/japan-payroll.ts');
+const { APP_VERSION, isNewerVersion } = require('../src/lib/app-version.ts');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const rows = (date, id, rateId) => splitShift(date, defaults.shifts.find(s => s.id === id)).map((s, i) => ({ ...s, id: String(i), rateId }));
 
@@ -78,4 +81,18 @@ test('policy snapshot is independent of subsequent company changes', () => {
   const entries = rows('2026-10-12', 'day-08', 'statutory');
   assert.equal(calculateHolidayPay(entries, stored, 1000).work, 10800);
   assert.equal(calculateHolidayPay(entries, changed, 1000).work, 12000);
+});
+
+test('account/frontend version matches Android and desktop packages', () => {
+  const read = p => fs.readFileSync(path.join(__dirname, '..', p), 'utf8');
+  assert.equal(JSON.parse(read('src-tauri/tauri.conf.json')).version, APP_VERSION);
+  assert.ok(read('src-tauri/Cargo.toml').includes(`version = "${APP_VERSION}"`));
+  assert.ok(read('android/app/build.gradle').includes(`versionName "${APP_VERSION}"`));
+});
+test('updater only offers newer versions, never downgrades', () => {
+  assert.equal(isNewerVersion('v1.0.20', '1.0.19'), true);
+  assert.equal(isNewerVersion('v1.1.0', '1.0.19'), true);
+  assert.equal(isNewerVersion('v1.0.18', '1.0.19'), false);
+  assert.equal(isNewerVersion('v1.0.19', '1.0.19'), false);
+  assert.equal(isNewerVersion('invalid', '1.0.19'), false);
 });

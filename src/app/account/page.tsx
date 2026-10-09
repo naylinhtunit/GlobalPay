@@ -17,6 +17,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useAppVersion } from "@/hooks/useAppVersion";
 
 export default function AccountPage() {
   const { country, setCountry } = useCountry();
@@ -26,6 +27,7 @@ export default function AccountPage() {
   const { setTheme, resolvedTheme } = useTheme();
   const { toast } = useToast();
   const [mounted, setMounted] = React.useState(false);
+  const appVersion = useAppVersion();
 
   React.useEffect(() => setMounted(true), []);
 
@@ -98,6 +100,11 @@ export default function AccountPage() {
                 {resolvedTheme === "dark" ? "On" : "Off"}
               </span>
             </Button>
+          </div>
+
+          <div className="rounded-xl border bg-card px-4 py-3 flex items-center justify-between gap-3">
+            <span className="text-sm font-semibold">App Version</span>
+            <span className="text-sm font-mono text-muted-foreground">v{appVersion}</span>
           </div>
 
           <Button

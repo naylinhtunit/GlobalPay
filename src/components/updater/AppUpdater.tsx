@@ -5,20 +5,15 @@ import { Download, X, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Capacitor } from "@capacitor/core";
-import { App } from "@capacitor/app";
+import { useAppVersion } from "@/hooks/useAppVersion";
+import { isNewerVersion } from "@/lib/app-version";
 
 const GITHUB_REPO = "naylinhtunit/GlobalPay-Releases";
-const CURRENT_VERSION_FALLBACK = "1.0.19"; // keep in sync with latest release tag
-
-function normalizeTag(tag: string) {
-  return tag.replace(/^v/, "").trim();
-}
-
 export function AppUpdater() {
   const [show, setShow] = useState(false);
   const [latestTag, setLatestTag] = useState<string | null>(null);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
-  const [currentVersion, setCurrentVersion] = useState<string>(CURRENT_VERSION_FALLBACK);
+  const currentVersion = useAppVersion();
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -49,22 +44,6 @@ export function AppUpdater() {
 
     async function check() {
       try {
-        // Get current app version
-        try {
-          if (isCapNative) {
-            const info = await App.getInfo();
-            if (info?.version) setCurrentVersion(info.version);
-          } else if (isTauri) {
-            const tauriApp: any = (window as any).__TAURI__?.app;
-            if (tauriApp?.getVersion) {
-              const v = await tauriApp.getVersion();
-              if (v) setCurrentVersion(v);
-            }
-          }
-        } catch {
-          // fallback
-        }
-
         const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`, {
           headers: { Accept: "application/vnd.github+json" },
           cache: "no-store",
@@ -75,14 +54,11 @@ export function AppUpdater() {
         const asset = (data?.assets as any[])?.find((a: any) => a.name === assetName);
         if (!tag || !asset) return;
 
-        const latest = normalizeTag(tag);
-        const current = normalizeTag(currentVersion);
-
         // Don't show if already on latest or dismissed
         const dismissed = localStorage.getItem("globalpay_update_dismissed");
         if (dismissed === tag) return;
 
-        if (latest !== current) {
+        if (isNewerVersion(tag, currentVersion)) {
           if (!cancelled) {
             setLatestTag(tag);
             setDownloadUrl(asset.browser_download_url || `https://github.com/${GITHUB_REPO}/releases/download/${tag}/${assetName}`);
