@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { DEFAULT_PAYROLL_POLICY: defaults, splitShift, splitHolidayHours, getHolidayAttendance, hasLegacyHolidayHours, suggestHolidayRate, groupHolidayEntries, calculateHolidayPay, normalizeLegacyHolidayFields, validatePolicy, validateHolidayEntries, nextDate } = require('../src/lib/japan-payroll.ts');
+const { DEFAULT_PAYROLL_POLICY: defaults, splitShift, splitHolidayHours, holidayRateBreakdown, getHolidayAttendance, hasLegacyHolidayHours, suggestHolidayRate, groupHolidayEntries, calculateHolidayPay, normalizeLegacyHolidayFields, validatePolicy, validateHolidayEntries, nextDate } = require('../src/lib/japan-payroll.ts');
 const { APP_VERSION, isNewerVersion } = require('../src/lib/app-version.ts');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -193,6 +193,25 @@ test('holiday display preserves legacy fallback and explicit cleared aggregate t
   assert.deepEqual(getHolidayAttendance({ saturdayHolidayHours: 8, holidayShiftType: 'afternoon' }), { day: 4, night: 4, total: 8 });
   assert.deepEqual(getHolidayAttendance({ saturdayHolidayHours: 8, holidayTotalHours: 0, holidayNightHours: 0 }), { day: 0, night: 0, total: 0 });
   assert.deepEqual(getHolidayAttendance({}), { day: 0, night: 0, total: 0 });
+});
+
+test('applied holiday rates follow actual day/night clock hours and editable defaults', () => {
+  for (const [id, expected] of [
+    ['day-08', [{ kind: 'day', hours: 8, multiplier: 1.5 }]],
+    ['day-12', [{ kind: 'day', hours: 8, multiplier: 1.5 }]],
+    ['night-19', [{ kind: 'day', hours: 3, multiplier: 1.5 }, { kind: 'night', hours: 5, multiplier: 1.75 }]],
+    ['night-21', [{ kind: 'day', hours: 2, multiplier: 1.5 }, { kind: 'night', hours: 6, multiplier: 1.75 }]],
+  ]) {
+    const pay = calculateHolidayPay(rows('2026-10-12', id, 'company-150'), defaults, 1000);
+    const parts = holidayRateBreakdown(pay.hours, pay.nightHours, 1.5, .25);
+    assert.deepEqual(parts, expected);
+    assert.equal(parts.reduce((sum, part) => sum + part.hours * part.multiplier * 1000, 0), pay.work + pay.night);
+  }
+  assert.deepEqual(holidayRateBreakdown(8, 6, 1.35, .25), [
+    { kind: 'day', hours: 2, multiplier: 1.35 }, { kind: 'night', hours: 6, multiplier: 1.6 },
+  ]);
+  assert.deepEqual(holidayRateBreakdown(6, 6, 1.5, .3), [{ kind: 'night', hours: 6, multiplier: 1.8 }]);
+  assert.deepEqual(holidayRateBreakdown(0, 0, 1.5, .25), []);
 });
 
 test('legacy holiday controls are only shown when preserved legacy hours exist', () => {

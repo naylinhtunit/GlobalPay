@@ -78,6 +78,15 @@ export function splitHolidayHours(totalHours: number, nightHours: number) {
   return { day: round(total - night), night: round(night), total: round(total) };
 }
 
+/** Applied rates for the actual clock hours, excluding unpaid breaks. Night rate includes holiday pay. */
+export function holidayRateBreakdown(totalHours: number, nightHours: number, holidayRate: number, nightPremium: number) {
+  const hours = splitHolidayHours(totalHours, nightHours);
+  return [
+    { kind: "day" as const, hours: hours.day, multiplier: holidayRate },
+    { kind: "night" as const, hours: hours.night, multiplier: Math.round((holidayRate + nightPremium) * 10000) / 10000 },
+  ].filter(part => part.hours > 0);
+}
+
 /** Saved aggregate fields remain totals, including night hours; never persist the display-only day value. */
 export function getHolidayAttendance(data: LegacyHolidayFields & { holidayTotalHours?: number; holidayNightHours?: number }) {
   const legacy = normalizeLegacyHolidayFields(data);

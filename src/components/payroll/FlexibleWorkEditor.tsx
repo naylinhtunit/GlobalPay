@@ -5,6 +5,7 @@ import { useCompanyPayrollSettings } from "@/hooks/useCompanyPayrollSettings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createLocalId } from "@/lib/local-id";
+import { HolidayRateBreakdown } from "./HolidayRateBreakdown";
 import { DEFAULT_PAYROLL_POLICY, groupHolidayEntries, splitHolidayHours, splitShift, suggestHolidayRate, validateHolidayEntries, validatePolicy, type HolidayWorkEntry, type PayrollPolicy, type ShiftPreset } from "@/lib/japan-payroll";
 
 const selectClass = "h-10 w-full min-w-0 rounded-md border bg-background px-2 text-sm";
@@ -76,13 +77,18 @@ export function FlexibleWorkEditor({ policy, entries, month, onChange, holidays 
       <label className="space-y-1">နားချိန် စ<Input aria-label="Holiday break start" type="time" value={selectedShift?.breakStart || ""} onChange={e => editShift("breakStart", e.target.value)} /></label>
       <label className="space-y-1">နားချိန် (မိနစ်)<Input aria-label="Holiday break minutes" type="number" min="0" step="1" value={selectedShift?.breakMinutes ?? 0} onChange={e => editShift("breakMinutes", Number(e.target.value))} /></label>
     </div><p className="pt-2 text-muted-foreground">ဥပမာ နားချိန် စ 12:00၊ မိနစ် 60 = 12:00–13:00 နားသည်။ လအတွက် စုစုပေါင်းမဟုတ်ပါ။</p></details>
-    <label className="block space-y-1 text-xs">အသုံးပြုမည့် holiday rate (auto / ပြင်နိုင်သည်)
+    <div className="space-y-2 rounded-lg border bg-muted/20 p-3" data-testid="holiday-rate-preview">
+      <p className="text-xs font-semibold">{rateOverride ? "ကိုယ်တိုင်ပြင်ထားသော rate" : "အလုပ်ချိန်အလိုက် Auto rate"}</p>
+      {!shiftProblem && suggestedRate ? <HolidayRateBreakdown hours={previewHours.total} nightHours={previewHours.night} multiplier={suggestedRate.multiplier} nightPremium={current.nightPremium} /> : <p className="text-xs text-muted-foreground">{shiftProblem ? "အချိန်နှင့် နားချိန်ကို စစ်ဆေးပါ။" : "ကုမ္ပဏီ rate ကို တစ်ခါသတ်မှတ်ပေးပါ။"}</p>}
+      <p className="text-xs text-muted-foreground">အလုပ်ချိန်နှင့် နားချိန်ပြောင်းလျှင် သက်ဆိုင်ရာ နာရီနှင့် rate ကို auto တွက်ပြသည်။ ညနာရီမပါလျှင် ည rate မသုံးပါ။</p>
+    </div>
+    <details className="text-xs"><summary className="cursor-pointer text-muted-foreground">Rate ပြင်ရန်</summary><label className="block space-y-1 pt-3">Holiday အခြေခံ rate (ညပိုင်းအပိုကြေး မပါ)
       <select aria-label="Holiday default rate" className={selectClass} value={suggestedRateId} onChange={e => setRateOverride(e.target.value)}>
         <option value="">Rate တစ်ခါရွေးပါ…</option>{current.holidayRates.map(rate => <option key={rate.id} value={rate.id}>{rate.name} ×{rate.multiplier}</option>)}
       </select>
-      {suggestedRate && <span className="block font-medium">နေ့ပိုင်း ×{suggestedRate.multiplier} · ညပိုင်း (22:00–05:00) ×{Math.round((suggestedRate.multiplier + current.nightPremium) * 10000) / 10000} = holiday ×{suggestedRate.multiplier} + ညကြေး {current.nightPremium}</span>}
       <span className="block text-muted-foreground">Account မှ company default / အဆိုင်းအလိုက် rate ကို auto သုံးသည်။ မသတ်မှတ်ရသေးလျှင် company ×1.50 နမူနာ default ဖြစ်သည်—ကုမ္ပဏီနှင့် အတည်ပြုပါ။ ရက်အလိုက် rate မတူလျှင် ထည့်ပြီးမှ ပြင်နိုင်သည်။</span>
-    </label>
+    </label>{rateOverride && <Button type="button" variant="ghost" size="sm" onClick={() => setRateOverride("")}>Auto rate ပြန်သုံးမည်</Button>}</details>
+    <p className="text-xs text-muted-foreground">Rate များသည် ပြင်နိုင်သော company default ဖြစ်သည်။ ကုမ္ပဏီနှင့် အတည်ပြုပါ။</p>
     <div className="flex flex-wrap items-center justify-between gap-3">
       <p className="text-sm text-muted-foreground" aria-live="polite">{shiftProblem || `နေ့ပိုင်း ${previewHours.day} + ညပိုင်း ${previewHours.night} = စုစုပေါင်း ${previewHours.total} နာရီ (နားချိန်နုတ်ပြီး)`}</p>
       <Button type="button" variant="outline" disabled={!!shiftProblem || (!policy && (isLoading || !isLoaded || !!loadError))} onClick={addWork}>+ Add holiday work / ထည့်မည်</Button>
@@ -94,6 +100,8 @@ export function FlexibleWorkEditor({ policy, entries, month, onChange, holidays 
       const paid = Math.round(group.reduce((sum, entry) => sum + entry.hours, 0) * 100) / 100;
       const night = Math.round(group.reduce((sum, entry) => sum + entry.nightHours, 0) * 100) / 100;
       const hours = splitHolidayHours(paid, night);
+      const groupRates = group.map(entry => current.holidayRates.find(rate => rate.id === entry.rateId));
+      const sameRate = groupRates[0] && groupRates.every(rate => rate?.id === groupRates[0]?.id) ? groupRates[0] : null;
       const ids = new Set(group.map(entry => entry.id));
       return <div key={first.groupId || first.id} data-testid="holiday-shift-card" className="space-y-3 rounded-lg border bg-muted/20 p-3">
         <div className="flex items-start justify-between gap-2">
@@ -101,12 +109,12 @@ export function FlexibleWorkEditor({ policy, entries, month, onChange, holidays 
           <Button type="button" size="sm" variant="ghost" aria-label={'Remove holiday shift ' + first.date} onClick={() => onChange(current, entries.filter(entry => !ids.has(entry.id)))}>ဖယ်မည်</Button>
         </div>
         <p className="text-sm font-medium">နေ့ပိုင်း {hours.day} + ညပိုင်း {hours.night} = စုစုပေါင်း {hours.total} နာရီ</p>
+        {sameRate ? <HolidayRateBreakdown hours={paid} nightHours={night} multiplier={sameRate.multiplier} nightPremium={current.nightPremium} /> : group.map((entry, index) => groupRates[index] && <div key={entry.id}><p className="text-xs text-muted-foreground">{entry.date}</p><HolidayRateBreakdown hours={entry.hours} nightHours={entry.nightHours} multiplier={groupRates[index]!.multiplier} nightPremium={current.nightPremium} /></div>)}
         {group.length > 1 && <p className="text-xs text-muted-foreground">အဆိုင်းတစ်ခုတည်းပါ။ သန်းခေါင်ကျော်သောကြောင့် ရက်ခွဲပြထားသည်။ လိုအပ်လျှင် rate ကို ရက်အလိုက် ပြင်နိုင်သည်။</p>}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">{group.map(entry => <label key={entry.id} className="space-y-1 text-xs block">
+        <details className="text-xs" open={group.some(entry => !entry.rateId)}><summary className="cursor-pointer text-muted-foreground">ရက်အလိုက် Rate ပြင်ရန်</summary><div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3">{group.map(entry => <label key={entry.id} className="space-y-1 text-xs block">
           <span>{entry.date} · {entry.hours} နာရီ</span>
           <select aria-label="Holiday rate" className={selectClass} value={entry.rateId} onChange={e => updateEntry(entry.id, { rateId: e.target.value })}><option value="">Rate ရွေးပါ…</option>{current.holidayRates.map(rate => <option key={rate.id} value={rate.id}>{rate.name} ×{rate.multiplier}</option>)}</select>
-          {entry.rateId && <span className="block break-words text-muted-foreground">နေ့ပိုင်း ×{current.holidayRates.find(r => r.id === entry.rateId)?.multiplier} · ညပိုင်း ×{Math.round(((current.holidayRates.find(r => r.id === entry.rateId)?.multiplier || 0) + current.nightPremium) * 10000) / 10000}</span>}
-        </label>)}</div>
+        </label>)}</div></details>
         <details className="border-t pt-2 text-xs"><summary className="cursor-pointer text-muted-foreground">နာရီအသေးစိတ် / ပြင်ဆင်ရန်</summary><div className="space-y-3 pt-3">{group.map(entry => <div key={entry.id} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <label className="space-y-1">ရက်စွဲ<Input type="date" aria-label="Work row date" value={entry.date} onChange={e => updateEntry(entry.id, { date: e.target.value })} /></label>
           <label className="space-y-1">အလုပ်ချိန် (နားချိန်မပါ)<Input type="number" aria-label="Holiday paid hours" min="0" max="24" step="0.01" value={entry.hours} onChange={e => updateEntry(entry.id, { hours: Number(e.target.value) })} /></label>
