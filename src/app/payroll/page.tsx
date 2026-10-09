@@ -40,6 +40,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { JapanPayrollForm, type JapanData } from "@/components/payroll/JapanPayrollForm";
 import { MyanmarPayrollForm, type MyanmarData } from "@/components/payroll/MyanmarPayrollForm";
 import { PayslipDocument } from "@/components/payroll/PayslipDocument";
+import { DEFAULT_PAYROLL_POLICY, validateHolidayEntries, validatePolicy } from "@/lib/japan-payroll";
 import { 
   Table, 
   TableBody, 
@@ -273,6 +274,18 @@ export default function PayrollPage() {
 
   const handleGenerate = async () => {
     if (!selectedEmployee || !firestore || !user) return;
+    if (country === "Japan") {
+      const policy = japanData.workPolicy;
+      const error = !policy ? "Company payroll settings are still loading. Please wait or check your connection." :
+        validatePolicy(policy) || validateHolidayEntries(japanData.holidayEntries || [], policy, selectedMonth) ||
+        (japanData.shifts?.some(s => !Number.isInteger(s.days) || s.days < 0 || s.days > 31) ? "Regular shift days must be whole numbers between 0 and 31." : null) ||
+        ((japanData.shifts || []).reduce((sum, s) => sum + s.days, 0) > new Date(Number(selectedMonth.slice(0, 4)), Number(selectedMonth.slice(5)), 0).getDate() ? "Regular shift days exceed the days in the payroll month." : null) ||
+        ([japanData.absenceHours, japanData.lateEarlyHours, japanData.regularOTHours, japanData.lateNightOTHours, japanData.paidLeaveDays, japanData.saturdayHolidayMorningHours || 0, japanData.saturdayHolidayAfternoonHours || 0, japanData.sundayHolidayMorningHours || 0, japanData.sundayHolidayAfternoonHours || 0].some(n => !Number.isFinite(n) || n < 0) ? "Attendance and overtime hours cannot be negative or invalid." : null);
+      if (error) {
+        toast({ variant: "destructive", title: "Check payroll details", description: error });
+        return;
+      }
+    }
     
     let grossPay = 0;
     let deductions = 0;
@@ -325,7 +338,7 @@ export default function PayrollPage() {
       employeeId: selectedEmpId,
       companyId: user.uid,
       payPeriodStartDate: `${selectedMonth}-01`,
-      payPeriodEndDate: `${selectedMonth}-30`,
+      payPeriodEndDate: `${selectedMonth}-${new Date(Number(selectedMonth.slice(0, 4)), Number(selectedMonth.slice(5)), 0).getDate()}`,
       payoutDate: new Date().toISOString(),
       country,
       basicSalary: baseSalary,
@@ -373,6 +386,10 @@ export default function PayrollPage() {
     
     if (record.country === "Japan") {
       const jd = { ...record.japanData };
+      // Legacy payslips use their original policy, not new company defaults.
+      jd.workPolicy = jd.workPolicy || structuredClone(DEFAULT_PAYROLL_POLICY);
+      jd.holidayEntries = jd.holidayEntries || [];
+      jd.incomeTaxOverride = jd.incomeTaxOverride ?? jd.incomeTax ?? 0;
       // Migrate legacy single Sat field + shiftType to new split fields
       if (jd.saturdayHolidayMorningHours === undefined && jd.saturdayHolidayAfternoonHours === undefined && jd.saturdayHolidayHours) {
         if (jd.holidayShiftType === "afternoon") {
@@ -457,12 +474,25 @@ export default function PayrollPage() {
         exportData.push(["Work Days", data.scheduledDays]);
         exportData.push(["Absence", data.absenceHours]);
         exportData.push(["Paid Leave", data.paidLeaveDays]);
+        exportData.push(["Holiday Work Hours", data.holidayTotalHours || 0]);
+        exportData.push(["Holiday Night Hours", data.holidayNightHours || 0]);
+        if (data.holidayEntries?.length) {
+          exportData.push(["HOLIDAY DATE", "SHIFT", "PAID HOURS", "NIGHT HOURS", "RATE", "MULTIPLIER"]);
+          for (const entry of data.holidayEntries) {
+            const rate = data.workPolicy?.holidayRates?.find((r: { id: string }) => r.id === entry.rateId);
+            exportData.push([entry.date, entry.shiftName, entry.hours, entry.nightHours, rate?.name || "", rate?.multiplier || ""]);
+          }
+        }
         exportData.push(["", ""]);
         
         exportData.push(["EARNINGS", "AMOUNT (JPY)"]);
         exportData.push(["Basic Salary", record.basicSalary]);
         exportData.push(["Overtime Allowance", data.otAllowance]);
         exportData.push(["Late Night Allowance", data.lateNightOTAllowance]);
+        exportData.push(["Company Shift Allowance 1", data.nightShiftAllowance]);
+        exportData.push(["Company Shift Allowance 2", data.nightShiftAllowanceExtra]);
+        exportData.push(["Holiday Work Allowance", data.holidayWorkAllowance]);
+        exportData.push(["Holiday Night Allowance", data.holidayNightAllowance]);
         exportData.push(["Gross Total", record.totalGrossPay]);
         exportData.push(["", ""]);
         

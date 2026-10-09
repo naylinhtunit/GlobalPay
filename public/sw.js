@@ -1,6 +1,6 @@
 
 // Basic Service Worker for PWA requirement
-const CACHE_NAME = 'globalpay-cache-v1';
+const CACHE_NAME = 'globalpay-shell-v1.0.19';
 const urlsToCache = [
   '/',
   '/manifest.json',
@@ -14,9 +14,23 @@ self.addEventListener('install', (event) => {
         return cache.addAll(urlsToCache);
       })
   );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(Promise.all([
+    caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith('globalpay-') && key !== CACHE_NAME).map(key => caches.delete(key)))),
+    self.clients.claim(),
+  ]));
 });
 
 self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET' || new URL(event.request.url).origin !== self.location.origin) return;
+  // Always get current pages online. Never cache employee/payroll data or authenticated pages.
+  if (event.request.mode === 'navigate') {
+    event.respondWith(fetch(event.request).catch(() => caches.match(event.request).then(response => response || Response.error())));
+    return;
+  }
   event.respondWith(
     caches.match(event.request)
       .then((response) => {

@@ -1,21 +1,28 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Sun, Moon, Plus, Trash2, Info } from "lucide-react";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Plus, Trash2, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
+import { FlexibleWorkEditor } from "./FlexibleWorkEditor";
+import { DEFAULT_PAYROLL_POLICY, calculateHolidayPay, splitShift, type HolidayWorkEntry, type PayrollPolicy, type ShiftPreset } from "@/lib/japan-payroll";
 
 export interface ShiftEntry {
   type: "day" | "night";
   startTime: string;
   days: number;
+  presetId?: string;
+  preset?: ShiftPreset;
 }
 
 export interface JapanData {
+  workPolicy?: PayrollPolicy;
+  holidayEntries?: HolidayWorkEntry[];
+  holidayNightHours?: number;
+  holidayTotalHours?: number;
   shifts?: ShiftEntry[];
   scheduledDays: number;
   absenceHours: number;
@@ -55,6 +62,7 @@ export interface JapanData {
   socInsAdj: number;
   employmentInsurance: number;
   incomeTax: number;
+  incomeTaxOverride?: number;
   residentTax: number;
   lunchFee: number;
   hostelFee: number;
@@ -78,13 +86,16 @@ interface Props {
 export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, selectedMonth }: Props) {
   const { user } = useUser();
   const firestore = useFirestore();
-  const shifts = data.shifts || [{ type: "day", startTime: "08:00", days: 0 }];
+  const shifts = useMemo<ShiftEntry[]>(() => data.shifts || [{ type: "day", startTime: "08:00", days: 0 }], [data.shifts]);
+  const policy = data.workPolicy || DEFAULT_PAYROLL_POLICY;
+  const getPreset = (shift: ShiftEntry) => policy.shifts.find(s => shift.presetId ? s.id === shift.presetId : s.start === shift.startTime) || shift.preset || DEFAULT_PAYROLL_POLICY.shifts.find(s => s.start === shift.startTime) || policy.shifts[0];
 
   const calendarQuery = useMemoFirebase(() => {
     if (!firestore || !user || !selectedMonth) return null;
     return query(
       collection(firestore, "companyCalendars"),
-      where("companyId", "==", user.uid)
+      where("companyId", "==", user.uid),
+      where("country", "==", "Japan")
     );
   }, [firestore, user, selectedMonth]);
 
@@ -99,31 +110,20 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
     let totalDays = 0;
     let totalNS1 = 0;
     let totalNS2 = 0;
+    let autoScheduledHours = 0;
 
     shifts.forEach(shift => {
       const d = Number(shift.days || 0);
       totalDays += d;
 
-      let dailyNS1 = 0;
-      let dailyNS2 = 0;
-
-      if (shift.type === "day") {
-        if (shift.startTime === "12:00") dailyNS1 = 4;
-      } else {
-        if (shift.startTime === "19:00") {
-          dailyNS1 = 3;
-          dailyNS2 = 5;
-        } else if (shift.startTime === "21:00") {
-          dailyNS1 = 1;
-          dailyNS2 = 7;
-        }
-      }
-      totalNS1 += (dailyNS1 * d);
-      totalNS2 += (dailyNS2 * d);
+      const preset = getPreset(shift);
+      if (!preset) return;
+      totalNS1 += preset.allowance1Hours * d;
+      totalNS2 += preset.allowance2Hours * d;
+      try { autoScheduledHours += splitShift("2026-01-01", preset).reduce((sum, row) => sum + row.hours, 0) * d; } catch { /* Validation blocks saving an invalid template. */ }
     });
 
-    const autoScheduledHours = totalDays * 8;
-    const otDenominator = 170.5;
+    const otDenominator = policy.hourlyDivisor > 0 ? policy.hourlyDivisor : 170.5;
     const hourlyRate = (Number(baseSalary) || 0) / otDenominator;
 
     const calculatedOT = Math.round(hourlyRate * 1.25 * (Number(data.regularOTHours) || 0));
@@ -149,10 +149,11 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
 
     const totalHolidayHours = effectiveSatMorning + effectiveSatAfternoon + effectiveSunHours;
 
-    const calculatedHolidayWork = Math.round(hourlyRate * 1.35 * totalHolidayHours);
+    const flexibleHoliday = calculateHolidayPay(data.holidayEntries || [], policy, hourlyRate);
+    const calculatedHolidayWork = Math.round(hourlyRate * 1.35 * totalHolidayHours) + flexibleHoliday.work;
 
     const holidayNS1Hours = Math.round((effectiveSatAfternoon + effectiveSunAfternoon) * 0.5);
-    const calculatedHolidayNightAlw = Math.round(hourlyRate * 0.25 * holidayNS1Hours);
+    const calculatedHolidayNightAlw = Math.round(hourlyRate * 0.25 * holidayNS1Hours) + flexibleHoliday.night;
     
     const calculatedNightAlw1 = Math.round(hourlyRate * 0.25 * totalNS1);
     const calculatedNightAlw2 = Math.round(hourlyRate * 0.30 * totalNS2);
@@ -188,11 +189,23 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
       else calculatedIncomeTax = Math.round(grossForTax * 0.08);
     }
 
-    const remainingLeave = employeeLeave 
+    if (data.incomeTaxOverride !== undefined) calculatedIncomeTax = data.incomeTaxOverride;
+
+    const remainingLeave = employeeLeave
       ? Math.max(0, employeeLeave.total - employeeLeave.used - (Number(data.paidLeaveDays) || 0))
       : 0;
 
-    const needsUpdate = 
+    const needsUpdate =
+      data.scheduledHours !== autoScheduledHours ||
+      data.lateNightOTAllowance !== calculatedLateNightOT ||
+      data.nightShiftAllowance !== calculatedNightAlw1 ||
+      data.nightShiftAllowanceExtra !== calculatedNightAlw2 ||
+      data.holidayWorkAllowance !== calculatedHolidayWork ||
+      data.holidayNightAllowance !== calculatedHolidayNightAlw ||
+      data.holidayNightHours !== holidayNS1Hours + flexibleHoliday.nightHours ||
+      data.holidayTotalHours !== totalHolidayHours + flexibleHoliday.hours ||
+      data.absenceDeduction !== calculatedAbsenceDed ||
+      data.lateEarlyDeduction !== calculatedLateEarlyDed ||
       data.scheduledDays !== totalDays ||
       data.nightShiftHours !== totalNS1 ||
       data.nightShiftHoursExtra !== totalNS2 ||
@@ -217,6 +230,8 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
         nightShiftAllowanceExtra: calculatedNightAlw2,
         holidayWorkAllowance: calculatedHolidayWork,
         holidayNightAllowance: calculatedHolidayNightAlw,
+        holidayNightHours: holidayNS1Hours + flexibleHoliday.nightHours,
+        holidayTotalHours: totalHolidayHours + flexibleHoliday.hours,
         absenceDeduction: calculatedAbsenceDed,
         lateEarlyDeduction: calculatedLateEarlyDed,
         healthInsurance: currentHealthIns,
@@ -226,7 +241,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
         remainingPaidLeave: remainingLeave
       });
     }
-  }, [shifts, baseSalary, data.regularOTHours, data.lateNightOTHours, data.saturdayHolidayHours, (data as any).saturdayHolidayMorningHours, (data as any).saturdayHolidayAfternoonHours, data.sundayHolidayHours, (data as any).sundayHolidayMorningHours, (data as any).sundayHolidayAfternoonHours, data.holidayShiftType, data.absenceHours, data.lateEarlyHours, data.paidLeaveDays, employeeLeave]);
+  }, [data, shifts, baseSalary, employeeLeave, policy, onChange]);
 
   const updateShift = (index: number, field: keyof ShiftEntry, value: any) => {
     const newShifts = [...shifts];
@@ -235,7 +250,8 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
   };
 
   const addShift = () => {
-    const newShifts = [...shifts, { type: "day", startTime: "08:00", days: 0 } as ShiftEntry];
+    const preset = policy.shifts[0];
+    const newShifts = [...shifts, { type: "day", startTime: preset?.start || "08:00", days: 0, ...(preset ? { presetId: preset.id, preset } : {}) } as ShiftEntry];
     onChange({ ...data, shifts: newShifts });
   };
 
@@ -247,7 +263,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
 
   const updateField = (field: keyof JapanData, value: string) => {
     const numValue = value === "" ? 0 : Number(value);
-    onChange({ ...data, [field]: numValue });
+    onChange({ ...data, [field]: numValue, ...(field === "incomeTax" ? { incomeTaxOverride: numValue } : {}) });
   };
 
   const totalEarnings = (Number(baseSalary) || 0) + 
@@ -289,7 +305,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
       )}
 
       <div className="bg-card border p-6 rounded-xl space-y-6 shadow-sm">
-        <div className="flex justify-between items-center border-b pb-3">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 border-b pb-3">
           <Label className="text-sm font-bold uppercase tracking-wider">勤務シフト (SHIFT SELECTION)</Label>
           <Button variant="outline" size="sm" onClick={addShift} className="gap-2 text-xs h-8">
             <Plus size={14} /> Add Shift Block
@@ -307,55 +323,29 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
                   <Trash2 size={12} />
                 </Button>
               )}
-              <div className="space-y-3">
-                <Label className="text-[10px] font-bold text-muted-foreground uppercase">Type</Label>
-                <RadioGroup value={shift.type} onValueChange={(v) => updateShift(idx, "type", v as any)} className="flex gap-2">
-                  <div className="flex items-center space-x-2 bg-background px-3 py-2 rounded border flex-1 cursor-pointer">
-                    <RadioGroupItem value="day" id={`day-${idx}`} />
-                    <Label htmlFor={`day-${idx}`} className="flex items-center gap-1 cursor-pointer text-xs font-bold"><Sun size={14} className="text-orange-500" /> Day</Label>
-                  </div>
-                  <div className="flex items-center space-x-2 bg-background px-3 py-2 rounded border flex-1 cursor-pointer">
-                    <RadioGroupItem value="night" id={`night-${idx}`} />
-                    <Label htmlFor={`night-${idx}`} className="flex items-center gap-1 cursor-pointer text-xs font-bold"><Moon size={14} className="text-primary" /> Night</Label>
-                  </div>
-                </RadioGroup>
-              </div>
-              <div className="space-y-3">
-                <Label className="text-[10px] font-bold text-muted-foreground uppercase">Start Time</Label>
-                <RadioGroup value={shift.startTime} onValueChange={(v) => updateShift(idx, "startTime", v)} className="flex gap-2">
-                  {shift.type === "day" ? (
-                    <>
-                      <div className="flex items-center space-x-2 bg-background px-3 py-2 rounded border flex-1 cursor-pointer">
-                        <RadioGroupItem value="08:00" id={`t08-${idx}`} />
-                        <Label htmlFor={`t08-${idx}`} className="text-xs">08:00</Label>
-                      </div>
-                      <div className="flex items-center space-x-2 bg-background px-3 py-2 rounded border flex-1 cursor-pointer">
-                        <RadioGroupItem value="12:00" id={`t12-${idx}`} />
-                        <Label htmlFor={`t12-${idx}`} className="text-xs">12:00</Label>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex items-center space-x-2 bg-background px-3 py-2 rounded border flex-1 cursor-pointer">
-                        <RadioGroupItem value="19:00" id={`t19-${idx}`} />
-                        <Label htmlFor={`t19-${idx}`} className="text-xs">19:00</Label>
-                      </div>
-                      <div className="flex items-center space-x-2 bg-background px-3 py-2 rounded border flex-1 cursor-pointer">
-                        <RadioGroupItem value="21:00" id={`t21-${idx}`} />
-                        <Label htmlFor={`t21-${idx}`} className="text-xs">21:00</Label>
-                      </div>
-                    </>
-                  )}
-                </RadioGroup>
+              <div className="space-y-3 md:col-span-2">
+                <Label className="text-xs font-bold">Shift / အဆိုင်း (ပုံမှန်အလုပ်ရက်သာ)</Label>
+                <select aria-label="Regular work shift" className="h-10 w-full rounded-md border bg-background px-2 text-sm" value={getPreset(shift)?.id || ""} onChange={e => {
+                  const preset = policy.shifts.find(s => s.id === e.target.value);
+                  if (!preset) return;
+                  const next = [...shifts];
+                  next[idx] = { ...shift, startTime: preset.start, presetId: preset.id, preset, type: preset.start >= "18:00" ? "night" : "day" };
+                  onChange({ ...data, shifts: next });
+                }}>
+                  {policy.shifts.map(s => <option key={s.id} value={s.id}>{s.name} {s.start}–{s.end}</option>)}
+                  {!policy.shifts.some(s => s.id === getPreset(shift)?.id) && <option value={getPreset(shift)?.id}>{getPreset(shift)?.name} (saved template)</option>}
+                </select>
               </div>
               <div className="space-y-3">
                 <Label className="text-[10px] font-bold text-muted-foreground uppercase">Days Worked</Label>
-                <Input type="number" className="h-9 text-xs" placeholder="0" value={shift.days === 0 ? "" : shift.days} onChange={e => updateShift(idx, "days", e.target.value === "" ? 0 : Number(e.target.value))} />
+                <Input aria-label="Regular days worked" type="number" min="0" step="1" className="h-9 text-xs" placeholder="0" value={shift.days === 0 ? "" : shift.days} onChange={e => updateShift(idx, "days", e.target.value === "" ? 0 : Number(e.target.value))} />
               </div>
             </div>
           ))}
         </div>
       </div>
+
+      <FlexibleWorkEditor policy={data.workPolicy} entries={data.holidayEntries || []} month={selectedMonth} holidays={(companyEvents || []).filter(e => !e.isWorkday).map(e => ({ date: e.date, title: e.title }))} onChange={(workPolicy, holidayEntries) => onChange({ ...data, workPolicy, holidayEntries })} />
 
       <div className="space-y-4 bg-card p-4 rounded-xl border shadow-sm">
         <h4 className="text-sm font-bold uppercase tracking-wider border-b pb-2">勤怠 (ATTENDANCE TOTALS)</h4>
@@ -366,10 +356,8 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
             { label: "遅刻早退", en: "Late/Early", field: "lateEarlyHours" },
             { label: "普通残業", en: "Regular OT", field: "regularOTHours" },
             { label: "深夜残業", en: "Late Night OT", field: "lateNightOTHours" },
-            { label: "土曜休日(朝)", en: "Sat Morn 8-17", field: "saturdayHolidayMorningHours" },
-            { label: "土曜休日(昼)", en: "Sat Aft 12-21", field: "saturdayHolidayAfternoonHours" },
-            { label: "日曜休日(朝)", en: "Sun Morn 8-17", field: "sundayHolidayMorningHours" },
-            { label: "日曜休日(昼)", en: "Sun Aft 12-21", field: "sundayHolidayAfternoonHours" },
+            { label: "休日勤務時間", en: "Holiday Hours", field: "holidayTotalHours", readOnly: true },
+            { label: "休日深夜時間", en: "Holiday Night Hrs", field: "holidayNightHours", readOnly: true },
             { label: "有休日数", en: "Paid Leave", field: "paidLeaveDays" },
             { label: "有休残日数", en: "Rem. Leave", field: "remainingPaidLeave", readOnly: true },
           ].map((item) => (
@@ -379,7 +367,12 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
             </div>
           ))}
         </div>
-        <div className="text-[10px] text-muted-foreground mt-2">※ (朝) 8:00-17:00 = Night Alw မပါ၊ (昼) 12:00-21:00 = 50%ကို Night Alw 0.25 auto တွက် (ဥပမာ 8နာရီ → 4နာရီ Night Alw) — 土/日 အတူတူ</div>
+        <details className="border-t pt-3">
+          <summary className="text-xs cursor-pointer">Legacy holiday fields / အဟောင်း payslip အတွက်သာ</summary>
+          <p className="text-xs text-muted-foreground my-2">မူလ Sat/Sun စုစုပေါင်းများကို 1.35 နှင့် afternoon 50% allowance အတိုင်း ထိန်းထားသည်။ အပေါ်က ရက်စွဲပါ row တွေနဲ့ ထပ်မထည့်ပါနှင့်။ အသစ်ရေးမည်ဆိုလျှင် ဒီ fields ကို 0 ထားပါ။</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">{(["saturdayHolidayMorningHours", "saturdayHolidayAfternoonHours", "sundayHolidayMorningHours", "sundayHolidayAfternoonHours"] as const).map((field, i) => <label className="text-xs space-y-1" key={field}>{["Sat morning", "Sat afternoon", "Sun morning", "Sun afternoon"][i]}<Input type="number" min="0" step="0.01" value={data[field] || 0} onChange={e => updateField(field, e.target.value)} /></label>)}</div>
+        </details>
+        {((data.saturdayHolidayMorningHours || 0) + (data.saturdayHolidayAfternoonHours || 0) + (data.sundayHolidayMorningHours || 0) + (data.sundayHolidayAfternoonHours || 0) > 0) && <p className="text-xs text-orange-700">Legacy hours ပါဝင်နေသည်။ ရက်စွဲပါ entry တွေ ထည့်မည်ဆိုလျှင် အလုပ်ချိန် မထပ်အောင် စစ်ဆေးပါ။</p>}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -389,19 +382,19 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
           </div>
           <div className="grid grid-cols-2 gap-3">
             {[
-              { label: "普通残業手当", en: "Regular OT (1.25)", field: "otAllowance", readOnly: false },
-              { label: "深夜残業手当", en: "Late Night (1.50)", field: "lateNightOTAllowance", readOnly: false },
-              { label: "夜勤手当 1", en: "Night Alw 1 (0.25)", field: "nightShiftAllowance", readOnly: false },
-              { label: "夜勤手当 2", en: "Night Alw 2 (0.30)", field: "nightShiftAllowanceExtra", readOnly: false },
-              { label: "休日勤務手当", en: "Holiday Alw (1.35)", field: "holidayWorkAllowance", readOnly: false },
-              { label: "休日深夜手当", en: "Hol. Night Alw (0.25)", field: "holidayNightAllowance", readOnly: false },
+              { label: "普通残業手当", en: "Regular OT (1.25)", field: "otAllowance", readOnly: true },
+              { label: "深夜残業手当", en: "Late Night (1.50)", field: "lateNightOTAllowance", readOnly: true },
+              { label: "夜勤手当 1", en: "Company Shift Alw 1 (0.25)", field: "nightShiftAllowance", readOnly: true },
+              { label: "夜勤手当 2", en: "Company Shift Alw 2 (0.30)", field: "nightShiftAllowanceExtra", readOnly: true },
+              { label: "休日勤務手当", en: "Holiday Alw (selected rates)", field: "holidayWorkAllowance", readOnly: true },
+              { label: "休日深夜手当", en: "Hol. Night (policy premium)", field: "holidayNightAllowance", readOnly: true },
               { label: "住宅手当", en: "Housing Alw", field: "housingAllowance", readOnly: false },
               { label: "通勤費", en: "Commuting", field: "nonTaxableCommuting", readOnly: false },
-              { label: "欠勤控နှုတ်", en: "Absence Ded", field: "absenceDeduction", color: "text-destructive", readOnly: false },
+              { label: "欠勤控နှုတ်", en: "Absence Ded", field: "absenceDeduction", color: "text-destructive", readOnly: true },
             ].map((item) => (
               <div key={item.field} className="space-y-1">
                 <Label className={`text-[10px] leading-tight block font-semibold ${item.color || ""}`}>{item.label}<br/><span className="text-muted-foreground font-normal uppercase">{item.en}</span></Label>
-                <Input type="number" className="h-8 text-xs" placeholder="0" value={(data as any)[item.field] == null || (data as any)[item.field] === 0 ? "" : (data as any)[item.field]} onChange={e => updateField(item.field as keyof JapanData, e.target.value)} />
+                <Input type="number" readOnly={item.readOnly} className={`h-8 text-xs ${item.readOnly ? 'bg-muted/50' : ''}`} placeholder="0" value={(data as any)[item.field] == null || (data as any)[item.field] === 0 ? "" : (data as any)[item.field]} onChange={e => !item.readOnly && updateField(item.field as keyof JapanData, e.target.value)} />
               </div>
             ))}
           </div>
@@ -410,6 +403,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
           <div className="flex justify-between items-center border-b pb-2 mb-4">
             <h4 className="text-sm font-bold text-destructive uppercase tracking-wider">控除 (DEDUCTIONS)</h4>
           </div>
+          <p className="text-xs text-muted-foreground">အခွန်/အာမခံများသည် ခန့်မှန်းတန်ဖိုးများဖြစ်သည်။ Payroll တာဝန်ရှိသူမှ စစ်ဆေးပြင်ဆင်ပါ။ Income tax ကို ကိုယ်တိုင်ပြင်ထားလျှင် ထိုတန်ဖိုးကို ဆက်သုံးမည်။</p>
           <div className="grid grid-cols-2 gap-3">
             {[
               { label: "健康保険料", en: "Health Ins (~5.5%)", field: "healthInsurance" },

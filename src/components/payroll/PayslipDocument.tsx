@@ -73,7 +73,8 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
                 { l: "土曜休日(昼)", e: "Sat Hol Aft", v: data.saturdayHolidayAfternoonHours ?? 0 },
                 { l: "日曜休日(朝)", e: "Sun Hol Morn", v: data.sundayHolidayMorningHours ?? data.sundayHolidayHours ?? 0 },
                 { l: "日曜休日(昼)", e: "Sun Hol Aft", v: data.sundayHolidayAfternoonHours ?? 0 },
-                { l: "休日深夜", e: "Hol Night Hrs", v: (data.saturdayHolidayAfternoonHours != null || data.sundayHolidayAfternoonHours != null) ? Math.round(((data.saturdayHolidayAfternoonHours ?? 0) + (data.sundayHolidayAfternoonHours ?? 0)) * 0.5) : (data.holidayNightHours ?? 0) },
+                { l: "休日合計", e: "Holiday Hrs", v: data.holidayTotalHours ?? ((data.saturdayHolidayMorningHours ?? data.saturdayHolidayHours ?? 0) + (data.saturdayHolidayAfternoonHours ?? 0) + (data.sundayHolidayMorningHours ?? data.sundayHolidayHours ?? 0) + (data.sundayHolidayAfternoonHours ?? 0)) },
+                { l: "休日深夜", e: "Hol Night Hrs", v: data.holidayNightHours ?? Math.round(((data.saturdayHolidayAfternoonHours ?? 0) + (data.sundayHolidayAfternoonHours ?? 0)) * 0.5) },
                 { l: "~22", e: "Night 1", v: data.nightShiftHours },
                 { l: "22~", e: "Night 2", v: data.nightShiftHoursExtra },
                 { l: "有休日数", e: "Paid Leave", v: data.paidLeaveDays },
@@ -102,8 +103,8 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
                 { l: "深夜残業手当", e: "Late Night (1.50)", v: data.lateNightOTAllowance },
                 { l: "~22", e: "Night Alw 1 (0.25)", v: data.nightShiftAllowance },
                 { l: "22~", e: "Night Alw 2 (0.30)", v: data.nightShiftAllowanceExtra },
-                { l: "休日勤務手当", e: "Holiday (1.35)", v: data.holidayWorkAllowance },
-                { l: "休日深夜手当", e: "Hol. Night (0.25)", v: data.holidayNightAllowance },
+                { l: "休日勤務手当", e: data.workPolicy ? "Holiday (selected rates)" : "Holiday (1.35)", v: data.holidayWorkAllowance },
+                { l: "休日深夜手当", e: `Hol. Night (${data.workPolicy?.nightPremium ?? 0.25})`, v: data.holidayNightAllowance },
                 { l: "家族手当", e: "Family Alw", v: data.familyAllowance },
                 { l: "住宅手当", e: "Housing Alw", v: data.housingAllowance },
                 { l: "非課税通勤費", e: "Non-tax Comm.", v: data.nonTaxableCommuting },
@@ -172,6 +173,15 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
             </div>
           </div>
         </div>
+        {data.holidayEntries?.length > 0 && <div className="mt-4 text-[9px] break-inside-avoid">
+          <h3 className="font-bold mb-1">休日勤務の内訳 / Holiday work details</h3>
+          <table className="w-full border-collapse"><thead><tr>{["Date", "Shift", "Paid hrs", "Night hrs", "Rate"].map(label => <th key={label} className="border border-gray-400 p-1 text-left">{label}</th>)}</tr></thead>
+            <tbody>{data.holidayEntries.map((entry: { id: string; date: string; shiftName: string; hours: number; nightHours: number; rateId: string }) => {
+              const rate = data.workPolicy?.holidayRates?.find((r: { id: string }) => r.id === entry.rateId);
+              return <tr key={entry.id}><td className="border border-gray-400 p-1">{entry.date}</td><td className="border border-gray-400 p-1">{entry.shiftName}</td><td className="border border-gray-400 p-1">{entry.hours}</td><td className="border border-gray-400 p-1">{entry.nightHours}</td><td className="border border-gray-400 p-1">{rate?.name} ×{rate?.multiplier}</td></tr>;
+            })}</tbody></table>
+          <p className="mt-1">Hourly divisor: {data.workPolicy?.hourlyDivisor}; night premium: +{data.workPolicy?.nightPremium}. Policy snapshot at payroll creation.</p>
+        </div>}
       </div>
     );
   } else {

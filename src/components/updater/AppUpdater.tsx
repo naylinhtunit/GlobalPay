@@ -8,7 +8,7 @@ import { Capacitor } from "@capacitor/core";
 import { App } from "@capacitor/app";
 
 const GITHUB_REPO = "naylinhtunit/GlobalPay-Releases";
-const CURRENT_VERSION_FALLBACK = "1.0.18"; // keep in sync with latest release tag
+const CURRENT_VERSION_FALLBACK = "1.0.19"; // keep in sync with latest release tag
 
 function normalizeTag(tag: string) {
   return tag.replace(/^v/, "").trim();
