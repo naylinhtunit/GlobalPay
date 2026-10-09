@@ -40,7 +40,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { JapanPayrollForm, type JapanData } from "@/components/payroll/JapanPayrollForm";
 import { MyanmarPayrollForm, type MyanmarData } from "@/components/payroll/MyanmarPayrollForm";
 import { PayslipDocument } from "@/components/payroll/PayslipDocument";
-import { DEFAULT_PAYROLL_POLICY, normalizeLegacyHolidayFields, validateHolidayEntries, validatePolicy } from "@/lib/japan-payroll";
+import { DEFAULT_PAYROLL_POLICY, getHolidayAttendance, normalizeLegacyHolidayFields, splitHolidayHours, validateHolidayEntries, validatePolicy } from "@/lib/japan-payroll";
 import { 
   Table, 
   TableBody, 
@@ -474,13 +474,16 @@ export default function PayrollPage() {
         exportData.push(["Work Days", data.scheduledDays]);
         exportData.push(["Absence", data.absenceHours]);
         exportData.push(["Paid Leave", data.paidLeaveDays]);
-        exportData.push(["Holiday Work Hours", data.holidayTotalHours || 0]);
-        exportData.push(["Holiday Night Hours", data.holidayNightHours || 0]);
+        const holidayHours = getHolidayAttendance(data);
+        exportData.push(["Holiday Day Hours (outside 22:00–05:00)", holidayHours.day]);
+        exportData.push(["Holiday Night Hours (22:00–05:00)", holidayHours.night]);
+        exportData.push(["Holiday Total Hours (Day + Night)", holidayHours.total]);
         if (data.holidayEntries?.length) {
-          exportData.push(["HOLIDAY DATE", "SHIFT", "PAID HOURS", "NIGHT HOURS", "RATE", "MULTIPLIER"]);
+          exportData.push(["HOLIDAY DATE", "SHIFT", "DAY HOURS", "NIGHT HOURS", "TOTAL HOURS (DAY + NIGHT)", "RATE", "MULTIPLIER"]);
           for (const entry of data.holidayEntries) {
             const rate = data.workPolicy?.holidayRates?.find((r: { id: string }) => r.id === entry.rateId);
-            exportData.push([entry.date, entry.shiftName, entry.hours, entry.nightHours, rate?.name || "", rate?.multiplier || ""]);
+            const hours = splitHolidayHours(entry.hours, entry.nightHours);
+            exportData.push([entry.date, entry.shiftName, hours.day, hours.night, hours.total, rate?.name || "", rate?.multiplier || ""]);
           }
         }
         exportData.push(["", ""]);

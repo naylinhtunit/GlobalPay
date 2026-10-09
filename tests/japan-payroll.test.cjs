@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { DEFAULT_PAYROLL_POLICY: defaults, splitShift, groupHolidayEntries, calculateHolidayPay, normalizeLegacyHolidayFields, validatePolicy, validateHolidayEntries, nextDate } = require('../src/lib/japan-payroll.ts');
+const { DEFAULT_PAYROLL_POLICY: defaults, splitShift, splitHolidayHours, getHolidayAttendance, groupHolidayEntries, calculateHolidayPay, normalizeLegacyHolidayFields, validatePolicy, validateHolidayEntries, nextDate } = require('../src/lib/japan-payroll.ts');
 const { APP_VERSION, isNewerVersion } = require('../src/lib/app-version.ts');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -168,4 +168,29 @@ test('two added holiday shifts automatically aggregate monthly attendance and ni
   assert.deepEqual(calculateHolidayPay(morning, defaults, 1000), { work: 24000, night: 0, hours: 16, nightHours: 0 });
   const night = [...rows('2026-10-10', 'night-21', 'company-150'), ...rows('2026-10-12', 'night-21', 'company-150')];
   assert.deepEqual(calculateHolidayPay(night, defaults, 1000), { work: 24000, night: 3000, hours: 16, nightHours: 12 });
+});
+
+test('holiday attendance displays disjoint day/night hours without changing pay or saved totals', () => {
+  const entries = [...rows('2026-10-10', 'day-08', 'company-150'), ...rows('2026-10-12', 'night-21', 'company-150')];
+  const snapshot = JSON.stringify(entries);
+  const pay = calculateHolidayPay(entries, defaults, 1000);
+  assert.deepEqual(pay, { work: 24000, night: 1500, hours: 16, nightHours: 6 });
+  assert.deepEqual(splitHolidayHours(pay.hours, pay.nightHours), { day: 10, night: 6, total: 16 });
+  assert.deepEqual(splitHolidayHours(8, 6), { day: 2, night: 6, total: 8 });
+  assert.deepEqual(splitHolidayHours(8, 0), { day: 8, night: 0, total: 8 });
+  assert.deepEqual(splitHolidayHours(16, 10), { day: 6, night: 10, total: 16 });
+  assert.deepEqual(splitHolidayHours(8.25, 4.75), { day: 3.5, night: 4.75, total: 8.25 });
+  assert.equal(JSON.stringify(entries), snapshot);
+  assert.deepEqual(calculateHolidayPay(entries, defaults, 1000), pay);
+  const saved = { holidayTotalHours: 16, holidayNightHours: 6, holidayWorkAllowance: 24000, holidayNightAllowance: 1500 };
+  const original = { ...saved };
+  assert.deepEqual(getHolidayAttendance(saved), { day: 10, night: 6, total: 16 });
+  assert.deepEqual(saved, original);
+});
+
+test('holiday display preserves legacy fallback and explicit cleared aggregate totals', () => {
+  assert.deepEqual(getHolidayAttendance({ saturdayHolidayHours: 8, sundayHolidayHours: 6, holidayShiftType: 'morning' }), { day: 14, night: 0, total: 14 });
+  assert.deepEqual(getHolidayAttendance({ saturdayHolidayHours: 8, holidayShiftType: 'afternoon' }), { day: 4, night: 4, total: 8 });
+  assert.deepEqual(getHolidayAttendance({ saturdayHolidayHours: 8, holidayTotalHours: 0, holidayNightHours: 0 }), { day: 0, night: 0, total: 0 });
+  assert.deepEqual(getHolidayAttendance({}), { day: 0, night: 0, total: 0 });
 });

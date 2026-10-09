@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Country } from "@/context/CountryContext";
+import { getHolidayAttendance } from "@/lib/japan-payroll";
 
 interface Props {
   country: Country;
@@ -21,6 +22,7 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
   const payTimeSalary = record?.basicSalary || employee.baseSalary || 0;
 
   if (country === "Japan") {
+    const holidayHours = getHolidayAttendance(data);
     const totalEarnings = (record?.totalGrossPay || 0);
     const totalDeductions = (record?.totalDeductions || 0);
     const netPay = (record?.netPay || 0);
@@ -73,8 +75,9 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
                 { l: "土曜休日(昼)", e: "Sat Hol Aft", v: data.saturdayHolidayAfternoonHours ?? 0 },
                 { l: "日曜休日(朝)", e: "Sun Hol Morn", v: data.sundayHolidayMorningHours ?? data.sundayHolidayHours ?? 0 },
                 { l: "日曜休日(昼)", e: "Sun Hol Aft", v: data.sundayHolidayAfternoonHours ?? 0 },
-                { l: "休日合計", e: "Holiday Hrs", v: data.holidayTotalHours ?? ((data.saturdayHolidayMorningHours ?? data.saturdayHolidayHours ?? 0) + (data.saturdayHolidayAfternoonHours ?? 0) + (data.sundayHolidayMorningHours ?? data.sundayHolidayHours ?? 0) + (data.sundayHolidayAfternoonHours ?? 0)) },
-                { l: "休日深夜", e: "Hol Night Hrs", v: data.holidayNightHours ?? Math.round(((data.saturdayHolidayAfternoonHours ?? 0) + (data.sundayHolidayAfternoonHours ?? 0)) * 0.5) },
+                { l: "休日・深夜以外", e: "Holiday Day Hrs", v: holidayHours.day },
+                { l: "休日深夜", e: "Holiday Night Hrs", v: holidayHours.night },
+                { l: "休日合計（日中＋深夜）", e: "Holiday Total (Day + Night)", v: holidayHours.total },
                 { l: "~22", e: "Night 1", v: data.nightShiftHours },
                 { l: "22~", e: "Night 2", v: data.nightShiftHoursExtra },
                 { l: "有休日数", e: "Paid Leave", v: data.paidLeaveDays },

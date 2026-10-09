@@ -5,7 +5,7 @@ import { useCompanyPayrollSettings } from "@/hooks/useCompanyPayrollSettings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createLocalId } from "@/lib/local-id";
-import { DEFAULT_PAYROLL_POLICY, groupHolidayEntries, splitShift, validateHolidayEntries, validatePolicy, type HolidayWorkEntry, type PayrollPolicy, type ShiftPreset } from "@/lib/japan-payroll";
+import { DEFAULT_PAYROLL_POLICY, groupHolidayEntries, splitHolidayHours, splitShift, validateHolidayEntries, validatePolicy, type HolidayWorkEntry, type PayrollPolicy, type ShiftPreset } from "@/lib/japan-payroll";
 
 const selectClass = "h-10 w-full min-w-0 rounded-md border bg-background px-2 text-sm";
 const newId = createLocalId;
@@ -56,6 +56,7 @@ export function FlexibleWorkEditor({ policy, entries, month, onChange, holidays 
   const problem = validateHolidayEntries(entries, current, month);
   const policyProblem = validatePolicy(current);
   const workGroups = groupHolidayEntries(entries);
+  const previewHours = splitHolidayHours(preview.reduce((sum, row) => sum + row.hours, 0), preview.reduce((sum, row) => sum + row.nightHours, 0));
 
   return <div className="space-y-4 rounded-xl border bg-card p-4">
     <h4 className="font-bold">休日勤務 / ပိတ်ရက် အလုပ်ဆင်းခြင်း</h4>
@@ -73,7 +74,7 @@ export function FlexibleWorkEditor({ policy, entries, month, onChange, holidays 
       <label className="space-y-1">နားချိန် (မိနစ်)<Input aria-label="Holiday break minutes" type="number" min="0" step="1" value={selectedShift?.breakMinutes ?? 0} onChange={e => editShift("breakMinutes", Number(e.target.value))} /></label>
     </div><p className="pt-2 text-muted-foreground">ဥပမာ နားချိန် စ 12:00၊ မိနစ် 60 = 12:00–13:00 နားသည်။ လအတွက် စုစုပေါင်းမဟုတ်ပါ။</p></details>
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <p className="text-sm text-muted-foreground" aria-live="polite">{shiftProblem || `နားချိန်နုတ်ပြီး ${Math.round(preview.reduce((sum, row) => sum + row.hours, 0) * 100) / 100} နာရီ · ညပိုင်း ${Math.round(preview.reduce((sum, row) => sum + row.nightHours, 0) * 100) / 100} နာရီ`}</p>
+      <p className="text-sm text-muted-foreground" aria-live="polite">{shiftProblem || `နေ့ပိုင်း ${previewHours.day} + ညပိုင်း ${previewHours.night} = စုစုပေါင်း ${previewHours.total} နာရီ (နားချိန်နုတ်ပြီး)`}</p>
       <Button type="button" variant="outline" disabled={!!shiftProblem || (!policy && (isLoading || !isLoaded || !!loadError))} onClick={addWork}>+ Add holiday work / ထည့်မည်</Button>
     </div>
     {holidays.filter(h => h.date.startsWith(month || "")).length > 0 && <details className="text-sm"><summary className="cursor-pointer text-muted-foreground">Calendar ပိတ်ရက်များမှ ရွေးရန်</summary><div className="flex flex-wrap gap-2 pt-2">{holidays.filter(h => h.date.startsWith(month || "")).map(h => <Button type="button" size="sm" variant="secondary" key={h.date} onClick={() => setDate(h.date)}>{h.date} {h.title}</Button>)}</div></details>}
@@ -82,13 +83,14 @@ export function FlexibleWorkEditor({ policy, entries, month, onChange, holidays 
       const first = group[0];
       const paid = Math.round(group.reduce((sum, entry) => sum + entry.hours, 0) * 100) / 100;
       const night = Math.round(group.reduce((sum, entry) => sum + entry.nightHours, 0) * 100) / 100;
+      const hours = splitHolidayHours(paid, night);
       const ids = new Set(group.map(entry => entry.id));
       return <div key={first.groupId || first.id} data-testid="holiday-shift-card" className="space-y-3 rounded-lg border bg-muted/20 p-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0"><p className="font-semibold text-sm break-words">{first.shiftName.replace(/ \(\+1 day\)$/, "")}</p><p className="text-xs text-muted-foreground mt-1">{first.date}{group.length > 1 ? ' → ' + group[group.length - 1].date : ''}</p></div>
           <Button type="button" size="sm" variant="ghost" aria-label={'Remove holiday shift ' + first.date} onClick={() => onChange(current, entries.filter(entry => !ids.has(entry.id)))}>ဖယ်မည်</Button>
         </div>
-        <p className="text-sm font-medium">အလုပ်ချိန် {paid} နာရီ <span className="text-muted-foreground font-normal">· ညပိုင်း {night} နာရီ</span></p>
+        <p className="text-sm font-medium">နေ့ပိုင်း {hours.day} + ညပိုင်း {hours.night} = စုစုပေါင်း {hours.total} နာရီ</p>
         {group.length > 1 && <p className="text-xs text-muted-foreground">အဆိုင်းတစ်ခုတည်းပါ။ သန်းခေါင်ကျော်သောကြောင့် ရက်နှစ်ရက်အတွက် rate ရွေးပါ။</p>}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">{group.map(entry => <label key={entry.id} className="space-y-1 text-xs block">
           <span>{entry.date} · {entry.hours} နာရီ</span>

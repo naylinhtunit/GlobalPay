@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
 import { FlexibleWorkEditor } from "./FlexibleWorkEditor";
-import { DEFAULT_PAYROLL_POLICY, calculateHolidayPay, normalizeLegacyHolidayFields, splitShift, validatePolicy, type HolidayWorkEntry, type PayrollPolicy, type ShiftPreset } from "@/lib/japan-payroll";
+import { DEFAULT_PAYROLL_POLICY, calculateHolidayPay, getHolidayAttendance, normalizeLegacyHolidayFields, splitShift, validatePolicy, type HolidayWorkEntry, type PayrollPolicy, type ShiftPreset } from "@/lib/japan-payroll";
 
 export interface ShiftEntry {
   type: "day" | "night";
@@ -91,6 +91,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
   const firestore = useFirestore();
   const shifts = useMemo<ShiftEntry[]>(() => data.shifts || [{ type: "day", startTime: "08:00", days: data.scheduledDays || 0 }], [data.shifts, data.scheduledDays]);
   const policy = data.workPolicy || DEFAULT_PAYROLL_POLICY;
+  const holidayAttendance = getHolidayAttendance(data);
   const getPreset = (shift: ShiftEntry) => (shift.customized ? shift.preset : undefined) || policy.shifts.find(s => shift.presetId ? s.id === shift.presetId : s.start === shift.startTime) || shift.preset || DEFAULT_PAYROLL_POLICY.shifts.find(s => s.start === shift.startTime) || policy.shifts[0];
 
   const calendarQuery = useMemoFirebase(() => {
@@ -394,8 +395,6 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
             { label: "遅刻早退", en: "Late/Early", field: "lateEarlyHours" },
             { label: "普通残業", en: "Regular OT", field: "regularOTHours" },
             { label: "深夜残業", en: "Late Night OT", field: "lateNightOTHours" },
-            { label: "休日勤務時間", en: "Holiday Hours", field: "holidayTotalHours", readOnly: true },
-            { label: "休日深夜時間", en: "Holiday Night Hrs", field: "holidayNightHours", readOnly: true },
             { label: "有休日数", en: "Paid Leave", field: "paidLeaveDays" },
             { label: "有休残日数", en: "Rem. Leave", field: "remainingPaidLeave", readOnly: true },
           ].map((item) => (
@@ -404,6 +403,21 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
               <Input type="number" readOnly={item.readOnly} className={`h-8 text-xs ${item.readOnly ? 'bg-muted/50' : ''}`} placeholder="0" value={(data as any)[item.field] == null || (data as any)[item.field] === 0 ? "" : (data as any)[item.field]} onChange={e => !item.readOnly && updateField(item.field as keyof JapanData, e.target.value)} />
             </div>
           ))}
+        </div>
+        <div className="space-y-3 border-t pt-3" data-testid="holiday-attendance-breakdown">
+          <p className="text-sm font-semibold">ပိတ်ရက် အလုပ်ချိန် / Holiday hours</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {[
+              { label: "နေ့ပိုင်း နာရီ", en: "Holiday Day Hours", value: holidayAttendance.day },
+              { label: "ညပိုင်း နာရီ (22:00–05:00)", en: "Holiday Night Hours", value: holidayAttendance.night },
+              { label: "စုစုပေါင်း နာရီ", en: "Holiday Total Hours", value: holidayAttendance.total },
+            ].map(item => <label key={item.en} className="space-y-1 text-xs">
+              <span className="block font-semibold">{item.label}</span>
+              <span className="block text-muted-foreground">{item.en}</span>
+              <Input aria-label={item.en} type="number" readOnly className="h-8 text-xs bg-muted/50" value={item.value} />
+            </label>)}
+          </div>
+          <p className="text-xs text-muted-foreground">နေ့ပိုင်း {holidayAttendance.day} + ညပိုင်း {holidayAttendance.night} = စုစုပေါင်း {holidayAttendance.total} နာရီ။ နားချိန်နုတ်ပြီး ဖြစ်သည်။ နေ့ပိုင်း = 22:00–05:00 ပြင်ပ အလုပ်ချိန်။ ညပိုင်းနာရီအတွက် holiday အလုပ်ခနှင့် ညပိုင်းအပိုကြေး နှစ်မျိုးလုံး တွက်သည်။</p>
         </div>
         <details className="border-t pt-3">
           <summary className="text-xs cursor-pointer">Legacy holiday fields / အဟောင်း payslip အတွက်သာ</summary>
@@ -424,8 +438,8 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
               { label: "深夜残業手当", en: "Late Night (1.50)", field: "lateNightOTAllowance", readOnly: true },
               { label: "夜勤手当 1", en: "Company Shift Alw 1 (0.25)", field: "nightShiftAllowance", readOnly: true },
               { label: "夜勤手当 2", en: "Company Shift Alw 2 (0.30)", field: "nightShiftAllowanceExtra", readOnly: true },
-              { label: "休日勤務手当", en: "Holiday Alw (selected rates)", field: "holidayWorkAllowance", readOnly: true },
-              { label: "休日深夜手当", en: "Hol. Night (policy premium)", field: "holidayNightAllowance", readOnly: true },
+              { label: "休日勤務手当（日中＋深夜）", en: "Holiday Pay (Day + Night)", field: "holidayWorkAllowance", readOnly: true },
+              { label: "休日深夜割増", en: "Holiday Night Premium Only", field: "holidayNightAllowance", readOnly: true },
               { label: "住宅手当", en: "Housing Alw", field: "housingAllowance", readOnly: false },
               { label: "通勤費", en: "Commuting", field: "nonTaxableCommuting", readOnly: false },
               { label: "欠勤控နှုတ်", en: "Absence Ded", field: "absenceDeduction", color: "text-destructive", readOnly: true },

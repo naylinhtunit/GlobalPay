@@ -68,6 +68,23 @@ interface LegacyHolidayFields {
   holidayShiftType?: "morning" | "afternoon";
 }
 
+/** Display-only, non-overlapping hours. Stored totals and pay calculations stay unchanged. */
+export function splitHolidayHours(totalHours: number, nightHours: number) {
+  const total = Math.max(0, Number(totalHours) || 0);
+  const night = Math.min(total, Math.max(0, Number(nightHours) || 0));
+  const round = (hours: number) => Math.round(hours * 10000) / 10000;
+  return { day: round(total - night), night: round(night), total: round(total) };
+}
+
+/** Saved aggregate fields remain totals, including night hours; never persist the display-only day value. */
+export function getHolidayAttendance(data: LegacyHolidayFields & { holidayTotalHours?: number; holidayNightHours?: number }) {
+  const legacy = normalizeLegacyHolidayFields(data);
+  return splitHolidayHours(
+    data.holidayTotalHours ?? legacy.saturdayHolidayHours + legacy.sundayHolidayHours,
+    data.holidayNightHours ?? Math.round((legacy.saturdayHolidayAfternoonHours + legacy.sundayHolidayAfternoonHours) * 0.5),
+  );
+}
+
 /** Explicit split zeros mean cleared hours; never resurrect a stale aggregate on edit. */
 export function normalizeLegacyHolidayFields(data: LegacyHolidayFields) {
   const satSplit = data.saturdayHolidayMorningHours != null || data.saturdayHolidayAfternoonHours != null;
