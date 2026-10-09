@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
 import { FlexibleWorkEditor } from "./FlexibleWorkEditor";
-import { DEFAULT_PAYROLL_POLICY, calculateHolidayPay, normalizeLegacyHolidayFields, splitShift, type HolidayWorkEntry, type PayrollPolicy, type ShiftPreset } from "@/lib/japan-payroll";
+import { DEFAULT_PAYROLL_POLICY, calculateHolidayPay, normalizeLegacyHolidayFields, splitShift, validatePolicy, type HolidayWorkEntry, type PayrollPolicy, type ShiftPreset } from "@/lib/japan-payroll";
 
 export interface ShiftEntry {
   type: "day" | "night";
@@ -16,6 +16,7 @@ export interface ShiftEntry {
   days: number;
   presetId?: string;
   preset?: ShiftPreset;
+  customized?: boolean;
 }
 
 export interface JapanData {
@@ -88,7 +89,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
   const firestore = useFirestore();
   const shifts = useMemo<ShiftEntry[]>(() => data.shifts || [{ type: "day", startTime: "08:00", days: data.scheduledDays || 0 }], [data.shifts, data.scheduledDays]);
   const policy = data.workPolicy || DEFAULT_PAYROLL_POLICY;
-  const getPreset = (shift: ShiftEntry) => policy.shifts.find(s => shift.presetId ? s.id === shift.presetId : s.start === shift.startTime) || shift.preset || DEFAULT_PAYROLL_POLICY.shifts.find(s => s.start === shift.startTime) || policy.shifts[0];
+  const getPreset = (shift: ShiftEntry) => (shift.customized ? shift.preset : undefined) || policy.shifts.find(s => shift.presetId ? s.id === shift.presetId : s.start === shift.startTime) || shift.preset || DEFAULT_PAYROLL_POLICY.shifts.find(s => s.start === shift.startTime) || policy.shifts[0];
 
   const calendarQuery = useMemoFirebase(() => {
     if (!firestore || !user || !selectedMonth) return null;
@@ -258,6 +259,16 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
     onChange({ ...data, shifts: newShifts });
   };
 
+  const updateShiftTime = (index: number, field: keyof ShiftPreset, value: string | number) => {
+    const shift = shifts[index];
+    const original = getPreset(shift);
+    if (!original) return;
+    const preset = { ...original, id: shift.customized ? original.id : crypto.randomUUID(), [field]: value };
+    const next = [...shifts];
+    next[index] = { ...shift, startTime: preset.start, presetId: preset.id, preset, customized: true };
+    onChange({ ...data, shifts: next });
+  };
+
   const addShift = () => {
     const preset = policy.shifts[0];
     const newShifts = [...shifts, { type: "day", startTime: preset?.start || "08:00", days: 0, ...(preset ? { presetId: preset.id, preset } : {}) } as ShiftEntry];
@@ -335,22 +346,36 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
                 </Button>
               )}
               <div className="space-y-3 md:col-span-2">
-                <Label className="text-xs font-bold">Shift / အဆိုင်း (ပုံမှန်အလုပ်ရက်သာ)</Label>
+                <Label className="text-xs font-bold">မူလအဆိုင်းရွေးရန် (အချိန်ကို အောက်တွင် ပြင်နိုင်သည်)</Label>
                 <select aria-label="Regular work shift" className="h-10 w-full rounded-md border bg-background px-2 text-sm" value={getPreset(shift)?.id || ""} onChange={e => {
                   const preset = policy.shifts.find(s => s.id === e.target.value);
                   if (!preset) return;
                   const next = [...shifts];
-                  next[idx] = { ...shift, startTime: preset.start, presetId: preset.id, preset, type: preset.start >= "18:00" ? "night" : "day" };
+                  next[idx] = { ...shift, startTime: preset.start, presetId: preset.id, preset, customized: false, type: preset.start >= "18:00" ? "night" : "day" };
                   onChange({ ...data, shifts: next });
                 }}>
                   {policy.shifts.map(s => <option key={s.id} value={s.id}>{s.name} {s.start}–{s.end}</option>)}
-                  {!policy.shifts.some(s => s.id === getPreset(shift)?.id) && <option value={getPreset(shift)?.id}>{getPreset(shift)?.name} (saved template)</option>}
+                  {!policy.shifts.some(s => s.id === getPreset(shift)?.id) && <option value={getPreset(shift)?.id}>{getPreset(shift)?.name} (စိတ်ကြိုက်ပြင်ထားသည်)</option>}
                 </select>
               </div>
               <div className="space-y-3">
                 <Label className="text-[10px] font-bold text-muted-foreground uppercase">Days Worked</Label>
                 <Input aria-label="Regular days worked" type="number" min="0" step="1" className="h-9 text-xs" placeholder="0" value={shift.days === 0 ? "" : shift.days} onChange={e => updateShift(idx, "days", e.target.value === "" ? 0 : Number(e.target.value))} />
               </div>
+              <div className="md:col-span-3 grid grid-cols-2 gap-3">
+                <label className="text-xs space-y-1">စချိန်<Input aria-label="Regular shift start" type="time" value={getPreset(shift)?.start || ""} onChange={e => updateShiftTime(idx, "start", e.target.value)} /></label>
+                <label className="text-xs space-y-1">ဆုံးချိန်<Input aria-label="Regular shift end" type="time" value={getPreset(shift)?.end || ""} onChange={e => updateShiftTime(idx, "end", e.target.value)} /></label>
+              </div>
+              <details className="md:col-span-3 text-xs" open={shift.customized && !!validatePolicy({ ...policy, shifts: [getPreset(shift)] })}>
+                <summary className="cursor-pointer text-muted-foreground">နားချိန် / Company allowance အသေးစိတ်</summary>
+                <div className="grid grid-cols-2 gap-3 pt-3">
+                  <label className="space-y-1">နားချိန် စ<Input aria-label="Regular break start" type="time" value={getPreset(shift)?.breakStart || ""} onChange={e => updateShiftTime(idx, "breakStart", e.target.value)} /></label>
+                  <label className="space-y-1">နားချိန် (မိနစ်)<Input aria-label="Regular break minutes" type="number" min="0" step="1" value={getPreset(shift)?.breakMinutes || 0} onChange={e => updateShiftTime(idx, "breakMinutes", Number(e.target.value))} /></label>
+                  <label className="space-y-1">Company allowance 1 နာရီ (×0.25)<Input type="number" min="0" step="0.01" value={getPreset(shift)?.allowance1Hours || 0} onChange={e => updateShiftTime(idx, "allowance1Hours", Number(e.target.value))} /></label>
+                  <label className="space-y-1">Company allowance 2 နာရီ (×0.30)<Input type="number" min="0" step="0.01" value={getPreset(shift)?.allowance2Hours || 0} onChange={e => updateShiftTime(idx, "allowance2Hours", Number(e.target.value))} /></label>
+                </div>
+              </details>
+              {shift.customized && <p className="md:col-span-3 text-xs text-muted-foreground">ဒီ payroll အတွက်သာ ပြင်ထားသည်။ နားချိန်နှင့် company allowance နာရီများကို စစ်ဆေးပါ။ {validatePolicy({ ...policy, shifts: [getPreset(shift)] })}</p>}
             </div>
           ))}
         </div>

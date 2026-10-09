@@ -28,11 +28,34 @@ export interface PayrollPolicy {
 
 export interface HolidayWorkEntry {
   id: string;
+  groupId?: string;
   date: string;
   shiftName: string;
   hours: number;
   nightHours: number;
   rateId: string;
+}
+
+/** One visible card per added shift, while retaining civil-date rows for calculation. */
+export function groupHolidayEntries(entries: HolidayWorkEntry[]): HolidayWorkEntry[][] {
+  const groups: HolidayWorkEntry[][] = [];
+  const byId = new Map<string, HolidayWorkEntry[]>();
+  for (const entry of entries) {
+    if (entry.groupId) {
+      let group = byId.get(entry.groupId);
+      if (!group) { group = []; byId.set(entry.groupId, group); groups.push(group); }
+      group.push(entry);
+    } else {
+      const previous = groups[groups.length - 1];
+      const sameShift = previous?.[0]?.shiftName === entry.shiftName.replace(/ \(\+1 day\)$/, "");
+      const continuation = entry.shiftName.endsWith(" (+1 day)") && previous?.length === 1 && !previous[0].groupId && sameShift;
+      let follows = false;
+      try { follows = !!continuation && nextDate(previous[0].date) === entry.date; } catch { /* Date is being edited. */ }
+      if (follows) previous.push(entry);
+      else groups.push([entry]);
+    }
+  }
+  return groups;
 }
 
 interface LegacyHolidayFields {
@@ -74,6 +97,7 @@ export const DEFAULT_PAYROLL_POLICY: PayrollPolicy = {
     { id: "company-ot", name: "所定休日・時間外 / Company holiday (OT)", multiplier: 1.25, statutory: false },
     { id: "company-normal", name: "所定休日・法定内 / Company holiday (within legal hours)", multiplier: 1, statutory: false },
     { id: "company-135", name: "会社規定 / Company policy 1.35", multiplier: 1.35, statutory: false },
+    { id: "company-150", name: "会社規定 / Company policy 1.50", multiplier: 1.50, statutory: false },
     { id: "company-ot60", name: "月60h超の時間外 / OT above 60h per month", multiplier: 1.50, statutory: false },
     { id: "regular-in-base", name: "通常勤務・基本給に含む / Regular work already in base salary", multiplier: 0, statutory: false, includedInBase: true },
   ],

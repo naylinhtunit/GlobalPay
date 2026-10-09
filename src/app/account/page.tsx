@@ -18,6 +18,7 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useAppVersion } from "@/hooks/useAppVersion";
+import { PayrollSettings } from "@/components/payroll/PayrollSettings";
 
 export default function AccountPage() {
   const { country, setCountry } = useCountry();
@@ -101,6 +102,8 @@ export default function AccountPage() {
               </span>
             </Button>
           </div>
+
+          {country === "Japan" && <PayrollSettings />}
 
           <div className="rounded-xl border bg-card px-4 py-3 flex items-center justify-between gap-3">
             <span className="text-sm font-semibold">App Version</span>

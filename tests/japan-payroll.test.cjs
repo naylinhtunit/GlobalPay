@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { DEFAULT_PAYROLL_POLICY: defaults, splitShift, calculateHolidayPay, normalizeLegacyHolidayFields, validatePolicy, validateHolidayEntries, nextDate } = require('../src/lib/japan-payroll.ts');
+const { DEFAULT_PAYROLL_POLICY: defaults, splitShift, groupHolidayEntries, calculateHolidayPay, normalizeLegacyHolidayFields, validatePolicy, validateHolidayEntries, nextDate } = require('../src/lib/japan-payroll.ts');
 const { APP_VERSION, isNewerVersion } = require('../src/lib/app-version.ts');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -113,4 +113,33 @@ test('numeric form fields remove leading zeros without damaging decimal/negative
   for (const [raw, expected] of [['02', '2'], ['0002', '2'], ['00', '0'], ['00.5', '0.5'], ['0.5', '0.5'], ['0.', '0.'], ['-02', '-2'], ['-0.5', '-0.5'], ['', ''], ['2', '2']]) {
     assert.equal(normalizeNumberInput(raw), expected);
   }
+});
+
+test('overnight date rows are one visible shift card without changing pay', () => {
+  const entries = rows('2026-10-12', 'night-21', 'statutory').map(e => ({ ...e, groupId: 'shift-1' }));
+  assert.equal(groupHolidayEntries(entries).length, 1);
+  assert.equal(groupHolidayEntries(entries)[0].length, 2);
+  assert.equal(calculateHolidayPay(entries, defaults, 1000).work, 10800);
+  assert.equal(groupHolidayEntries([...entries, ...rows('2026-10-14', 'day-08', 'company-ot')]).length, 2);
+  const oldEntries = rows('2026-10-12', 'night-19', 'statutory');
+  assert.equal(groupHolidayEntries(oldEntries).length, 1);
+  assert.doesNotThrow(() => groupHolidayEntries(oldEntries.map((e, i) => i === 0 ? { ...e, date: '' } : e)));
+});
+
+test('editable regular shift times and breaks are independent payroll snapshots', () => {
+  const shift = { ...defaults.shifts[0], id: 'edited-regular', start: '09:00', end: '18:30', breakStart: '13:00', breakMinutes: 45 };
+  assert.equal(validatePolicy({ ...defaults, shifts: [shift] }), null);
+  assert.deepEqual(splitShift('2026-10-12', shift).map(row => [row.hours, row.nightHours]), [[8.75, 0]]);
+  assert.equal(defaults.shifts[0].start, '08:00');
+  assert.equal(defaults.shifts[0].breakMinutes, 60);
+  assert.equal(validatePolicy({ ...defaults, shifts: [{ ...defaults.shifts[3], id: 'edited-night', start: '20:00', end: '05:00' }] }), null);
+});
+
+test('company holiday 1.50 is distinct from statutory holiday and monthly overtime threshold', () => {
+  const rate = defaults.holidayRates.find(r => r.id === 'company-150');
+  assert.equal(rate.multiplier, 1.5);
+  assert.equal(rate.statutory, false);
+  const entries = rows('2026-10-10', 'day-08', 'company-150');
+  assert.equal(validateHolidayEntries(entries, defaults, '2026-10'), null);
+  assert.deepEqual(calculateHolidayPay(entries, defaults, 1000), { work: 12000, night: 0, hours: 8, nightHours: 0 });
 });

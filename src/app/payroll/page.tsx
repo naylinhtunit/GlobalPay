@@ -277,7 +277,7 @@ export default function PayrollPage() {
     if (country === "Japan") {
       const policy = japanData.workPolicy;
       const error = !policy ? "Company payroll settings are still loading. Please wait or check your connection." :
-        validatePolicy(policy) || validateHolidayEntries(japanData.holidayEntries || [], policy, selectedMonth) ||
+        validatePolicy({ ...policy, shifts: [...policy.shifts, ...(japanData.shifts || []).filter(s => s.customized && s.preset).map(s => s.preset!)] }) || validateHolidayEntries(japanData.holidayEntries || [], policy, selectedMonth) ||
         (japanData.shifts?.some(s => !Number.isInteger(s.days) || s.days < 0 || s.days > 31) ? "Regular shift days must be whole numbers between 0 and 31." : null) ||
         ((japanData.shifts || []).reduce((sum, s) => sum + s.days, 0) > new Date(Number(selectedMonth.slice(0, 4)), Number(selectedMonth.slice(5)), 0).getDate() ? "Regular shift days exceed the days in the payroll month." : null) ||
         ([japanData.absenceHours, japanData.lateEarlyHours, japanData.regularOTHours, japanData.lateNightOTHours, japanData.paidLeaveDays, japanData.saturdayHolidayMorningHours || 0, japanData.saturdayHolidayAfternoonHours || 0, japanData.sundayHolidayMorningHours || 0, japanData.sundayHolidayAfternoonHours || 0].some(n => !Number.isFinite(n) || n < 0) ? "Attendance and overtime hours cannot be negative or invalid." : null);
