@@ -1,5 +1,6 @@
-
 "use client";
+import { useLanguage } from "@/context/LanguageContext";
+import { formatDisplayDate, localizeShiftLabel } from "@/lib/i18n";
 
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { Navbar } from "@/components/layout/Navbar";
@@ -55,6 +56,7 @@ import { errorEmitter } from "@/firebase/error-emitter";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function PayrollPage() {
+  const { t, language } = useLanguage();
   const { country, currency } = useCountry();
   const { user } = useUser();
   const firestore = useFirestore();
@@ -80,14 +82,14 @@ export default function PayrollPage() {
       const year = d.getFullYear();
       const month = String(d.getMonth() + 1).padStart(2, '0');
       const value = `${year}-${month}`;
-      const label = d.toLocaleString('default', { month: 'long', year: 'numeric' });
+      const label = formatDisplayDate(d, language, { month: 'long', year: 'numeric' });
       options.push({ value, label });
     }
     setMonthOptions(options);
     if (!selectedMonth && options.length > 0) {
       setSelectedMonth(options[0].value);
     }
-  }, []);
+  }, [language]);
 
   const [japanData, setJapanData] = useState<JapanData>({
     scheduledDays: 0,
@@ -282,7 +284,7 @@ export default function PayrollPage() {
         ((japanData.shifts || []).reduce((sum, s) => sum + s.days, 0) > new Date(Number(selectedMonth.slice(0, 4)), Number(selectedMonth.slice(5)), 0).getDate() ? "Regular shift days exceed the days in the payroll month." : null) ||
         ([japanData.absenceHours, japanData.lateEarlyHours, japanData.regularOTHours, japanData.lateNightOTHours, japanData.paidLeaveDays, japanData.saturdayHolidayMorningHours || 0, japanData.saturdayHolidayAfternoonHours || 0, japanData.sundayHolidayMorningHours || 0, japanData.sundayHolidayAfternoonHours || 0].some(n => !Number.isFinite(n) || n < 0) ? "Attendance and overtime hours cannot be negative or invalid." : null);
       if (error) {
-        toast({ variant: "destructive", title: "Check payroll details", description: error });
+        toast({ variant: "destructive", title: t("Check payroll details"), description: t(error) });
         return;
       }
     }
@@ -365,8 +367,8 @@ export default function PayrollPage() {
 
     batch.commit().then(() => {
       toast({ 
-        title: editingRecordId ? "Payroll updated" : "Payroll generated", 
-        description: `Successfully processed for ${selectedMonth}` 
+        title: editingRecordId ? t("Payroll updated") : t("Payroll generated"),
+        description: t("Successfully processed for {month}", { month: selectedMonth })
       });
       setIsModalOpen(false);
       resetForm();
@@ -421,14 +423,14 @@ export default function PayrollPage() {
   };
 
   const handleDelete = async (record: any) => {
-    if (!firestore || !confirm("Are you sure you want to delete this payroll record?")) return;
+    if (!firestore || !confirm(t("Are you sure you want to delete this payroll record?"))) return;
     
     const batch = writeBatch(firestore);
     const payrollRef = doc(firestore, "payrollRecords", record.id);
     batch.delete(payrollRef);
 
     batch.commit().then(() => {
-      toast({ title: "Payroll deleted", variant: "destructive" });
+      toast({ title: t("Payroll deleted"), variant: "destructive" });
     }).catch(err => {
       errorEmitter.emit('permission-error', new FirestorePermissionError({
         path: payrollRef.path,
@@ -460,67 +462,67 @@ export default function PayrollPage() {
       const record = previewData;
       
       let exportData: any[] = [
-        ["PAYSLIP REPORT", ""],
-        ["Employee Name", emp?.fullName || "N/A"],
-        ["Employee ID", emp?.employeeNumber || "N/A"],
-        ["Period", previewData.month],
-        ["Country", previewData.country],
-        ["Status", record.status],
+        [t("PAYSLIP REPORT"), ""],
+        [t("Employee Name"), emp?.fullName || "N/A"],
+        [t("Employee ID"), emp?.employeeNumber || "N/A"],
+        [t("Period"), previewData.month],
+        [t("Country"), t(previewData.country)],
+        [t("Status"), t(record.status || "")],
         ["", ""],
       ];
 
       if (previewData.country === "Japan") {
-        exportData.push(["ATTENDANCE", "VALUE"]);
-        exportData.push(["Work Days", data.scheduledDays]);
-        exportData.push(["Absence", data.absenceHours]);
-        exportData.push(["Paid Leave", data.paidLeaveDays]);
+        exportData.push([t("Attendance"), t("Value")]);
+        exportData.push([t("Work Days"), data.scheduledDays]);
+        exportData.push([t("Absence"), data.absenceHours]);
+        exportData.push([t("Paid Leave"), data.paidLeaveDays]);
         const holidayHours = getHolidayAttendance(data);
-        exportData.push(["Holiday Day Hours (outside 22:00–05:00)", holidayHours.day]);
-        exportData.push(["Holiday Night Hours (22:00–05:00)", holidayHours.night]);
-        exportData.push(["Holiday Total Hours (Day + Night)", holidayHours.total]);
+        exportData.push([t("Holiday Day Hours"), holidayHours.day]);
+        exportData.push([t("Holiday Night Hours"), holidayHours.night]);
+        exportData.push([t("Total hours (day + night)"), holidayHours.total]);
         if (data.holidayEntries?.length) {
-          exportData.push(["HOLIDAY DATE", "SHIFT", "DAY HOURS", "NIGHT HOURS", "TOTAL HOURS (DAY + NIGHT)", "RATE", "MULTIPLIER"]);
+          exportData.push([t("Holiday date"), t("Shift"), t("Day hours"), t("Night hours"), t("Total hours (day + night)"), t("Rate"), t("Multiplier")]);
           for (const entry of data.holidayEntries) {
             const rate = data.workPolicy?.holidayRates?.find((r: { id: string }) => r.id === entry.rateId);
             const hours = splitHolidayHours(entry.hours, entry.nightHours);
-            exportData.push([entry.date, entry.shiftName, hours.day, hours.night, hours.total, rate?.name || "", rate?.multiplier || ""]);
+            exportData.push([entry.date, localizeShiftLabel(entry.shiftName, language), hours.day, hours.night, hours.total, t(rate?.name || ""), rate?.multiplier ?? ""]);
           }
         }
         exportData.push(["", ""]);
         
-        exportData.push(["EARNINGS", "AMOUNT (JPY)"]);
-        exportData.push(["Basic Salary", record.basicSalary]);
-        exportData.push(["Overtime Allowance", data.otAllowance]);
-        exportData.push(["Late Night Allowance", data.lateNightOTAllowance]);
-        exportData.push(["Company Shift Allowance 1", data.nightShiftAllowance]);
-        exportData.push(["Company Shift Allowance 2", data.nightShiftAllowanceExtra]);
-        exportData.push(["Holiday Work Allowance", data.holidayWorkAllowance]);
-        exportData.push(["Holiday Night Allowance", data.holidayNightAllowance]);
-        exportData.push(["Gross Total", record.totalGrossPay]);
+        exportData.push([t("Earnings"), t("Amount (JPY)")]);
+        exportData.push([t("Basic Salary"), record.basicSalary]);
+        exportData.push([t("Regular OT (1.25)"), data.otAllowance]);
+        exportData.push([t("Late Night (1.50)"), data.lateNightOTAllowance]);
+        exportData.push([t("Company Shift Alw 1 (0.25)"), data.nightShiftAllowance]);
+        exportData.push([t("Company Shift Alw 2 (0.30)"), data.nightShiftAllowanceExtra]);
+        exportData.push([t("Holiday Pay (Day + Night)"), data.holidayWorkAllowance]);
+        exportData.push([t("Holiday Night Premium Only"), data.holidayNightAllowance]);
+        exportData.push([t("Gross Total"), record.totalGrossPay]);
         exportData.push(["", ""]);
         
-        exportData.push(["DEDUCTIONS", "AMOUNT (JPY)"]);
-        exportData.push(["Health Insurance", data.healthInsurance]);
-        exportData.push(["Pension", data.pension]);
-        exportData.push(["Income Tax", data.incomeTax]);
-        exportData.push(["Total Deductions", record.totalDeductions]);
+        exportData.push([t("Deductions"), t("Amount (JPY)")]);
+        exportData.push([t("Health Ins (~5.5%)"), data.healthInsurance]);
+        exportData.push([t("Welfare Pension (~9.8%)"), data.pension]);
+        exportData.push([t("Income Tax"), data.incomeTax]);
+        exportData.push([t("Total Deductions"), record.totalDeductions]);
         exportData.push(["", ""]);
         
-        exportData.push(["NET PAY", record.netPay]);
+        exportData.push([t("Net Pay"), record.netPay]);
       } else {
-        exportData.push(["EARNINGS", "AMOUNT (MMK)"]);
-        exportData.push(["Basic Salary (MMK)", Math.round(record.totalGrossPay - (data.otHours * (record.basicSalary / 240) * 2) - (data.attendanceBonus || 0) - (data.mealAllowance || 0))]);
-        exportData.push(["OT Hours", data.otHours]);
-        exportData.push(["Gross Total", record.totalGrossPay]);
+        exportData.push([t("Earnings"), t("Amount (MMK)")]);
+        exportData.push([t("Basic Salary (MMK)"), Math.round(record.totalGrossPay - (data.otHours * (record.basicSalary / 240) * 2) - (data.attendanceBonus || 0) - (data.mealAllowance || 0))]);
+        exportData.push([t("OT Hours (2x Rate)"), data.otHours]);
+        exportData.push([t("Gross Total"), record.totalGrossPay]);
         exportData.push(["", ""]);
         
-        exportData.push(["DEDUCTIONS", "AMOUNT (MMK)"]);
-        exportData.push(["SSB", data.ssbAmount]);
-        exportData.push(["Income Tax", data.incomeTax]);
-        exportData.push(["Total Deductions", record.totalDeductions]);
+        exportData.push([t("Deductions"), t("Amount (MMK)")]);
+        exportData.push([t("SSB"), data.ssbAmount]);
+        exportData.push([t("Income Tax"), data.incomeTax]);
+        exportData.push([t("Total Deductions"), record.totalDeductions]);
         exportData.push(["", ""]);
         
-        exportData.push(["NET PAY", record.netPay]);
+        exportData.push([t("Net Pay"), record.netPay]);
       }
 
       const ws = utils.aoa_to_sheet(exportData);
@@ -528,10 +530,10 @@ export default function PayrollPage() {
       utils.book_append_sheet(wb, ws, "Payslip");
       writeFile(wb, `Payslip_${emp?.fullName || 'Employee'}_${previewData.month}.xlsx`);
       
-      toast({ title: "Success", description: "Payslip downloaded as Excel file." });
+      toast({ title: t("Success"), description: t("Payslip downloaded as Excel file.") });
     } catch (error) {
       console.error("Excel Download failed:", error);
-      toast({ title: "Error", description: "Failed to download Excel.", variant: "destructive" });
+      toast({ title: t("Error"), description: t("Failed to download Excel."), variant: "destructive" });
     } finally {
       setIsDownloading(false);
     }
@@ -571,10 +573,10 @@ export default function PayrollPage() {
       }
       pdf.save(`Payslip_${previewData?.employee?.fullName || 'Employee'}_${previewData?.month}.pdf`);
       
-      toast({ title: "Success", description: "Payslip downloaded as PDF file." });
+      toast({ title: t("Success"), description: t("Payslip downloaded as PDF file.") });
     } catch (error) {
       console.error("PDF Download failed:", error);
-      toast({ title: "Error", description: "Failed to download PDF.", variant: "destructive" });
+      toast({ title: t("Error"), description: t("Failed to download PDF."), variant: "destructive" });
     } finally {
       setIsPdfDownloading(false);
     }
@@ -586,18 +588,18 @@ export default function PayrollPage() {
       <main className="p-4 md:p-8 space-y-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-slate-100 uppercase">Monthly Payroll</h2>
-            <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Historical audit & processing for {country}</p>
+            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-slate-100 uppercase">{t("Monthly Payroll")}</h2>
+            <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">{t("Historical audit & processing for {country}", { country: t(country) })}</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex items-center gap-2 bg-background dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl pl-3 shadow-sm h-11 w-full sm:w-auto transition-all hover:bg-slate-50 dark:hover:bg-slate-800/50 group overflow-hidden">
               <Filter size={16} className="text-slate-400 shrink-0 group-hover:text-primary transition-colors" />
               <Select onValueChange={setFilterMonth} value={filterMonth}>
                 <SelectTrigger className="border-none shadow-none focus:ring-0 h-full p-0 pr-3 flex-1 bg-transparent hover:bg-transparent min-w-[120px] font-bold text-xs uppercase tracking-wider transition-none">
-                  <SelectValue placeholder="All Months" />
+                  <SelectValue placeholder={t("All Months")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Months</SelectItem>
+                  <SelectItem value="all">{t("All Months")}</SelectItem>
                   {monthOptions.map(opt => (
                     <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
                   ))}
@@ -611,20 +613,19 @@ export default function PayrollPage() {
             }}>
               <DialogTrigger asChild>
                 <Button onClick={resetForm} className="gap-2 bg-primary shadow-md hover:shadow-lg transition-all font-bold h-11">
-                  <Calculator size={18} /> New Payroll Entry
-                </Button>
+                  <Calculator size={18} /> {t("New Payroll Entry")} </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[800px] max-h-[95vh] overflow-y-auto border-none shadow-2xl dark:bg-slate-900">
                 <DialogHeader>
-                  <DialogTitle className="text-xl font-black dark:text-slate-100">{editingRecordId ? "Adjust Payroll" : "Process New Payroll"} - {country}</DialogTitle>
+                  <DialogTitle className="text-xl font-black dark:text-slate-100">{editingRecordId ? t("Adjust Payroll") : t("Process New Payroll")} - {t(country)}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-6 py-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Select Employee</Label>
+                      <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">{t("Select Employee")}</Label>
                       <Select onValueChange={setSelectedEmpId} value={selectedEmpId}>
                         <SelectTrigger className="h-11 font-bold dark:bg-slate-800">
-                          <SelectValue placeholder="Choose employee" />
+                          <SelectValue placeholder={t("Choose employee")} />
                         </SelectTrigger>
                         <SelectContent>
                           {(employees || []).map((emp: any) => (
@@ -634,10 +635,10 @@ export default function PayrollPage() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Payroll Month</Label>
+                      <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">{t("Payroll Month")}</Label>
                       <Select onValueChange={setSelectedMonth} value={selectedMonth}>
                         <SelectTrigger className="h-11 font-bold dark:bg-slate-800">
-                          <SelectValue placeholder="Choose month" />
+                          <SelectValue placeholder={t("Choose month")} />
                         </SelectTrigger>
                         <SelectContent>
                           {monthOptions.map(opt => (
@@ -651,18 +652,16 @@ export default function PayrollPage() {
                   {selectedEmployee && (
                     <div className="mt-4 p-5 border border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50 dark:bg-slate-800/50 flex items-center gap-4 shadow-inner">
                       <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-black text-lg">
-                        {selectedEmployee.fullName?.[0] || 'E'}
+                        {selectedEmployee.fullName?.[0] || t("E")}
                       </div>
                       <div className="flex-1">
                         <p className="text-sm font-black text-slate-900 dark:text-slate-100">{selectedEmployee.fullName}</p>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[10px] font-black bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-2 py-0.5 rounded text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                            Base: {historicalSalary.toLocaleString()} {selectedEmployee.salaryCurrency || currency}
+                          <span className="text-[10px] font-black bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-2 py-0.5 rounded text-slate-500 dark:text-slate-400 uppercase tracking-wider"> {t("Base:")} {historicalSalary.toLocaleString()} {selectedEmployee.salaryCurrency || currency}
                           </span>
                           {selectedEmployee.salaryHistory && selectedEmployee.salaryHistory.length > 1 && (
                             <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded font-black flex items-center gap-1 uppercase tracking-wider">
-                              <History size={10} /> Historical Rate Applied
-                            </span>
+                              <History size={10} /> {t("Historical Rate Applied")} </span>
                           )}
                         </div>
                       </div>
@@ -693,7 +692,7 @@ export default function PayrollPage() {
                   
                   <DialogFooter>
                     <Button onClick={handleGenerate} className="w-full h-12 text-sm font-black shadow-lg" disabled={!selectedEmpId}>
-                      {editingRecordId ? "UPDATE PAYSLIP" : "PROCESS PAYSLIP"}
+                      {editingRecordId ? t("UPDATE PAYSLIP") : t("PROCESS PAYSLIP")}
                     </Button>
                   </DialogFooter>
                 </div>
@@ -707,18 +706,18 @@ export default function PayrollPage() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50/50 dark:bg-slate-900/30 hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
-                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Period</TableHead>
-                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Employee Profile</TableHead>
-                  <TableHead className="hidden sm:table-cell text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Net Disbursement</TableHead>
-                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Status</TableHead>
-                  <TableHead className="text-right text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Actions</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">{t("Period")}</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">{t("Employee Profile")}</TableHead>
+                  <TableHead className="hidden sm:table-cell text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">{t("Net Pay")}</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">{t("Status")}</TableHead>
+                  <TableHead className="text-right text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">{t("Actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {payrollLoading ? (
-                  <TableRow><TableCell colSpan={5} className="text-center py-12 text-sm font-medium text-slate-400 dark:text-slate-500">Syncing payroll logs...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} className="text-center py-12 text-sm font-medium text-slate-400 dark:text-slate-500">{t("Syncing payroll logs...")}</TableCell></TableRow>
                 ) : sortedRecords.length === 0 ? (
-                  <TableRow><TableCell colSpan={5} className="text-center py-12 text-sm font-medium text-slate-400 dark:text-slate-500 italic">No disbursements found for this period.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} className="text-center py-12 text-sm font-medium text-slate-400 dark:text-slate-500 italic">{t("No disbursements found for this period.")}</TableCell></TableRow>
                 ) : (
                   sortedRecords.map((rec: any) => (
                     <TableRow key={rec.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-slate-100 dark:border-slate-800">
@@ -728,15 +727,15 @@ export default function PayrollPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col">
-                          <span className="font-bold text-slate-900 dark:text-slate-100">{(employees || []).find((e: any) => e.id === rec.employeeId)?.fullName || 'Unknown'}</span>
-                          <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter">Code: {(employees || []).find((e: any) => e.id === rec.employeeId)?.employeeNumber || 'N/A'}</span>
+                          <span className="font-bold text-slate-900 dark:text-slate-100">{(employees || []).find((e: any) => e.id === rec.employeeId)?.fullName || t("Unknown")}</span>
+                          <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter">{t("Code:")} {(employees || []).find((e: any) => e.id === rec.employeeId)?.employeeNumber || 'N/A'}</span>
                         </div>
                       </TableCell>
                       <TableCell className="hidden sm:table-cell font-black text-slate-900 dark:text-slate-100">
                         {Math.round(rec.netPay || 0).toLocaleString()} <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">{currency}</span>
                       </TableCell>
                       <TableCell>
-                        <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 text-[9px] font-black uppercase tracking-widest border border-emerald-200 dark:border-emerald-800">{rec.status}</span>
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 text-[9px] font-black uppercase tracking-widest border border-emerald-200 dark:border-emerald-800">{t(rec.status || "")}</span>
                       </TableCell>
                       <TableCell className="text-right space-x-1">
                         <Button variant="ghost" size="icon" onClick={() => handlePreview(rec)} className="h-8 w-8 hover:bg-slate-100 dark:hover:bg-slate-800"><Eye size={14} className="text-slate-600 dark:text-slate-400" /></Button>
@@ -755,7 +754,7 @@ export default function PayrollPage() {
           <DialogContent className="max-w-[1000px] w-[95vw] h-[95vh] overflow-y-auto p-4 md:p-6 border-none shadow-2xl dark:bg-slate-900">
             <DialogHeader>
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pr-12 gap-4">
-                <DialogTitle className="text-xl font-black dark:text-slate-100">Payslip Document Preview</DialogTitle>
+                <DialogTitle className="text-xl font-black dark:text-slate-100">{t("Payslip Document Preview")}</DialogTitle>
                 <div className="flex gap-2">
                   <TooltipProvider>
                     <Tooltip>
@@ -770,7 +769,7 @@ export default function PayrollPage() {
                           {isPdfDownloading ? <Loader2 size={18} className="animate-spin" /> : <FileDown size={18} className="text-red-500" />}
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent>Download PDF</TooltipContent>
+                      <TooltipContent>{t("Download PDF")}</TooltipContent>
                     </Tooltip>
                     
                     <Tooltip>
@@ -785,7 +784,7 @@ export default function PayrollPage() {
                           {isDownloading ? <Loader2 size={18} className="animate-spin" /> : <FileSpreadsheet size={18} className="text-emerald-500" />}
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent>Download Excel</TooltipContent>
+                      <TooltipContent>{t("Download Excel")}</TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </div>

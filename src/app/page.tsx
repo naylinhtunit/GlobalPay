@@ -1,4 +1,6 @@
 "use client";
+import { LanguageSelector } from "@/components/LanguageSelector";
+import { useLanguage } from "@/context/LanguageContext";
 
 import { useEffect, useLayoutEffect, useState } from "react";
 import Link from "next/link";
@@ -42,6 +44,7 @@ function isNativeApp() {
 }
 
 export default function LandingPage() {
+  const { t } = useLanguage();
   const router = useRouter();
   const [isNative] = useState(() => isNativeApp());
 
@@ -55,17 +58,18 @@ export default function LandingPage() {
     <div className="min-h-screen bg-white dark:bg-slate-950">
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b bg-white/80 dark:bg-slate-950/80 backdrop-blur supports-[backdrop-filter]:bg-white/60">
-        <div className="container mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-6">
+        <div className="container mx-auto flex flex-wrap gap-y-2 py-3 sm:h-16 sm:flex-nowrap sm:py-0 max-w-7xl items-center justify-between px-4 md:px-6">
           <div className="flex items-center gap-2 text-primary">
             <Shield size={28} strokeWidth={2.5} />
             <span className="text-xl font-black tracking-tight">GlobalPay</span>
           </div>
-          <div className="flex items-center gap-2 md:gap-3">
+          <div className="flex w-full sm:w-auto items-center justify-end gap-2 md:gap-3">
+            <LanguageSelector compact />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="gap-2 font-bold text-xs md:text-sm h-9 rounded-xl">
                   <Download size={16} />
-                  <span className="hidden sm:inline">Download</span>
+                  <span className="hidden sm:inline">{t("Download")}</span>
                   <ChevronDown size={14} />
                 </Button>
               </DropdownMenuTrigger>
@@ -81,8 +85,8 @@ export default function LandingPage() {
                       <Smartphone size={18} className="text-green-600" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-bold">Android App</p>
-                      <p className="text-[11px] text-muted-foreground">APK Direct Download</p>
+                      <p className="text-sm font-bold">{t("Android App")}</p>
+                      <p className="text-[11px] text-muted-foreground">{t("APK Direct Download")}</p>
                     </div>
                     <Download size={14} className="text-muted-foreground" />
                   </a>
@@ -98,8 +102,8 @@ export default function LandingPage() {
                       <Monitor size={18} />
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-bold">macOS App</p>
-                      <p className="text-[11px] text-muted-foreground">.dmg Unsigned</p>
+                      <p className="text-sm font-bold">{t("macOS App")}</p>
+                      <p className="text-[11px] text-muted-foreground">{t(".dmg Unsigned")}</p>
                     </div>
                     <Download size={14} className="text-muted-foreground" />
                   </a>
@@ -115,8 +119,8 @@ export default function LandingPage() {
                       <Laptop size={18} className="text-blue-600" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-bold">Windows App</p>
-                      <p className="text-[11px] text-muted-foreground">.exe Unsigned</p>
+                      <p className="text-sm font-bold">{t("Windows App")}</p>
+                      <p className="text-[11px] text-muted-foreground">{t(".exe Unsigned")}</p>
                     </div>
                     <Download size={14} className="text-muted-foreground" />
                   </a>
@@ -124,7 +128,7 @@ export default function LandingPage() {
               </DropdownMenuContent>
             </DropdownMenu>
             <Button asChild className="font-bold rounded-xl h-9 px-5">
-              <Link href="/login">Login</Link>
+              <Link href="/login">{t("Login")}</Link>
             </Button>
           </div>
         </div>
@@ -135,32 +139,22 @@ export default function LandingPage() {
         <div className="grid lg:grid-cols-2 gap-10 items-center">
           <div className="space-y-6">
             <div className="inline-flex items-center gap-2 rounded-full border bg-slate-50 dark:bg-slate-900 px-3 py-1 text-xs font-bold">
-              <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-              Trusted by teams in Japan & Myanmar
-            </div>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight leading-[1.1]">
-              Global Payroll,
-              <span className="text-primary"> Simplified.</span>
+              <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" /> {t("Trusted by teams in Japan & Myanmar")} </div>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight leading-[1.1]"> {t("Global Payroll,")} <span className="text-primary"> {t("Simplified.")}</span>
             </h1>
-            <p className="text-lg text-muted-foreground leading-relaxed max-w-xl">
-              Specialized payroll for <span className="font-bold text-foreground">Japan (JPY)</span> &{" "}
-              <span className="font-bold text-foreground">Myanmar (MMK)</span>. Compliance, payslips,
-              and workforce management — all in one secure platform.
-            </p>
+            <p className="text-lg text-muted-foreground leading-relaxed max-w-xl"> {t("Specialized payroll for")} <span className="font-bold text-foreground">{t("Japan (JPY)")}</span> &{" "}
+              <span className="font-bold text-foreground">{t("Myanmar (MMK)")}</span>{t(". Compliance, payslips, and workforce management — all in one secure platform.")} </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <Button asChild size="lg" className="rounded-xl h-12 px-8 font-bold text-base">
-                <Link href="/login">
-                  Get Started — Login <ArrowRight size={18} className="ml-2" />
+                <Link href="/login"> {t("Get Started — Login")} <ArrowRight size={18} className="ml-2" />
                 </Link>
               </Button>
             </div>
             <div className="flex items-center gap-6 pt-2 text-xs text-muted-foreground">
               <span className="flex items-center gap-1.5">
-                <CheckCircle2 size={16} className="text-green-600" /> No credit card
-              </span>
+                <CheckCircle2 size={16} className="text-green-600" /> {t("No credit card")} </span>
               <span className="flex items-center gap-1.5">
-                <CheckCircle2 size={16} className="text-green-600" /> Secure & Compliant
-              </span>
+                <CheckCircle2 size={16} className="text-green-600" /> {t("Secure & Compliant")} </span>
             </div>
           </div>
 
@@ -173,7 +167,7 @@ export default function LandingPage() {
                   <span className="h-3 w-3 rounded-full bg-yellow-500" />
                   <span className="h-3 w-3 rounded-full bg-green-500" />
                 </div>
-                <span className="text-xs font-mono text-slate-400 ml-3">GlobalPay Dashboard — Preview</span>
+                <span className="text-xs font-mono text-slate-400 ml-3">{t("GlobalPay Dashboard — Preview")}</span>
               </div>
               <CardContent className="p-6 space-y-4 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-950">
                 <div className="grid grid-cols-3 gap-3">
@@ -185,13 +179,13 @@ export default function LandingPage() {
                     <div key={s.label} className="rounded-2xl bg-white dark:bg-slate-900 border p-3 shadow-sm">
                       <s.icon size={16} className={s.color} />
                       <p className="text-lg font-black mt-2">{s.value}</p>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{s.label}</p>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{t(s.label)}</p>
                     </div>
                   ))}
                 </div>
                 <div className="rounded-2xl bg-primary text-primary-foreground p-4 flex items-center justify-between">
                   <div>
-                    <p className="text-xs opacity-80">Net Pay (This Month)</p>
+                    <p className="text-xs opacity-80">{t("Net Pay (This Month)")}</p>
                     <p className="text-2xl font-black">¥ 248,517</p>
                   </div>
                   <Calculator size={28} className="opacity-60" />
@@ -206,8 +200,8 @@ export default function LandingPage() {
       <section className="bg-slate-50 dark:bg-slate-900/50 border-y">
         <div className="container mx-auto max-w-7xl px-4 md:px-6 py-16">
           <div className="text-center max-w-2xl mx-auto mb-10">
-            <h2 className="text-3xl font-black tracking-tight">Built for Japan & Myanmar</h2>
-            <p className="text-muted-foreground mt-3">Everything you need to run compliant payroll across borders.</p>
+            <h2 className="text-3xl font-black tracking-tight">{t("Built for Japan & Myanmar")}</h2>
+            <p className="text-muted-foreground mt-3">{t("Everything you need to run compliant payroll across borders.")}</p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {[
@@ -242,13 +236,13 @@ export default function LandingPage() {
                 desc: "Profiles, salary history, paid leave tracking, department assignment, multi-country support.",
               },
             ].map((f) => (
-              <Card key={f.title} className="rounded-2xl border-none shadow-sm hover:shadow-md transition-shadow">
+              <Card key={t(f.title)} className="rounded-2xl border-none shadow-sm hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
                   <div className="h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
                     <f.icon size={22} className="text-primary" />
                   </div>
-                  <h3 className="font-black">{f.title}</h3>
-                  <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{f.desc}</p>
+                  <h3 className="font-black">{t(f.title)}</h3>
+                  <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{t(f.desc)}</p>
                 </CardContent>
               </Card>
             ))}
@@ -263,7 +257,7 @@ export default function LandingPage() {
         <div className="container mx-auto max-w-7xl px-4 md:px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2 font-black text-foreground">
             <Shield size={20} className="text-primary" /> GlobalPay
-            <span className="font-normal text-muted-foreground">© 2026 GlobalPay Enterprise</span>
+            <span className="font-normal text-muted-foreground">{t("© 2026 GlobalPay Enterprise")}</span>
           </div>
         </div>
       </footer>

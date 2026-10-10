@@ -1,4 +1,5 @@
 "use client";
+import { useLanguage } from "@/context/LanguageContext";
 
 import React, { useState, useEffect } from "react";
 import { Download, X, RefreshCw } from "lucide-react";
@@ -10,6 +11,7 @@ import { isNewerVersion } from "@/lib/app-version";
 
 const GITHUB_REPO = "naylinhtunit/GlobalPay-Releases";
 export function AppUpdater() {
+  const { t } = useLanguage();
   const [show, setShow] = useState(false);
   const [latestTag, setLatestTag] = useState<string | null>(null);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
@@ -97,13 +99,12 @@ export function AppUpdater() {
           <RefreshCw size={24} />
         </div>
         <div className="flex-1 overflow-hidden">
-          <h3 className="text-sm font-bold truncate">Update Available — {latestTag}</h3>
-          <p className="text-xs text-muted-foreground truncate">Tap to download & install {latestTag}</p>
+          <h3 className="text-sm font-bold truncate">{t("Update Available —")} {latestTag}</h3>
+          <p className="text-xs text-muted-foreground truncate">{t("Tap to download & install")} {latestTag}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button size="sm" onClick={handleUpdate} className="bg-primary hover:bg-primary/90 text-xs font-bold gap-1.5 h-9">
-            <Download size={14} /> Update
-          </Button>
+            <Download size={14} /> {t("Update")} </Button>
           <Button variant="ghost" size="icon" onClick={handleDismiss} className="h-9 w-9 text-muted-foreground hover:bg-muted">
             <X size={16} />
           </Button>

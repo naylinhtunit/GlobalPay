@@ -1,5 +1,5 @@
-
 "use client";
+import { useLanguage } from "@/context/LanguageContext";
 
 import React, { useState, useEffect } from "react";
 import { Download, X, Shield } from "lucide-react";
@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { usePathname } from "next/navigation";
 
 export function PWAInstallPrompt() {
+  const { t } = useLanguage();
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
@@ -78,8 +79,8 @@ export function PWAInstallPrompt() {
           <Shield size={28} />
         </div>
         <div className="flex-1 overflow-hidden">
-          <h3 className="text-sm font-bold truncate">Install GlobalPay App</h3>
-          <p className="text-xs text-muted-foreground truncate">Add to home screen for quick access</p>
+          <h3 className="text-sm font-bold truncate">{t("Install GlobalPay App")}</h3>
+          <p className="text-xs text-muted-foreground truncate">{t("Add to home screen for quick access")}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button 
@@ -87,9 +88,7 @@ export function PWAInstallPrompt() {
             onClick={handleInstallClick}
             className="bg-primary hover:bg-primary/90 text-xs font-bold gap-1.5 h-9"
           >
-            <Download size={14} />
-            Install
-          </Button>
+            <Download size={14} /> {t("Install")} </Button>
           <Button 
             variant="ghost" 
             size="icon" 

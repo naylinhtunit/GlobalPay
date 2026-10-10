@@ -1,5 +1,5 @@
-
 "use client";
+import { useLanguage } from "@/context/LanguageContext";
 
 import React, { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
@@ -31,6 +31,7 @@ interface Props {
 }
 
 export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency }: Props) {
+  const { t } = useLanguage();
   const [effectiveBaseMMK, setEffectiveBaseMMK] = useState(baseSalary);
   
   const isUsd = salaryCurrency === "USD" || (baseSalary > 0 && baseSalary < 10000);
@@ -107,14 +108,14 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency 
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Globe size={16} className="text-primary" />
-                <span className="text-sm font-bold text-primary tracking-tight">Currency Conversion</span>
+                <span className="text-sm font-bold text-primary tracking-tight">{t("Currency Conversion")}</span>
               </div>
-              <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-widest px-2 py-0">USD Profile</Badge>
+              <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-widest px-2 py-0">{t("USD Profile")}</Badge>
             </div>
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Base Salary</Label>
+                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("Base Salary")}</Label>
                 <Input 
                   readOnly 
                   className="h-10 bg-muted/20 text-lg font-bold border-dashed"
@@ -122,7 +123,7 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency 
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Exchange Rate</Label>
+                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("Exchange Rate")}</Label>
                 <Input 
                   type="number" 
                   placeholder="0.00"
@@ -136,7 +137,7 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency 
           </div>
 
           <div className="px-4 py-3 flex justify-between items-center bg-muted/50 border-t">
-            <span className="text-xs font-semibold text-muted-foreground">Effective Basic Salary:</span>
+            <span className="text-xs font-semibold text-muted-foreground">{t("Effective Basic Salary:")}</span>
             <div className="text-right flex items-baseline gap-1">
               <span className="text-xl font-bold text-primary tracking-tight">{Math.round(effectiveBaseMMK).toLocaleString()}</span>
               <span className="text-[10px] font-bold text-primary/60 uppercase">MMK</span>
@@ -147,7 +148,7 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency 
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">OT Hours (2x Rate)</Label>
+          <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t("OT Hours (2x Rate)")}</Label>
           <Input 
             type="number" 
             placeholder="0"
@@ -158,7 +159,7 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency 
           />
         </div>
         <div className="space-y-2">
-          <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Attendance Bonus</Label>
+          <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t("Attendance Bonus")}</Label>
           <Input 
             type="number" 
             placeholder="0"
@@ -169,7 +170,7 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency 
           />
         </div>
         <div className="space-y-2 col-span-1 sm:col-span-2">
-          <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Meal Allowance</Label>
+          <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t("Meal Allowance")}</Label>
           <Input 
             type="number" 
             placeholder="0"
@@ -186,19 +187,17 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <div className="flex items-center gap-1.5">
-            <Label className="text-xs font-bold uppercase tracking-wider text-primary">SSB (2% Auto)</Label>
+            <Label className="text-xs font-bold uppercase tracking-wider text-primary">{t("SSB (2% Auto)")}</Label>
             <Popover>
               <PopoverTrigger asChild>
-                <button className="text-muted-foreground hover:text-primary transition-colors p-1 -m-1" aria-label="SSB Information">
+                <button className="text-muted-foreground hover:text-primary transition-colors p-1 -m-1" aria-label={t("SSB Information")}>
                   <Info size={14} />
                 </button>
               </PopoverTrigger>
               <PopoverContent className="text-xs p-4 space-y-3 w-[280px] max-w-[calc(100vw-40px)] shadow-2xl rounded-xl border-primary/20">
                 <p className="font-bold border-b border-primary/10 pb-2 flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-primary" />
-                  လူမှုဖူလုံရေးကြေး (SSB)
-                </p>
-                <p className="leading-relaxed text-muted-foreground">အခြေခံလစာ၏ ၂% ဖြစ်ပြီး တစ်လလျှင် အများဆုံး ၆,၀၀၀ ကျပ်အထိသာ အလိုအလျောက် သတ်မှတ်တွက်ချက်ပေးပါသည်။</p>
+                  <span className="h-2 w-2 rounded-full bg-primary" /> {t("Social security contribution (SSB)")} </p>
+                <p className="leading-relaxed text-muted-foreground">{t("Automatically calculates 2% of basic salary, capped at MMK 6,000 per month.")}</p>
               </PopoverContent>
             </Popover>
           </div>
@@ -212,22 +211,20 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency 
         </div>
         <div className="space-y-2">
           <div className="flex items-center gap-1.5">
-            <Label className="text-xs font-bold uppercase tracking-wider text-primary">Income Tax (PIT)</Label>
+            <Label className="text-xs font-bold uppercase tracking-wider text-primary">{t("Income Tax (PIT)")}</Label>
             <Popover>
               <PopoverTrigger asChild>
-                <button className="text-muted-foreground hover:text-primary transition-colors p-1 -m-1" aria-label="Income Tax Information">
+                <button className="text-muted-foreground hover:text-primary transition-colors p-1 -m-1" aria-label={t("Income Tax Information")}>
                   <Info size={14} />
                 </button>
               </PopoverTrigger>
               <PopoverContent className="text-xs p-4 space-y-3 w-[320px] max-w-[calc(100vw-40px)] shadow-2xl rounded-xl border-primary/20">
                 <p className="font-bold border-b border-primary/10 pb-2 flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-primary" />
-                  ဝင်ငွေခွန် တွက်ချက်ပုံ (PIT)
-                </p>
+                  <span className="h-2 w-2 rounded-full bg-primary" /> {t("Income tax calculation")} </p>
                 <div className="space-y-2.5 text-muted-foreground">
-                  <p className="leading-relaxed">၁။ တစ်နှစ်စာ စုစုပေါင်းဝင်ငွေကို အရင်တွက်ပါသည်။</p>
-                  <p className="leading-relaxed">၂။ အခြေခံသက်သာခွင့် ၂၀% (အများဆုံး ၁၀၀ သိန်း) ကို နှုတ်ပါသည်။</p>
-                  <p className="leading-relaxed">၃။ ကျန်ရှိသော ပမာဏအပေါ် ၅% မှ အမြင့်ဆုံး ၂၅% (သိန်း ၃၀၀ အထက်) အဆင့်ဆင့်သော အခွန်နှုန်းထားများဖြင့် တွက်ချက်ထားပါသည်။</p>
+                  <p className="leading-relaxed">{t("1. Calculate total annual income.")}</p>
+                  <p className="leading-relaxed">{t("2. Deduct the 20% basic relief (maximum MMK 10 million).")}</p>
+                  <p className="leading-relaxed">{t("3. Apply progressive rates of 5% to 25% (above MMK 30 million) to the remaining amount.")}</p>
                 </div>
               </PopoverContent>
             </Popover>
@@ -244,16 +241,16 @@ export function MyanmarPayrollForm({ data, onChange, baseSalary, salaryCurrency 
 
       <div className="p-5 bg-primary/5 dark:bg-primary/10 rounded-xl border border-primary/10 space-y-3 shadow-inner">
         <div className="flex justify-between items-center text-sm">
-          <span className="font-medium text-muted-foreground">Gross Total:</span>
+          <span className="font-medium text-muted-foreground">{t("Gross Total:")}</span>
           <span className="font-bold">{Math.round(grossPay).toLocaleString()} MMK</span>
         </div>
         <div className="flex justify-between items-center text-sm text-destructive/80">
-          <span className="font-medium">Total Deductions:</span>
+          <span className="font-medium">{t("Total Deductions:")}</span>
           <span className="font-bold">-{((data.ssbAmount || 0) + (data.incomeTax || 0)).toLocaleString()} MMK</span>
         </div>
         <Separator className="bg-primary/10" />
         <div className="flex justify-between items-center text-xl font-black">
-          <span className="text-primary tracking-tight">Net Salary:</span>
+          <span className="text-primary tracking-tight">{t("Net Salary:")}</span>
           <div className="flex items-baseline gap-1">
             <span className="text-primary">{Math.round(netPay).toLocaleString()}</span>
             <span className="text-[10px] text-primary/60 font-bold">MMK</span>

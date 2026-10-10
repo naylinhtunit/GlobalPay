@@ -1,4 +1,5 @@
 "use client";
+import { useLanguage } from "@/context/LanguageContext";
 
 import React, { useState, useEffect, useRef } from "react";
 import { Shield, LayoutDashboard, Users, FileText, LogOut, User, Globe, Sun, Moon, Calendar as CalendarIcon } from "lucide-react";
@@ -50,6 +51,7 @@ function shouldIgnoreSwipeTarget(target: EventTarget | null) {
 }
 
 export function Navbar() {
+  const { t } = useLanguage();
   const { country, setCountry } = useCountry();
   const { user } = useUser();
   const auth = useAuth();
@@ -148,16 +150,16 @@ export function Navbar() {
     try {
       if (!auth) throw new Error("Authentication service is not ready");
       await signOut(auth);
-      toast({ title: "Signed Out", description: "Logged out successfully." });
+      toast({ title: t("Signed Out"), description: t("Logged out successfully.") });
       router.replace("/login");
     } catch (error) {
-      toast({ title: "Error", description: "Failed to sign out.", variant: "destructive" });
+      toast({ title: t("Error"), description: t("Failed to sign out."), variant: "destructive" });
     }
   };
 
   const NavLinks = ({ onClick }: { onClick?: () => void }) => (
     <div className="space-y-1.5 mt-8">
-      {NAV_ITEMS.map((item) => (
+      {MOBILE_NAV_ITEMS.map((item) => (
         <Link key={item.href} href={item.href} onClick={onClick}>
           <span
             className={cn(
@@ -168,7 +170,7 @@ export function Navbar() {
             )}
           >
             <item.icon size={16} strokeWidth={2.5} />
-            {item.name}
+            {t(item.name)}
           </span>
         </Link>
       ))}
@@ -180,16 +182,14 @@ export function Navbar() {
       <DropdownMenuTrigger asChild>
         <Button variant="outline" className="w-full justify-start gap-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all rounded-xl h-11">
           <Globe size={16} className="text-primary" />
-          <span className="flex-1 text-left font-bold text-xs uppercase tracking-wider truncate dark:text-slate-200">{country}</span>
+          <span className="flex-1 text-left font-bold text-xs uppercase tracking-wider truncate dark:text-slate-200">{t(country)}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56 border-none shadow-2xl rounded-xl dark:bg-slate-900">
         <DropdownMenuItem onClick={() => setCountry("Japan")} className="gap-2 cursor-pointer py-3 font-bold text-xs uppercase tracking-wider dark:hover:bg-slate-800">
-          <span className="text-lg">🇯🇵</span> Japan (JPY)
-        </DropdownMenuItem>
+          <span className="text-lg">🇯🇵</span> {t("Japan (JPY)")} </DropdownMenuItem>
         <DropdownMenuItem onClick={() => setCountry("Myanmar")} className="gap-2 cursor-pointer py-3 font-bold text-xs uppercase tracking-wider dark:hover:bg-slate-800">
-          <span className="text-lg">🇲🇲</span> Myanmar (MMK)
-        </DropdownMenuItem>
+          <span className="text-lg">🇲🇲</span> {t("Myanmar (MMK)")} </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -236,7 +236,7 @@ export function Navbar() {
               </div>
               <div className="flex-1 overflow-hidden">
                 <p className="text-xs font-black truncate capitalize text-slate-900 dark:text-slate-100">{user.email?.split('@')[0]}</p>
-                <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">Admin Level</p>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">{t("Admin Level")}</p>
               </div>
             </div>
           )}
@@ -249,13 +249,11 @@ export function Navbar() {
             className="w-full justify-start gap-2 text-slate-400 dark:text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 font-black text-xs uppercase tracking-widest rounded-xl"
             onClick={handleSignOut}
           >
-            <LogOut size={16} strokeWidth={2.5} />
-            Sign Out
-          </Button>
+            <LogOut size={16} strokeWidth={2.5} /> {t("Sign Out")} </Button>
         </div>
       </nav>
       <nav
-        aria-label="Primary navigation"
+        aria-label={t("Primary navigation")}
         className="mobile-bottom-nav md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200/80 dark:border-slate-800 bg-background/95 dark:bg-slate-950/95 backdrop-blur-xl shadow-[0_-8px_30px_rgba(15,23,42,0.08)]"
       >
         <div className="grid grid-cols-5 h-[4.5rem] px-1">
@@ -279,7 +277,7 @@ export function Navbar() {
                 )}>
                   <item.icon size={21} strokeWidth={isActive ? 2.7 : 2.1} />
                 </span>
-                <span className="text-[10px] font-extrabold leading-none">{item.mobileName}</span>
+                <span className="text-[10px] font-extrabold leading-none">{t(item.mobileName)}</span>
                 {isActive && <span className="absolute bottom-1 h-1 w-1 rounded-full bg-primary" />}
               </Link>
             );
@@ -298,7 +296,7 @@ export function Navbar() {
                 <span className={cn("flex h-8 min-w-12 items-center justify-center rounded-2xl transition-all", isActive && "bg-primary/10 dark:bg-primary/20")}>
                   <User size={21} strokeWidth={isActive ? 2.7 : 2.1} />
                 </span>
-                <span className="text-[10px] font-extrabold leading-none">Account</span>
+                <span className="text-[10px] font-extrabold leading-none">{t("Account")}</span>
                 {isActive && <span className="absolute bottom-1 h-1 w-1 rounded-full bg-primary" />}
               </Link>
             );

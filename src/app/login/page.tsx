@@ -1,5 +1,5 @@
-
 "use client";
+import { useLanguage } from "@/context/LanguageContext";
 
 import React, { useEffect, useState } from "react";
 import { useAuth, useUser } from "@/firebase";
@@ -11,8 +11,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { LogIn, Shield } from "lucide-react";
+import { LanguageSelector } from "@/components/LanguageSelector";
 
 export default function LoginPage() {
+  const { t } = useLanguage();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -38,15 +40,15 @@ export default function LoginPage() {
       if (!auth) throw new Error("Authentication service is not ready");
       await setPersistence(auth, browserLocalPersistence);
       await signInWithEmailAndPassword(auth, loginEmail, password);
-      toast({ title: "Login Successful", description: "Welcome back to GlobalPay." });
+      toast({ title: t("Login Successful"), description: t("Welcome back to GlobalPay.") });
       router.replace("/dashboard");
     } catch (error: any) {
       console.error(error);
       const reason = error?.code || error?.message || "Unknown error";
       setErrorMsg(reason);
       toast({
-        title: "Login Failed",
-        description: `(${reason}) Please check your username and password.`,
+        title: t("Login Failed"),
+        description: `(${reason}) ${t("Please check your username and password.")}`,
         variant: "destructive",
       });
     } finally {
@@ -71,17 +73,16 @@ export default function LoginPage() {
             <Shield className="w-16 h-16 text-primary" strokeWidth={1.5} />
           </div>
           <CardTitle className="text-4xl font-bold tracking-tight text-foreground">GlobalPay</CardTitle>
-          <CardDescription className="text-base text-muted-foreground">
-            International Payroll Management System
-          </CardDescription>
+          <CardDescription className="text-base text-muted-foreground"> {t("International Payroll Management System")} </CardDescription>
         </CardHeader>
         <CardContent className="px-8 pb-10">
+          <LanguageSelector compact />
           <form onSubmit={handleLogin} className="space-y-6 mt-6">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-semibold">Username / Email</Label>
+              <Label htmlFor="email" className="text-sm font-semibold">{t("Username / Email")}</Label>
               <Input
                 id="email"
-                placeholder="e.g. globalpay"
+                placeholder={t("e.g. globalpay")}
                 className="h-12 bg-muted/50"
                 required
                 value={email}
@@ -89,7 +90,7 @@ export default function LoginPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" throws-error="false" className="text-sm font-semibold">Password</Label>
+              <Label htmlFor="password" throws-error="false" className="text-sm font-semibold">{t("Password")}</Label>
               <Input
                 id="password"
                 type="password"
@@ -100,14 +101,14 @@ export default function LoginPage() {
               />
             </div>
             <Button type="submit" className="w-full h-12 text-base font-semibold gap-2 mt-4 transition-all hover:scale-[1.01]" disabled={isLoading}>
-              {isLoading ? "Signing in..." : <><LogIn size={20} /> Sign In</>}
+              {isLoading ? t("Signing in...") : <><LogIn size={20} /> {t("Sign In")}</>}
             </Button>
             {errorMsg && (
               <p className="mt-4 text-sm font-medium text-destructive text-center break-words">{errorMsg}</p>
             )}
           </form>
           <div className="mt-10 pt-6 border-t border-border text-center">
-            <p className="text-xs font-medium text-muted-foreground tracking-wider uppercase">Authorized Access Only</p>
+            <p className="text-xs font-medium text-muted-foreground tracking-wider uppercase">{t("Authorized Access Only")}</p>
           </div>
         </CardContent>
       </Card>

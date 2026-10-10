@@ -1,4 +1,5 @@
 "use client";
+import { useLanguage } from "@/context/LanguageContext";
 
 import React, { useMemo, useState, useEffect } from "react";
 import { Navbar } from "@/components/layout/Navbar";
@@ -10,6 +11,7 @@ import { Users, CreditCard, CalendarCheck, TrendingUp, ArrowUpRight, Clock, Shie
 import { cn } from "@/lib/utils";
 
 export default function Dashboard() {
+  const { t } = useLanguage();
   const { country, currency } = useCountry();
   const { user } = useUser();
   const firestore = useFirestore();
@@ -58,27 +60,27 @@ export default function Dashboard() {
       <main className="p-4 md:p-8 space-y-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-slate-100 uppercase">GlobalPay Overview for {country}</h2>
+            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-slate-100">{t("GlobalPay Overview for {country}", { country: t(country) })}</h2>
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
           {[
-            { title: "Active Employees", value: employeeCount, sub: `In ${country} region`, icon: Users, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-950/30" },
+            { title: "Active Employees", value: employeeCount, sub: t("In {country} region", { country: t(country) }), icon: Users, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-950/30" },
             { title: "Total Base Salary", value: `${totalPayroll.toLocaleString()} ${currency}`, sub: "Monthly total", icon: CreditCard, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-950/30" },
             { title: "Payroll Runs", value: payrollRecords?.length || 0, sub: "Historical records", icon: CalendarCheck, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-950/30" },
             { title: "Compliance", value: "100%", sub: "All regions", icon: TrendingUp, color: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-50 dark:bg-indigo-950/30" },
           ].map((stat, idx) => (
             <Card key={idx} className="border-none shadow-sm hover:shadow-md transition-all duration-300 dark:bg-slate-900/50">
               <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                <CardTitle className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">{stat.title}</CardTitle>
+                <CardTitle className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">{t(stat.title)}</CardTitle>
                 <div className={cn("p-2 rounded-lg", stat.bg)}>
                   <stat.icon className={cn("h-4 w-4", stat.color)} />
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-black text-slate-900 dark:text-slate-100">{stat.value}</div>
-                <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1">{stat.sub}</p>
+                <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1">{t(stat.sub)}</p>
               </CardContent>
             </Card>
           ))}
@@ -89,8 +91,7 @@ export default function Dashboard() {
             <CardHeader className="border-b dark:border-slate-800 bg-white/50 dark:bg-slate-900/30 py-4">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-bold flex items-center gap-2 dark:text-slate-200">
-                  <Clock size={16} className="text-slate-400" /> Recent Activity
-                </CardTitle>
+                  <Clock size={16} className="text-slate-400" /> {t("Recent Activity")} </CardTitle>
               </div>
             </CardHeader>
             <CardContent className="p-0">
@@ -101,14 +102,14 @@ export default function Dashboard() {
                       {i + 1}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">Payroll for {(employees || []).find(e => e.id === rec.employeeId)?.fullName || 'Employee'}</p>
-                      <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500">{rec.payPeriodStartDate?.substring(0, 7) || 'Date N/A'}</p>
+                      <p className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">{t("Payroll for {name}", { name: (employees || []).find(e => e.id === rec.employeeId)?.fullName || t("Employee") })}</p>
+                      <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500">{rec.payPeriodStartDate?.substring(0, 7) || t("Date N/A")}</p>
                     </div>
                     <ArrowUpRight size={14} className="text-slate-300 dark:text-slate-600" />
                   </div>
                 ))}
                 {sortedRecentRecords.length === 0 && (
-                   <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-12 italic">No recent activity recorded.</p>
+                   <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-12 italic">{t("No recent activity recorded.")}</p>
                 )}
               </div>
             </CardContent>
@@ -117,8 +118,7 @@ export default function Dashboard() {
           <Card className="border-none shadow-sm overflow-hidden dark:bg-slate-900/50">
             <CardHeader className="border-b dark:border-slate-800 bg-white/50 dark:bg-slate-900/30 py-4">
               <CardTitle className="text-sm font-bold flex items-center gap-2 dark:text-slate-200">
-                <ShieldCheck size={16} className="text-primary" /> Regional Compliance
-              </CardTitle>
+                <ShieldCheck size={16} className="text-primary" /> {t("Regional Compliance")} </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6 pt-6">
                <div className="space-y-4">
@@ -129,8 +129,8 @@ export default function Dashboard() {
                   ].map((item, i) => (
                     <div key={i} className="space-y-2">
                       <div className="flex justify-between text-[11px] font-bold uppercase tracking-wider">
-                        <span className="text-slate-500 dark:text-slate-400">{item.label}</span>
-                        <span className="text-emerald-600 dark:text-emerald-400">{item.status}</span>
+                        <span className="text-slate-500 dark:text-slate-400">{t(item.label)}</span>
+                        <span className="text-emerald-600 dark:text-emerald-400">{t(item.status)}</span>
                       </div>
                       <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                         <div className="h-full bg-primary w-full" />
@@ -139,7 +139,7 @@ export default function Dashboard() {
                   ))}
                </div>
                <div className="pt-4 border-t dark:border-slate-800">
-                 <p className="text-[10px] leading-relaxed text-slate-400 dark:text-slate-500 italic font-medium">All payroll calculations are processed according to the latest regional tax laws and employment regulations.</p>
+                 <p className="text-[10px] leading-relaxed text-slate-400 dark:text-slate-500 italic font-medium">{t("All payroll calculations are processed according to the latest regional tax laws and employment regulations.")}</p>
                </div>
             </CardContent>
           </Card>

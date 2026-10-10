@@ -41,26 +41,24 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useLanguage } from "@/context/LanguageContext";
+import { LanguageSelector } from "@/components/LanguageSelector";
+import { formatDisplayDate } from "@/lib/i18n";
+import { ja, enUS } from "date-fns/locale";
 
 export default function CalendarPage() {
+  const { t, language } = useLanguage();
+  const calendarLocale = language === "ja" ? ja : enUS;
   const { country } = useCountry();
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
   
-  const [language, setLanguage] = useState<"JP" | "MM">("JP");
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [isAddingEvent, setIsAddingEvent] = useState(false);
   const [selectedDateForEdit, setSelectedDateForEdit] = useState<Date | null>(null);
   const [eventTitle, setEventTitle] = useState("");
 
-  useEffect(() => {
-    if (country === "Myanmar") {
-      setLanguage("MM");
-    } else {
-      setLanguage("JP");
-    }
-  }, [country]);
 
   // Firestore query for company calendar events, filtered by country
   const calendarQuery = useMemoFirebase(() => {
@@ -115,7 +113,7 @@ export default function CalendarPage() {
       companyId: user.uid,
       country,
       date: dateStr,
-      title: eventTitle || (language === "JP" ? "会社休日" : "ကုမ္ပဏီပိတ်ရက်"),
+      title: eventTitle || "Company holiday",
       isWorkday: false,
       updatedAt: serverTimestamp(),
     }).catch(err => {
@@ -123,7 +121,7 @@ export default function CalendarPage() {
     });
 
     setIsAddingEvent(false);
-    toast({ title: country === "Japan" ? "保存されました" : "သိမ်းဆည်းပြီးပါပြီ", description: country === "Japan" ? "カレンダーကို အပ်ဒိတ်လုပ်ပြီးပါပြီ" : "ပြက္ခဒိန်ကို အပ်ဒိတ်လုပ်ပြီးပါပြီ" });
+    toast({ title: t("Calendar updated") });
   };
 
   const deleteManualEvent = async () => {
@@ -134,39 +132,16 @@ export default function CalendarPage() {
       console.error("Failed to delete event:", err);
     });
     setIsAddingEvent(false);
-    toast({ title: country === "Japan" ? "削除されました" : "ဖယ်ရှားပြီးပါပြီ", description: country === "Japan" ? "休日ကို ဖယ်ရှားလိုက်ပါပြီ" : "ပိတ်ရက်ကို ဖယ်ရှားလိုက်ပါပြီ" });
+    toast({ title: t("Holiday removed") });
   };
 
   const translate = (key: string) => {
-    const dict: any = {
-      JP: {
-        title: "カレンダー",
-        companyCalendar: "会社カレンダー",
-        holiday: "祝日",
-        workday: "平日",
-        yearlySummary: "年間の会社休日合計",
-        days: "日",
-        clickToMark: "日付をクリックして休日に設定",
-        currentYear: `${currentYear}年`,
-        removeEvent: "削除",
-        saveEvent: "保存",
-        placeholder: "イベント名 (例: 夏休み)"
-      },
-      MM: {
-        title: "ပြက္ခဒိန်",
-        companyCalendar: "ကုမ္ပဏီ ပိတ်ရက်များ",
-        holiday: "ရုံးပိတ်ရက်",
-        workday: "ရုံးဖွင့်ရက်",
-        yearlySummary: "ယခုနှစ် စုစုပေါင်း ကုမ္ပဏီပိတ်ရက်",
-        days: "ရက်",
-        clickToMark: "ပိတ်ရက်သတ်မှတ်ရန် ရက်စွဲကို နှိပ်ပါ",
-        currentYear: `${currentYear} ခုနှစ်`,
-        removeEvent: "ဖယ်ရှားမည်",
-        saveEvent: "သိမ်းဆည်းမည်",
-        placeholder: "ပိတ်ရက်အမည် (ဥပမာ- သင်္ကြန်ပိတ်ရက်)"
-      }
+    const keys: Record<string, string> = {
+      title: "Calendar", companyCalendar: "Company calendar", yearlySummary: "Yearly company holidays",
+      days: "days", clickToMark: "Click a date to mark a holiday", removeEvent: "Delete", saveEvent: "Save",
+      placeholder: "Event name (e.g. summer holiday)",
     };
-    return dict[language][key] || key;
+    return key === "currentYear" ? String(currentYear) : t(keys[key] || key);
   };
 
   const months = useMemo(() => {
@@ -194,15 +169,7 @@ export default function CalendarPage() {
                 <ChevronRight size={16} />
               </Button>
             </div>
-            {country === "Japan" && (
-              <Button 
-                variant="outline" 
-                onClick={() => setLanguage(language === "JP" ? "MM" : "JP")}
-                className="gap-2 border-primary/20 bg-card hover:bg-muted"
-              >
-                <Globe size={16} /> {language === "JP" ? "မြန်မာ" : "日本語"}
-              </Button>
-            )}
+            <LanguageSelector compact />
           </div>
         </div>
 
@@ -213,11 +180,14 @@ export default function CalendarPage() {
                 <Card key={idx} className="shadow-sm border-primary/10 overflow-hidden bg-card">
                   <CardHeader className="p-3 bg-muted/30 border-b">
                     <CardTitle className="text-xs font-bold text-center uppercase tracking-wider">
-                      {monthDate.toLocaleString(language === "JP" ? "ja-JP" : "en-US", { month: "long" })}
+                      {formatDisplayDate(monthDate, language, { month: "long" })}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-4 flex justify-center">
                     <Calendar
+                      locale={calendarLocale}
+                      formatters={{ formatWeekdayName: date => formatDisplayDate(date, language, { weekday: "short" }) }}
+                      labels={{ labelDayButton: date => formatDisplayDate(date, language, { dateStyle: "full" }) }}
                       mode="single"
                       month={monthDate}
                       onDayClick={handleDayClick}
@@ -248,7 +218,7 @@ export default function CalendarPage() {
                 </div>
                 <div className="mt-4 flex items-center gap-2 text-[10px] text-muted-foreground border-t pt-4">
                   <CheckCircle2 size={12} className="text-green-500" />
-                  Synced with monthly payroll
+                  {t("Synced with monthly payroll")}
                 </div>
                 
                 <div className="mt-6 space-y-4">
@@ -258,7 +228,7 @@ export default function CalendarPage() {
                   <div className="max-h-[400px] overflow-y-auto space-y-2 pr-2">
                     {(companyEvents || []).filter(e => e.date.startsWith(currentYear.toString())).length === 0 ? (
                       <p className="text-[10px] text-muted-foreground italic text-center py-4">
-                        {language === "JP" ? "休日の登録はありません。" : "ပိတ်ရက်များ မရှိသေးပါ။"}
+                        {t("No holidays registered.")}
                       </p>
                     ) : (
                       (companyEvents || [])
@@ -267,7 +237,7 @@ export default function CalendarPage() {
                         .map((ev: any) => (
                           <div key={ev.id} className="flex items-center gap-2 p-2 bg-background border rounded-lg text-[10px] font-medium shadow-sm">
                             <span className="text-destructive font-bold bg-destructive/5 px-1.5 py-0.5 rounded border border-destructive/10">{ev.date.substring(5)}</span>
-                            <span className="truncate flex-1">{ev.title}</span>
+                            <span className="truncate flex-1">{["Company holiday", "会社休日", "ကုမ္ပဏီပိတ်ရက်"].includes(ev.title) ? t("Company holiday") : ev.title}</span>
                           </div>
                         ))
                     )}
@@ -283,12 +253,12 @@ export default function CalendarPage() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <CalendarIcon className="text-primary" />
-                {selectedDateForEdit && format(selectedDateForEdit, "PPP")}
+                {selectedDateForEdit && formatDisplayDate(selectedDateForEdit, language, { dateStyle: "long" })}
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase text-muted-foreground">{language === "JP" ? "休日名" : "ပိတ်ရက်အမည်"}</Label>
+                <Label className="text-xs font-bold uppercase text-muted-foreground">{t("Holiday name")}</Label>
                 <Input 
                   placeholder={translate("placeholder")} 
                   value={eventTitle} 

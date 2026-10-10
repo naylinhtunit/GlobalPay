@@ -1,5 +1,5 @@
-
 "use client";
+import { useLanguage } from "@/context/LanguageContext";
 
 import React, { useState, useEffect } from "react";
 import { Navbar } from "@/components/layout/Navbar";
@@ -20,6 +20,7 @@ interface CbmRates {
 }
 
 export default function ExchangeRatesPage() {
+  const { t } = useLanguage();
   const { country } = useCountry();
   const [rates, setRates] = useState<CbmRates | null>(null);
   const [loading, setLoading] = useState(true);
@@ -55,7 +56,7 @@ export default function ExchangeRatesPage() {
         <Navbar />
         <Card className="max-w-md w-full border-primary/20">
           <CardContent className="pt-6 text-center">
-            <p className="text-muted-foreground">Exchange rates are only available for Myanmar mode.</p>
+            <p className="text-muted-foreground">{t("Exchange rates are only available for Myanmar mode.")}</p>
           </CardContent>
         </Card>
       </div>
@@ -75,19 +76,17 @@ export default function ExchangeRatesPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
             <h2 className="text-2xl md:text-3xl font-bold text-primary flex items-center gap-3">
-              <Landmark className="text-primary" /> Central Bank of Myanmar
-            </h2>
-            <p className="text-muted-foreground">Daily Activities of Foreign Exchange Market</p>
+              <Landmark className="text-primary" /> {t("Central Bank of Myanmar")} </h2>
+            <p className="text-muted-foreground">{t("Daily Activities of Foreign Exchange Market")}</p>
           </div>
           <Button onClick={fetchRates} disabled={loading} variant="outline" className="gap-2 border-primary/20">
-            <RefreshCcw size={16} className={loading ? "animate-spin" : ""} /> Refresh Data
-          </Button>
+            <RefreshCcw size={16} className={loading ? "animate-spin" : ""} /> {t("Refresh Data")} </Button>
         </div>
 
         {error && (
           <Alert variant="destructive" className="mb-6 bg-destructive/5 border-destructive/20 text-destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>API Connection Issue</AlertTitle>
+            <AlertTitle>{t("API Connection Issue")}</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
@@ -96,42 +95,34 @@ export default function ExchangeRatesPage() {
           <Card className="shadow-lg border-primary/20 bg-primary/5 overflow-hidden">
             <CardHeader className="pb-2">
               <div className="flex justify-between items-center">
-                <Badge variant="outline" className="bg-background text-primary border-primary/20">Official Reference</Badge>
+                <Badge variant="outline" className="bg-background text-primary border-primary/20">{t("Official Reference")}</Badge>
                 <TrendingUp size={16} className="text-primary opacity-50" />
               </div>
-              <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground mt-2">
-                CBM Reference Rate, MMK per USD
-              </CardTitle>
+              <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground mt-2"> {t("CBM Reference Rate, MMK per USD")} </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-baseline gap-2">
                 <span className="text-4xl font-black text-primary">{referenceRateUSD.toLocaleString()}</span>
-                <span className="text-sm font-medium text-muted-foreground">MMK / USD</span>
+                <span className="text-sm font-medium text-muted-foreground">{t("MMK / USD")}</span>
               </div>
-              <p className="text-[10px] text-muted-foreground mt-2 italic">
-                * Official rate for government reporting and customs valuation.
-              </p>
+              <p className="text-[10px] text-muted-foreground mt-2 italic"> {t("* Official rate for government reporting and customs valuation.")} </p>
             </CardContent>
           </Card>
 
           <Card className="shadow-lg border-orange-500/20 bg-orange-500/5 overflow-hidden">
             <CardHeader className="pb-2">
               <div className="flex justify-between items-center">
-                <Badge variant="outline" className="bg-background text-orange-600 border-orange-500/20">Bank-Customer Transactions</Badge>
+                <Badge variant="outline" className="bg-background text-orange-600 border-orange-500/20">{t("Bank-Customer Transactions")}</Badge>
                 <ArrowRightLeft size={16} className="text-orange-600 opacity-50" />
               </div>
-              <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground mt-2">
-                Weighted Average Rate, MMK per USD
-              </CardTitle>
+              <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground mt-2"> {t("Weighted Average Rate, MMK per USD")} </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-baseline gap-2">
                 <span className="text-4xl font-black text-orange-600">{weightedRateUSD.toLocaleString()}</span>
-                <span className="text-sm font-medium text-muted-foreground">MMK / USD</span>
+                <span className="text-sm font-medium text-muted-foreground">{t("MMK / USD")}</span>
               </div>
-              <p className="text-[10px] text-muted-foreground mt-2 italic">
-                * Dynamic market rate used for commercial payroll and private sector trades.
-              </p>
+              <p className="text-[10px] text-muted-foreground mt-2 italic"> {t("* Dynamic market rate used for commercial payroll and private sector trades.")} </p>
             </CardContent>
           </Card>
         </div>
@@ -141,11 +132,9 @@ export default function ExchangeRatesPage() {
             <CardHeader className="bg-muted/30 border-b">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
-                  <Info size={14} className="text-primary" /> Other Currency Reference Rates
-                </CardTitle>
+                  <Info size={14} className="text-primary" /> {t("Other Currency Reference Rates")} </CardTitle>
                 {rates?.timestamp && (
-                  <span className="text-[10px] font-normal text-muted-foreground bg-background px-2 py-1 rounded-full border">
-                    Updated: {new Date(parseInt(rates.timestamp) * 1000).toLocaleString()}
+                  <span className="text-[10px] font-normal text-muted-foreground bg-background px-2 py-1 rounded-full border"> {t("Updated:")} {new Date(parseInt(rates.timestamp) * 1000).toLocaleString()}
                   </span>
                 )}
               </div>
@@ -154,26 +143,26 @@ export default function ExchangeRatesPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent bg-muted/20">
-                    <TableHead className="font-bold">Currency</TableHead>
-                    <TableHead className="font-bold">Symbol</TableHead>
-                    <TableHead className="text-right font-bold">Rate (MMK)</TableHead>
+                    <TableHead className="font-bold">{t("Currency")}</TableHead>
+                    <TableHead className="font-bold">{t("Symbol")}</TableHead>
+                    <TableHead className="text-right font-bold">{t("Rate (MMK)")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
-                    <TableRow><TableCell colSpan={3} className="text-center py-20 text-muted-foreground animate-pulse">Fetching latest data...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={3} className="text-center py-20 text-muted-foreground animate-pulse">{t("Fetching latest data...")}</TableCell></TableRow>
                   ) : rates ? (
                     Object.entries(rates.rates).slice(0, 15).map(([curr, rate]) => (
                       <TableRow key={curr} className="hover:bg-muted/30 transition-colors border-b">
                         <TableCell className="font-bold">{curr}</TableCell>
-                        <TableCell className="text-muted-foreground">{curr === 'USD' ? '$' : curr === 'EUR' ? '€' : curr === 'SGD' ? 'S$' : curr === 'THB' ? '฿' : curr === 'JPY' ? '¥' : '-'}</TableCell>
+                        <TableCell className="text-muted-foreground">{curr === 'USD' ? '$' : curr === 'EUR' ? '€' : curr === 'SGD' ? t("S$") : curr === 'THB' ? '฿' : curr === 'JPY' ? '¥' : '-'}</TableCell>
                         <TableCell className="text-right font-mono font-bold text-primary">{rate}</TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
                       <TableCell colSpan={3} className="text-center py-20 text-muted-foreground">
-                        {error ? "Service Unavailable" : "No exchange rate data found."}
+                        {error ? t("Service Unavailable") : t("No exchange rate data found.")}
                       </TableCell>
                     </TableRow>
                   )}
@@ -185,21 +174,14 @@ export default function ExchangeRatesPage() {
           <Card className="shadow-lg border-primary/10 bg-card h-fit">
             <CardHeader>
               <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
-                <Landmark size={16} className="text-primary" /> About CBM Rates
-              </CardTitle>
+                <Landmark size={16} className="text-primary" /> {t("About CBM Rates")} </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 text-sm">
-              <p className="leading-relaxed text-muted-foreground">
-                The <span className="text-primary font-bold">CBM Reference Rate</span> is determined by the Central Bank based on interbank market results.
-              </p>
+              <p className="leading-relaxed text-muted-foreground"> {t("The")} <span className="text-primary font-bold">{t("CBM Reference Rate")}</span> {t("is determined by the Central Bank based on interbank market results.")} </p>
               <div className="h-px w-full bg-border" />
-              <p className="leading-relaxed text-muted-foreground">
-                The <span className="text-orange-600 font-bold">Weighted Average Rate</span> (Bank-Customer) represents the actual volume-weighted rates at which banks trade with their clients. This is the rate typically used for GlobalPay payroll calculations in Myanmar.
-              </p>
+              <p className="leading-relaxed text-muted-foreground"> {t("The")} <span className="text-orange-600 font-bold">{t("Weighted Average Rate")}</span> {t("(Bank-Customer) represents the actual volume-weighted rates at which banks trade with their clients. This is the rate typically used for GlobalPay payroll calculations in Myanmar.")} </p>
               <div className="p-4 bg-muted/50 rounded-lg border border-dashed text-xs text-muted-foreground">
-                <p className="font-bold mb-1">Note for HR:</p>
-                When processing payroll for USD-based employees, the Market Rate (Weighted Average) is applied to ensure compliance with current commercial standards.
-              </div>
+                <p className="font-bold mb-1">{t("Note for HR:")}</p> {t("When processing payroll for USD-based employees, the Market Rate (Weighted Average) is applied to ensure compliance with current commercial standards.")} </div>
             </CardContent>
           </Card>
         </div>

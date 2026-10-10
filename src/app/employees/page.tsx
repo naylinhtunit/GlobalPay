@@ -1,4 +1,5 @@
 "use client";
+import { useLanguage } from "@/context/LanguageContext";
 
 import React, { useState, useEffect, useMemo } from "react";
 import { Navbar } from "@/components/layout/Navbar";
@@ -65,6 +66,7 @@ interface Employee {
 }
 
 export default function EmployeesPage() {
+  const { t } = useLanguage();
   const { country, currency } = useCountry();
   const { user } = useUser();
   const firestore = useFirestore();
@@ -176,7 +178,7 @@ export default function EmployeesPage() {
     if (editingId) {
       const docRef = doc(firestore, "employees", editingId);
       updateDocumentNonBlocking(docRef, dataToSave);
-      toast({ title: "Employee updated", description: `${formData.fullName} has been updated.` });
+      toast({ title: t("Employee updated"), description: t("{name} has been updated.", { name: formData.fullName }) });
     } else {
       const colRef = collection(firestore, "employees");
       const newDocRef = doc(colRef);
@@ -189,14 +191,14 @@ export default function EmployeesPage() {
           requestResourceData: dataToSave
         }));
       });
-      toast({ title: "Employee added", description: `${formData.fullName} has been added successfully.` });
+      toast({ title: t("Employee added"), description: t("{name} has been added successfully.", { name: formData.fullName }) });
     }
     setIsModalOpen(false);
     resetForm();
   };
 
   const handleDelete = (id: string) => {
-    if (!firestore || !confirm("Are you sure you want to delete this employee?")) return;
+    if (!firestore || !confirm(t("Are you sure you want to delete this employee?"))) return;
     const batch = writeBatch(firestore);
     const empRef = doc(firestore, "employees", id);
     batch.delete(empRef);
@@ -206,7 +208,7 @@ export default function EmployeesPage() {
         operation: 'delete'
       }));
     });
-    toast({ title: "Employee deleted", variant: "destructive" });
+    toast({ title: t("Employee deleted"), variant: "destructive" });
   };
 
   const openEdit = (emp: Employee) => {
@@ -241,8 +243,8 @@ export default function EmployeesPage() {
       <main className="p-4 md:p-8 space-y-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-slate-100 uppercase">Employees</h2>
-            <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Manage your workforce in {country}</p>
+            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-slate-100 uppercase">{t("Employees")}</h2>
+            <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">{t("Manage your workforce in {country}", { country: t(country) })}</p>
           </div>
           <Dialog open={isModalOpen} onOpenChange={(open) => {
             setIsModalOpen(open);
@@ -250,32 +252,28 @@ export default function EmployeesPage() {
           }}>
             <DialogTrigger asChild>
               <Button onClick={() => resetForm()} className="gap-2 bg-primary shadow-md hover:shadow-lg transition-all w-full md:w-auto font-bold">
-                <Plus size={18} /> Add Employee
-              </Button>
+                <Plus size={18} /> {t("Add Employee")} </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[600px] max-h-[95vh] overflow-y-auto border-none shadow-2xl dark:bg-slate-900">
               <DialogHeader>
-                <DialogTitle className="text-xl font-black dark:text-slate-100">{editingId ? "Edit Employee Profile" : "Create New Employee"}</DialogTitle>
+                <DialogTitle className="text-xl font-black dark:text-slate-100">{editingId ? t("Edit Employee Profile") : t("Create New Employee")}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-6 py-4">
                 <div className="space-y-4 border-b dark:border-slate-800 pb-6">
                   <div className="space-y-2">
                     <Label htmlFor="fullName" className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                      <UserCircle size={14} /> Full Name
-                    </Label>
+                      <UserCircle size={14} /> {t("Full Name")} </Label>
                     <Input id="fullName" required value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})} className="h-11 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700" />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="code" className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                        <Hash size={14} /> Employee Code
-                      </Label>
+                        <Hash size={14} /> {t("Employee Code")} </Label>
                       <Input id="code" required value={formData.employeeNumber} onChange={e => setFormData({...formData, employeeNumber: e.target.value})} className="h-11 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700" />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="dept" className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                        <Briefcase size={14} /> Department
-                      </Label>
+                        <Briefcase size={14} /> {t("Department")} </Label>
                       <Input id="dept" required value={formData.department} onChange={e => setFormData({...formData, department: e.target.value})} className="h-11 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700" />
                     </div>
                   </div>
@@ -284,13 +282,12 @@ export default function EmployeesPage() {
                 <div className="space-y-4 bg-slate-50 dark:bg-slate-800/50 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-inner">
                   <div className="flex justify-between items-center">
                     <h3 className="text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-widest flex items-center gap-2">
-                      <Banknote size={16} className="text-primary" /> Salary Management
-                    </h3>
+                      <Banknote size={16} className="text-primary" /> {t("Salary Management")} </h3>
                     {editingId && (
                       <Collapsible open={showHistory} onOpenChange={setShowHistory}>
                         <CollapsibleTrigger asChild>
                           <Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold gap-1 text-primary hover:bg-primary/5">
-                            <History size={14} /> {showHistory ? "HIDE LOGS" : "SHOW LOGS"}
+                            <History size={14} /> {showHistory ? t("HIDE LOGS") : t("SHOW LOGS")}
                           </Button>
                         </CollapsibleTrigger>
                       </Collapsible>
@@ -299,7 +296,7 @@ export default function EmployeesPage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="sm:col-span-2 space-y-2">
-                      <Label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Monthly Base Salary</Label>
+                      <Label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t("Monthly Base Salary")}</Label>
                       <div className="relative">
                         <Input 
                           type="number" 
@@ -308,11 +305,11 @@ export default function EmployeesPage() {
                           value={formData.baseSalary === 0 ? "" : formData.baseSalary} 
                           onChange={e => setFormData({...formData, baseSalary: e.target.value === "" ? 0 : Number(e.target.value)})} 
                         />
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">{country === "Japan" ? "¥" : "K"}</span>
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">{country === "Japan" ? "¥" : t("K")}</span>
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Effective Date</Label>
+                      <Label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t("Effective Date")}</Label>
                       <Input 
                         type="month" 
                         required
@@ -343,7 +340,7 @@ export default function EmployeesPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Annual Leave Balance</Label>
+                    <Label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t("Annual Leave Balance")}</Label>
                     <Input 
                       type="number" 
                       className="h-11 font-bold dark:bg-slate-800"
@@ -352,19 +349,19 @@ export default function EmployeesPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="hireDate" className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Joining Date</Label>
+                    <Label htmlFor="hireDate" className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t("Joining Date")}</Label>
                     <Input id="hireDate" type="date" required value={formData.hireDate} onChange={e => setFormData({...formData, hireDate: e.target.value})} className="h-11 font-bold dark:bg-slate-800" />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Official Email</Label>
+                  <Label htmlFor="email" className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t("Official Email")}</Label>
                   <Input id="email" type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="h-11 dark:bg-slate-800" />
                 </div>
 
                 <DialogFooter className="pt-4">
                   <Button type="submit" className="w-full h-12 text-sm font-black shadow-lg">
-                    {editingId ? "SAVE CHANGES" : "PROVISION EMPLOYEE"}
+                    {editingId ? t("Save Changes") : t("PROVISION EMPLOYEE")}
                   </Button>
                 </DialogFooter>
               </form>
@@ -376,26 +373,26 @@ export default function EmployeesPage() {
           <CardHeader className="p-4 border-b dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30">
             <div className="relative max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={16} />
-              <Input placeholder="Search records..." className="pl-9 h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+              <Input placeholder={t("Search records...")} className="pl-9 h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
             </div>
           </CardHeader>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50/50 dark:bg-slate-900/30 hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
-                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">ID</TableHead>
-                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Full Name</TableHead>
-                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Department</TableHead>
-                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Salary Profile</TableHead>
-                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Leave Balance</TableHead>
-                  <TableHead className="text-right text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Actions</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">{t("ID")}</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">{t("Full Name")}</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">{t("Department")}</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">{t("Salary Profile")}</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">{t("Leave Balance")}</TableHead>
+                  <TableHead className="text-right text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">{t("Actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow><TableCell colSpan={6} className="text-center py-12 text-[10px] text-slate-400 dark:text-slate-500">Fetching workforce data...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center py-12 text-[10px] text-slate-400 dark:text-slate-500">{t("Fetching workforce data...")}</TableCell></TableRow>
                 ) : filteredEmployees.length === 0 ? (
-                  <TableRow><TableCell colSpan={6} className="text-center py-12 text-[10px] text-slate-400 dark:text-slate-500 italic">No matching records found.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center py-12 text-[10px] text-slate-400 dark:text-slate-500 italic">{t("No matching records found.")}</TableCell></TableRow>
                 ) : filteredEmployees.map((emp) => {
                   const used = calculateUsedLeave(emp.id);
                   const rem = Math.max(0, (emp.totalPaidLeave || 0) - used);
@@ -408,14 +405,14 @@ export default function EmployeesPage() {
                         <div className="flex flex-col">
                           <span className="text-slate-900 dark:text-slate-100 text-[10px]">{(emp.baseSalary || 0).toLocaleString()} <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase">{emp.salaryCurrency || currency}</span></span>
                           {emp.salaryHistory && emp.salaryHistory.length > 1 && (
-                            <span className="text-[10px] flex items-center gap-1 text-primary uppercase tracking-tighter"><History size={14} /> {emp.salaryHistory.length} Cycles</span>
+                            <span className="text-[10px] flex items-center gap-1 text-primary uppercase tracking-tighter"><History size={14} /> {emp.salaryHistory.length} {t("Cycles")}</span>
                           )}
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col">
-                          <span className="text-indigo-600 dark:text-indigo-400 text-[10px]">{rem} / {emp.totalPaidLeave || 0} <span className="text-[10px] uppercase text-slate-400 dark:text-slate-500">Available</span></span>
-                          <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-tighter">Resets Jan 1st</span>
+                          <span className="text-indigo-600 dark:text-indigo-400 text-[10px]">{rem} / {emp.totalPaidLeave || 0} <span className="text-[10px] uppercase text-slate-400 dark:text-slate-500">{t("Available")}</span></span>
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-tighter">{t("Resets Jan 1st")}</span>
                         </div>
                       </TableCell>
                       <TableCell className="text-right space-x-1">

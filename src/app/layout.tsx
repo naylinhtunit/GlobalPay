@@ -2,6 +2,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { CountryProvider } from '@/context/CountryContext';
+import { LanguageProvider } from '@/context/LanguageContext';
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { AuthInit } from '@/components/auth/AuthInit';
@@ -88,13 +89,13 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <FirebaseClientProvider>
-            <CountryProvider>
+            <LanguageProvider><CountryProvider>
               <AuthInit />
               {children}
               <PWAInstallPrompt />
               <AppUpdater />
               <Toaster />
-            </CountryProvider>
+            </CountryProvider></LanguageProvider>
           </FirebaseClientProvider>
         </ThemeProvider>
         <Script id="native-redirect" strategy="beforeInteractive">
