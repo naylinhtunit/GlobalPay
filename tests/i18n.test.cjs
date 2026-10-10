@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const ts = require('typescript');
+const vm = require('node:vm');
 const { MESSAGES, isLanguage, hasTranslation, translateText, localizeShiftLabel, formatDisplayDate, LANGUAGE_LOCALES } = require('../src/lib/i18n.ts');
 const { DEFAULT_PAYROLL_POLICY, calculateHolidayPay, splitShift } = require('../src/lib/japan-payroll.ts');
 
@@ -14,6 +15,26 @@ test('three display languages are independent of payroll country and currency', 
   assert.equal(translateText('Account', 'en'), 'Account');
   assert.equal(translateText('Account', 'ja'), 'アカウント');
   assert.equal(translateText('Country', 'en'), 'Country');
+});
+
+test('inline native startup redirects parse and only redirect native landing routes', () => {
+  const ast = ts.createSourceFile('layout.tsx', fs.readFileSync('src/app/layout.tsx', 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const scripts = [];
+  function visit(node) {
+    if (ts.isNoSubstitutionTemplateLiteral(node) && node.text.includes("location.replace('/login')")) scripts.push(node.text);
+    ts.forEachChild(node, visit);
+  }
+  visit(ast);
+  assert.equal(scripts.length, 2);
+  for (const source of scripts) {
+    const script = new vm.Script(source);
+    for (const [native, pathname, expected] of [[false, '/', false], [true, '/', true], [true, '/index.html', true], [true, '/payroll/', false], [false, '/login/', false]]) {
+      let redirected = false;
+      const context = { window: { Capacitor: { isNativePlatform: () => native } }, navigator: { userAgent: '' }, location: { pathname, replace: url => { assert.equal(url, '/login'); redirected = true; } } };
+      script.runInNewContext(context);
+      assert.equal(redirected, expected, source);
+    }
+  }
 });
 
 test('message parameters are preserved in all languages', () => {
