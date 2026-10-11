@@ -45,6 +45,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { formatDisplayDate } from "@/lib/i18n";
 import { ja, enUS } from "date-fns/locale";
+import { useReportingYear } from "@/hooks/useCalendarYear";
 
 export default function CalendarPage() {
   const { t, language } = useLanguage();
@@ -54,10 +55,11 @@ export default function CalendarPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   
-  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+  const [currentYear, setCurrentYear] = useReportingYear();
   const [isAddingEvent, setIsAddingEvent] = useState(false);
   const [selectedDateForEdit, setSelectedDateForEdit] = useState<Date | null>(null);
   const [eventTitle, setEventTitle] = useState("");
+  const [savingEvent, setSavingEvent] = useState(false);
 
 
   // Firestore query for company calendar events, filtered by country
@@ -109,30 +111,35 @@ export default function CalendarPage() {
     const dateStr = format(selectedDateForEdit, "yyyy-MM-dd");
     const eventId = `${user.uid}_${country}_${dateStr}`;
     
-    setDoc(doc(firestore, "companyCalendars", eventId), {
+    setSavingEvent(true);
+    try {
+    await setDoc(doc(firestore, "companyCalendars", eventId), {
       companyId: user.uid,
       country,
       date: dateStr,
       title: eventTitle || "Company holiday",
       isWorkday: false,
       updatedAt: serverTimestamp(),
-    }).catch(err => {
-      console.error("Failed to save event:", err);
     });
-
     setIsAddingEvent(false);
     toast({ title: t("Calendar updated") });
+    } catch {
+      toast({ variant: "destructive", title: t("Error"), description: t("Calendar changes could not be saved. Please try again.") });
+    } finally { setSavingEvent(false); }
   };
 
   const deleteManualEvent = async () => {
     if (!selectedDateForEdit || !firestore || !user) return;
     const dateStr = format(selectedDateForEdit, "yyyy-MM-dd");
     const eventId = `${user.uid}_${country}_${dateStr}`;
-    deleteDoc(doc(firestore, "companyCalendars", eventId)).catch(err => {
-      console.error("Failed to delete event:", err);
-    });
+    setSavingEvent(true);
+    try {
+    await deleteDoc(doc(firestore, "companyCalendars", eventId));
     setIsAddingEvent(false);
     toast({ title: t("Holiday removed") });
+    } catch {
+      toast({ variant: "destructive", title: t("Error"), description: t("Calendar changes could not be saved. Please try again.") });
+    } finally { setSavingEvent(false); }
   };
 
   const translate = (key: string) => {
@@ -158,6 +165,7 @@ export default function CalendarPage() {
               <CalendarIcon className="text-primary" /> {translate("title")}
             </h2>
             <p className="text-muted-foreground text-sm">{translate("clickToMark")}</p>
+            <p className="text-muted-foreground text-xs mt-2">{t("Each year starts with a separate company holiday calendar. Past years stay saved; holidays are not copied to the new year.")}</p>
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 bg-card border rounded-lg p-1 shadow-sm">
@@ -248,7 +256,7 @@ export default function CalendarPage() {
           </div>
         </div>
 
-        <Dialog open={isAddingEvent} onOpenChange={setIsAddingEvent}>
+        <Dialog open={isAddingEvent} onOpenChange={value => { if (!savingEvent) setIsAddingEvent(value); }}>
           <DialogContent className="sm:max-w-[400px]">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
@@ -268,11 +276,11 @@ export default function CalendarPage() {
               </div>
             </div>
             <DialogFooter className="flex-col sm:flex-row gap-2">
-              <Button variant="outline" onClick={deleteManualEvent} className="text-destructive hover:bg-destructive/5 flex-1 border-destructive/20">
+              <Button disabled={savingEvent} variant="outline" onClick={deleteManualEvent} className="text-destructive hover:bg-destructive/5 flex-1 border-destructive/20">
                 {translate("removeEvent")}
               </Button>
-              <Button onClick={saveManualEvent} className="bg-primary flex-1">
-                {translate("saveEvent")}
+              <Button disabled={savingEvent} onClick={saveManualEvent} className="bg-primary flex-1">
+                {savingEvent ? t("Saving…") : translate("saveEvent")}
               </Button>
             </DialogFooter>
           </DialogContent>

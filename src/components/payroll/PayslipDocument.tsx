@@ -5,6 +5,7 @@ import React from "react";
 import { formatDisplayDate, localizeShiftLabel } from "@/lib/i18n";
 import { Country } from "@/context/CountryContext";
 import { getHolidayAttendance, hasLegacyHolidayHours, splitHolidayHours } from "@/lib/japan-payroll";
+import { payslipCompanyName } from "@/lib/company-profile";
 
 interface Props {
   country: Country;
@@ -12,10 +13,12 @@ interface Props {
   month: string;
   data: any;
   record?: any; // Contains the actual basicSalary at payment time
+  companyName?: string;
 }
 
-export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ country, employee, month, data, record }, ref) => {
+export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ country, employee, month, data, record, companyName = "" }, ref) => {
   const { t, language } = useLanguage();
+  const issuerName = payslipCompanyName(record, companyName);
   const [yearPart, monthPart] = (month || "").split('-');
   const displayYear = yearPart || new Date().getFullYear().toString();
   const displayMonthNum = monthPart ? parseInt(monthPart, 10) : new Date().getMonth() + 1;
@@ -35,7 +38,7 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
         <div className="mb-6 flex justify-between items-start">
           <div className="space-y-1">
             <h1 className="text-2xl font-black tracking-widest border-b-2 border-black inline-block pb-1">{t("Payroll Statement")}</h1>
-            <p className="text-sm mt-4 font-bold">{t("GlobalPay Enterprise System")}</p>
+            {issuerName && <p className="text-sm mt-4 font-bold whitespace-pre-wrap break-words max-w-[24rem]">{issuerName}</p>}
           </div>
           <div className="text-right space-y-2">
             <p className="text-xl font-bold border-b border-black pb-1">{t("Payroll for {month}", { month: formatDisplayDate(new Date(Number(displayYear), displayMonthNum - 1, 1), language, { year: "numeric", month: "long" }) })}</p>
@@ -209,6 +212,7 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
       <div ref={ref} className="p-12 max-w-[800px] mx-auto bg-white text-black font-sans border border-gray-300 shadow-lg">
         <div className="text-center border-b-2 border-black pb-4 mb-8">
           <h1 className="text-3xl font-bold tracking-tighter uppercase">{t("Payslip")}</h1>
+          {issuerName && <p className="mt-2 font-bold whitespace-pre-wrap break-words">{issuerName}</p>}
           <p className="text-gray-600 font-medium">{t("Month:")} {month}</p>
         </div>
 

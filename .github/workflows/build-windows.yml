@@ -47,6 +47,9 @@ jobs:
       - name: Build Windows installer
         run: npm run tauri:build
 
+      - name: Verify native update security
+        run: cargo test --manifest-path src-tauri/Cargo.toml --release
+
       - name: Collect NSIS installer
         shell: pwsh
         run: |

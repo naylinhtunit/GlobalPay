@@ -30,7 +30,7 @@
   },
   "productName": "GlobalPay",
   "mainBinaryName": "GlobalPay",
-  "version": "1.0.21",
+  "version": "1.0.22",
   "identifier": "com.globalpay.desktop",
   "plugins": {},
   "app": {

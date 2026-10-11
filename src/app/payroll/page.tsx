@@ -54,6 +54,9 @@ import { useToast } from "@/hooks/use-toast";
 import { FirestorePermissionError } from "@/firebase/errors";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useCompanyProfile } from "@/hooks/useCompanyProfile";
+import { payslipCompanyName } from "@/lib/company-profile";
+import { leaveForYear, payrollLeaveTotal, recordYear, usedLeaveForYear } from "@/lib/annual-leave";
 
 export default function PayrollPage() {
   const { t, language } = useLanguage();
@@ -61,6 +64,7 @@ export default function PayrollPage() {
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { companyName, isLoaded: isCompanyLoaded, error: companyError } = useCompanyProfile();
   
   const [monthOptions, setMonthOptions] = useState<{value: string, label: string}[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -190,10 +194,7 @@ export default function PayrollPage() {
 
   const currentYearLeaveUsed = useMemo(() => {
     if (!selectedEmpId || !payrollRecords || !selectedMonth) return 0;
-    const year = selectedMonth.substring(0, 4);
-    return (payrollRecords || [])
-      .filter(p => p.employeeId === selectedEmpId && p.id !== editingRecordId && p.payPeriodStartDate?.startsWith(year))
-      .reduce((acc, curr) => acc + (curr.paidLeaveDays || 0), 0);
+    return usedLeaveForYear(payrollRecords, selectedEmpId, Number(selectedMonth.slice(0, 4)), editingRecordId);
   }, [selectedEmpId, payrollRecords, selectedMonth, editingRecordId]);
 
   const sortedRecords = useMemo(() => {
@@ -276,7 +277,17 @@ export default function PayrollPage() {
 
   const handleGenerate = async () => {
     if (!selectedEmployee || !firestore || !user) return;
+    if (!isCompanyLoaded || companyError) {
+      toast({ variant: "destructive", title: t("Unable to load company settings. Check your connection.") });
+      return;
+    }
     if (country === "Japan") {
+      const original = (payrollRecords || []).find(record => record.id === editingRecordId);
+      const existingLeave = original && recordYear(original) === Number(selectedMonth.slice(0, 4)) && Number(original.paidLeaveDays ?? original.japanData?.paidLeaveDays) > 0;
+      if (!existingLeave && japanData.paidLeaveDays > 0 && !leaveForYear(selectedEmployee, Number(selectedMonth.slice(0, 4))).assigned) {
+        toast({ variant: "destructive", title: t("Set {year} leave allowance in Employees before entering paid leave.", { year: selectedMonth.slice(0, 4) }) });
+        return;
+      }
       const policy = japanData.workPolicy;
       const error = !policy ? "Company payroll settings are still loading. Please wait or check your connection." :
         validatePolicy({ ...policy, shifts: [...policy.shifts, ...(japanData.shifts || []).filter(s => s.customized && s.preset).map(s => s.preset!)] }) || validateHolidayEntries(japanData.holidayEntries || [], policy, selectedMonth) ||
@@ -334,7 +345,9 @@ export default function PayrollPage() {
       netPay = grossPay - deductions;
     }
 
+    const issuerName = payslipCompanyName((payrollRecords || []).find(record => record.id === editingRecordId), companyName);
     const payload = {
+      ...(issuerName ? { companyName: issuerName } : {}),
       amount: Math.round(netPay),
       month: selectedMonth,
       employeeId: selectedEmpId,
@@ -348,7 +361,8 @@ export default function PayrollPage() {
       totalGrossPay: Math.round(grossPay),
       totalDeductions: Math.round(deductions),
       netPay: Math.round(netPay),
-      paidLeaveDays: Number(japanData.paidLeaveDays || 0), 
+      paidLeaveDays: country === "Japan" ? Number(japanData.paidLeaveDays || 0) : 0,
+      ...(country === "Japan" && (editingRecordId || leaveForYear(selectedEmployee, Number(selectedMonth.slice(0, 4))).assigned) ? { leaveEntitlement: { year: Number(selectedMonth.slice(0, 4)), total: payrollLeaveTotal(selectedEmployee, Number(selectedMonth.slice(0, 4)), (payrollRecords || []).find(record => record.id === editingRecordId), currentYearLeaveUsed) } } : {}),
       japanData: country === "Japan" ? japanData : null,
       myanmarData: country === "Myanmar" ? myanmarData : null,
       updatedAt: serverTimestamp()
@@ -463,6 +477,7 @@ export default function PayrollPage() {
       
       let exportData: any[] = [
         [t("PAYSLIP REPORT"), ""],
+        [t("Company name"), payslipCompanyName(record, companyName)],
         [t("Employee Name"), emp?.fullName || "N/A"],
         [t("Employee ID"), emp?.employeeNumber || "N/A"],
         [t("Period"), previewData.month],
@@ -668,6 +683,7 @@ export default function PayrollPage() {
                     </div>
                   )}
 
+                  {country === "Japan" && selectedEmployee && !editingRecordId && !leaveForYear(selectedEmployee, Number(selectedMonth.slice(0, 4))).assigned && <p className="text-sm text-amber-600">{t("Set {year} leave allowance in Employees before entering paid leave.", { year: selectedMonth.slice(0, 4) })}</p>}
                   {country === "Japan" ? (
                     <JapanPayrollForm 
                       data={japanData} 
@@ -675,7 +691,7 @@ export default function PayrollPage() {
                       baseSalary={historicalSalary}
                       employeeLeave={
                         selectedEmployee ? { 
-                          total: Number(selectedEmployee.totalPaidLeave) || 0, 
+                          total: payrollLeaveTotal(selectedEmployee, Number(selectedMonth.slice(0, 4)), (payrollRecords || []).find(record => record.id === editingRecordId), currentYearLeaveUsed),
                           used: currentYearLeaveUsed 
                         } : undefined
                       }
@@ -800,6 +816,7 @@ export default function PayrollPage() {
                     month={previewData.month} 
                     data={previewData.data} 
                     record={previewData}
+                    companyName={companyName}
                   />
                 </div>
               )}

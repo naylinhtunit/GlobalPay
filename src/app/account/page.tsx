@@ -21,6 +21,8 @@ import { cn } from "@/lib/utils";
 import { useAppVersion } from "@/hooks/useAppVersion";
 import { PayrollSettings } from "@/components/payroll/PayrollSettings";
 import { LanguageSelector } from "@/components/LanguageSelector";
+import { CheckForUpdatesButton } from "@/components/updater/AppUpdater";
+import { CompanyProfileSettings } from "@/components/CompanyProfileSettings";
 
 export default function AccountPage() {
   const { t } = useLanguage();
@@ -68,6 +70,7 @@ export default function AccountPage() {
             </div>
           )}
 
+          <CompanyProfileSettings />
           <LanguageSelector />
           <div className="space-y-2">
             <p className="px-1 text-[11px] font-black uppercase tracking-[0.18em] text-muted-foreground">{t("Country")}</p>
@@ -109,6 +112,7 @@ export default function AccountPage() {
             <span className="text-sm font-semibold">{t("App Version")}</span>
             <span className="text-sm font-mono text-muted-foreground">{t("v")}{appVersion}</span>
           </div>
+          <CheckForUpdatesButton />
 
           <Button
             variant="ghost"

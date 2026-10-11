@@ -84,6 +84,7 @@ test('every literal UI translation key has all three catalog translations', () =
     }
   }
   dirs.forEach(collect);
+  files.push('src/components/CompanyProfileSettings.tsx');
   for (const file of files) {
     const source = fs.readFileSync(file, 'utf8');
     const ast = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);

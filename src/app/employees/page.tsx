@@ -7,8 +7,7 @@ import {
   useFirestore, 
   useCollection, 
   useMemoFirebase,
-  useUser,
-  updateDocumentNonBlocking
+  useUser
 } from "@/firebase";
 import { 
   collection, 
@@ -16,7 +15,8 @@ import {
   where, 
   doc, 
   serverTimestamp,
-  writeBatch
+  writeBatch,
+  runTransaction
 } from "firebase/firestore";
 import { useCountry } from "@/context/CountryContext";
 import { Button } from "@/components/ui/button";
@@ -44,13 +44,15 @@ import { useToast } from "@/hooks/use-toast";
 import { FirestorePermissionError } from "@/firebase/errors";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useReportingYear } from "@/hooks/useCalendarYear";
+import { completedServiceYears, leaveForYear, legacyLeaveYear, usedLeaveForYear, validLeaveDays, validLeaveYear, type AnnualLeaveEmployee } from "@/lib/annual-leave";
 
 interface SalaryHistoryItem {
   amount: number;
   effectiveMonth: string;
 }
 
-interface Employee {
+interface Employee extends AnnualLeaveEmployee {
   id: string;
   companyId: string;
   employeeNumber: string;
@@ -75,11 +77,8 @@ export default function EmployeesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showHistory, setShowHistory] = useState(false);
-  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
-
-  useEffect(() => {
-    setCurrentYear(new Date().getFullYear());
-  }, []);
+  const [currentYear, setCurrentYear, calendarYear] = useReportingYear();
+  const [saving, setSaving] = useState(false);
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -90,6 +89,7 @@ export default function EmployeesPage() {
     email: "",
     hireDate: "",
     totalPaidLeave: 0,
+    leaveYear: currentYear,
     effectiveMonth: "",
     salaryHistory: [] as SalaryHistoryItem[]
   });
@@ -123,9 +123,7 @@ export default function EmployeesPage() {
 
   const calculateUsedLeave = (employeeId: string) => {
     if (!allPayroll) return 0;
-    return allPayroll
-      .filter(p => p.employeeId === employeeId && p.payPeriodStartDate?.startsWith(currentYear.toString()))
-      .reduce((acc, curr) => acc + (curr.paidLeaveDays || curr.japanData?.paidLeaveDays || 0), 0);
+    return usedLeaveForYear(allPayroll, employeeId, currentYear);
   };
 
   const resetForm = () => {
@@ -138,6 +136,7 @@ export default function EmployeesPage() {
       email: "",
       hireDate: new Date().toISOString().split('T')[0],
       totalPaidLeave: 0,
+      leaveYear: currentYear,
       effectiveMonth: new Date().toISOString().substring(0, 7),
       salaryHistory: []
     });
@@ -145,9 +144,14 @@ export default function EmployeesPage() {
     setShowHistory(false);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!firestore || !user) return;
+    if (!firestore || !user || saving) return;
+    if (!validLeaveDays(Number(formData.totalPaidLeave)) || !validLeaveYear(formData.leaveYear)) {
+      toast({ variant: "destructive", title: t("Enter leave days between 0 and 366 and a valid year.") });
+      return;
+    }
+    setSaving(true);
 
     const newHistory = [...formData.salaryHistory];
     const existingEntryIndex = newHistory.findIndex(h => h.effectiveMonth === formData.effectiveMonth);
@@ -169,32 +173,37 @@ export default function EmployeesPage() {
       salaryCurrency: formData.salaryCurrency || (country === "Myanmar" ? "MMK" : "JPY"),
       email: formData.email,
       hireDate: formData.hireDate,
-      totalPaidLeave: Number(formData.totalPaidLeave),
       country,
       companyId: user.uid,
       updatedAt: serverTimestamp()
     };
 
-    if (editingId) {
-      const docRef = doc(firestore, "employees", editingId);
-      updateDocumentNonBlocking(docRef, dataToSave);
-      toast({ title: t("Employee updated"), description: t("{name} has been updated.", { name: formData.fullName }) });
-    } else {
-      const colRef = collection(firestore, "employees");
-      const newDocRef = doc(colRef);
-      const batch = writeBatch(firestore);
-      batch.set(newDocRef, { ...dataToSave, createdAt: serverTimestamp() });
-      batch.commit().catch(err => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: newDocRef.path,
-          operation: 'create',
-          requestResourceData: dataToSave
-        }));
-      });
-      toast({ title: t("Employee added"), description: t("{name} has been added successfully.", { name: formData.fullName }) });
-    }
-    setIsModalOpen(false);
-    resetForm();
+    try {
+      if (editingId) {
+        const docRef = doc(firestore, "employees", editingId);
+        await runTransaction(firestore, async transaction => {
+          const snapshot = await transaction.get(docRef);
+          if (!snapshot.exists() || snapshot.data().companyId !== user.uid) throw new Error("Employee unavailable");
+          const employee = snapshot.data() as AnnualLeaveEmployee;
+          transaction.update(docRef, {
+            ...dataToSave,
+            annualLeaveLegacyYear: legacyLeaveYear(employee),
+            // Dotted updates preserve allowances another device saved for other years.
+            [`annualLeaveByYear.${formData.leaveYear}`]: Number(formData.totalPaidLeave),
+          });
+        });
+        toast({ title: t("Employee updated"), description: t("{name} has been updated.", { name: formData.fullName }) });
+      } else {
+        const newDocRef = doc(collection(firestore, "employees"));
+        const batch = writeBatch(firestore);
+        batch.set(newDocRef, { ...dataToSave, totalPaidLeave: 0, annualLeaveLegacyYear: formData.leaveYear, annualLeaveByYear: { [formData.leaveYear]: Number(formData.totalPaidLeave) }, createdAt: serverTimestamp() });
+        await batch.commit();
+        toast({ title: t("Employee added"), description: t("{name} has been added successfully.", { name: formData.fullName }) });
+      }
+      setIsModalOpen(false); resetForm();
+    } catch {
+      toast({ variant: "destructive", title: t("Unable to save employee changes. Check your connection and try again.") });
+    } finally { setSaving(false); }
   };
 
   const handleDelete = (id: string) => {
@@ -225,7 +234,8 @@ export default function EmployeesPage() {
       salaryCurrency: emp.salaryCurrency || (country === "Myanmar" ? "MMK" : "JPY"),
       email: emp.email || "",
       hireDate: emp.hireDate || new Date().toISOString().split('T')[0],
-      totalPaidLeave: emp.totalPaidLeave || 0,
+      totalPaidLeave: leaveForYear(emp, currentYear).total,
+      leaveYear: currentYear,
       effectiveMonth: history[0]?.effectiveMonth || new Date().toISOString().substring(0, 7),
       salaryHistory: history
     });
@@ -245,6 +255,13 @@ export default function EmployeesPage() {
           <div>
             <h2 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-slate-100 uppercase">{t("Employees")}</h2>
             <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">{t("Manage your workforce in {country}", { country: t(country) })}</p>
+            <div className="mt-3 flex items-center gap-2">
+              <Label htmlFor="leave-report-year">{t("Leave year")}</Label>
+              <Input id="leave-report-year" type="number" min={1900} max={9999} value={currentYear} className="w-24 h-9" onChange={event => { const year = Number(event.target.value); if (validLeaveYear(year)) setCurrentYear(year); }} />
+              <Button variant="ghost" size="sm" onClick={() => setCurrentYear(calendarYear)}>{t("Current year")}</Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">{t("Leave allowances do not carry over. Set each employee's allowance for the new year; past years stay saved.")}</p>
+            <p className="text-xs text-muted-foreground mt-2">{t("This resets the app's annual allocation only, not statutory leave rights. Include any required carryover in the new year's allowance.")}</p>
           </div>
           <Dialog open={isModalOpen} onOpenChange={(open) => {
             setIsModalOpen(open);
@@ -340,13 +357,16 @@ export default function EmployeesPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t("Annual Leave Balance")}</Label>
+                    <Label htmlFor="annual-leave-allowance" className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t("Annual leave allowance — {year}", { year: formData.leaveYear })}</Label>
                     <Input 
+                      id="annual-leave-allowance"
                       type="number" 
+                      min={0} max={366} step={0.5}
                       className="h-11 font-bold dark:bg-slate-800"
                       value={formData.totalPaidLeave === 0 ? "" : formData.totalPaidLeave} 
                       onChange={e => setFormData({...formData, totalPaidLeave: e.target.value === "" ? 0 : Number(e.target.value)})} 
                     />
+                    <p className="text-xs text-muted-foreground">{t("Completed service at the start of {year}: {years} years. Set the allowance according to company policy.", { year: formData.leaveYear, years: completedServiceYears(formData.hireDate, formData.leaveYear) })}</p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="hireDate" className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t("Joining Date")}</Label>
@@ -360,8 +380,8 @@ export default function EmployeesPage() {
                 </div>
 
                 <DialogFooter className="pt-4">
-                  <Button type="submit" className="w-full h-12 text-sm font-black shadow-lg">
-                    {editingId ? t("Save Changes") : t("PROVISION EMPLOYEE")}
+                  <Button type="submit" disabled={saving} className="w-full h-12 text-sm font-black shadow-lg">
+                    {saving ? t("Saving…") : editingId ? t("Save Changes") : t("PROVISION EMPLOYEE")}
                   </Button>
                 </DialogFooter>
               </form>
@@ -395,7 +415,8 @@ export default function EmployeesPage() {
                   <TableRow><TableCell colSpan={6} className="text-center py-12 text-[10px] text-slate-400 dark:text-slate-500 italic">{t("No matching records found.")}</TableCell></TableRow>
                 ) : filteredEmployees.map((emp) => {
                   const used = calculateUsedLeave(emp.id);
-                  const rem = Math.max(0, (emp.totalPaidLeave || 0) - used);
+                  const allowance = leaveForYear(emp, currentYear);
+                  const rem = Math.max(0, allowance.total - used);
                   return (
                     <TableRow key={emp.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-slate-100 dark:border-slate-800">
                       <TableCell className="font-mono text-[10px] text-slate-500 dark:text-slate-400">{emp.employeeNumber}</TableCell>
@@ -411,7 +432,8 @@ export default function EmployeesPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col">
-                          <span className="text-indigo-600 dark:text-indigo-400 text-[10px]">{rem} / {emp.totalPaidLeave || 0} <span className="text-[10px] uppercase text-slate-400 dark:text-slate-500">{t("Available")}</span></span>
+                          <span className="text-indigo-600 dark:text-indigo-400 text-[10px]">{rem} / {allowance.total} <span className="text-[10px] uppercase text-slate-400 dark:text-slate-500">{t("Available")}</span></span>
+                          {!allowance.assigned && <span className="text-xs text-amber-600">{t("Set leave for {year}", { year: currentYear })}</span>}
                           <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-tighter">{t("Resets Jan 1st")}</span>
                         </div>
                       </TableCell>
