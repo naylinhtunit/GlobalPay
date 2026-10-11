@@ -15,7 +15,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test:payroll": "tsx --test tests/*.test.cjs"
+    "test:payroll": "node scripts/run-tests.cjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",
