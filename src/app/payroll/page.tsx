@@ -55,6 +55,7 @@ import { FirestorePermissionError } from "@/firebase/errors";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useCompanyProfile } from "@/hooks/useCompanyProfile";
+import { useCompanyPayrollSettings } from "@/hooks/useCompanyPayrollSettings";
 import { payslipCompanyName } from "@/lib/company-profile";
 import { leaveForYear, payrollLeaveTotal, recordYear, usedLeaveForYear } from "@/lib/annual-leave";
 
@@ -65,6 +66,7 @@ export default function PayrollPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const { companyName, isLoaded: isCompanyLoaded, error: companyError } = useCompanyProfile();
+  const { policy: companyPayrollPolicy, isLoaded: isPayrollPolicyLoaded } = useCompanyPayrollSettings();
   
   const [monthOptions, setMonthOptions] = useState<{value: string, label: string}[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -96,6 +98,7 @@ export default function PayrollPage() {
   }, [language]);
 
   const [japanData, setJapanData] = useState<JapanData>({
+    workPolicy: structuredClone(DEFAULT_PAYROLL_POLICY),
     scheduledDays: 0,
     absenceHours: 0,
     lateEarlyHours: 0,
@@ -216,6 +219,7 @@ export default function PayrollPage() {
     setSelectedEmpId("");
     if (monthOptions.length > 0) setSelectedMonth(monthOptions[0].value);
     setJapanData({
+      workPolicy: structuredClone(companyPayrollPolicy),
       scheduledDays: 0,
       absenceHours: 0,
       lateEarlyHours: 0,
@@ -282,6 +286,10 @@ export default function PayrollPage() {
       return;
     }
     if (country === "Japan") {
+      if (!isPayrollPolicyLoaded) {
+        toast({ variant: "destructive", title: t("Company payroll settings are still loading. Please wait or check your connection.") });
+        return;
+      }
       const original = (payrollRecords || []).find(record => record.id === editingRecordId);
       const existingLeave = original && recordYear(original) === Number(selectedMonth.slice(0, 4)) && Number(original.paidLeaveDays ?? original.japanData?.paidLeaveDays) > 0;
       if (!existingLeave && japanData.paidLeaveDays > 0 && !leaveForYear(selectedEmployee, Number(selectedMonth.slice(0, 4))).assigned) {
@@ -707,7 +715,7 @@ export default function PayrollPage() {
                   )}
                   
                   <DialogFooter>
-                    <Button onClick={handleGenerate} className="w-full h-12 text-sm font-black shadow-lg" disabled={!selectedEmpId}>
+                    <Button onClick={handleGenerate} className="w-full h-12 text-sm font-black shadow-lg" disabled={!selectedEmpId || (country === "Japan" && !isPayrollPolicyLoaded)}>
                       {editingRecordId ? t("UPDATE PAYSLIP") : t("PROCESS PAYSLIP")}
                     </Button>
                   </DialogFooter>

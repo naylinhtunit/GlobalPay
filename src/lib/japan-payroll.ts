@@ -23,6 +23,10 @@ export interface PayrollPolicy {
   version: 1;
   hourlyDivisor: number;
   nightPremium: number;
+  regularOTMultiplier?: number;
+  lateNightOTMultiplier?: number;
+  shiftAllowance1Rate?: number;
+  shiftAllowance2Rate?: number;
   shifts: ShiftPreset[];
   holidayRates: HolidayRate[];
   defaultHolidayRateId?: string;
@@ -136,6 +140,10 @@ export const DEFAULT_PAYROLL_POLICY: PayrollPolicy = {
   defaultHolidayRateId: "company-150",
   hourlyDivisor: 170.5,
   nightPremium: 0.25,
+  regularOTMultiplier: 1.25,
+  lateNightOTMultiplier: 1.5,
+  shiftAllowance1Rate: 0.25,
+  shiftAllowance2Rate: 0.30,
   shifts: [
     { id: "day-08", name: "Morning / မနက်", start: "08:00", end: "17:00", breakStart: "12:00", breakMinutes: 60, allowance1Hours: 0, allowance2Hours: 0 },
     { id: "day-12", name: "Afternoon / နေ့လယ်", start: "12:00", end: "21:00", breakStart: "16:00", breakMinutes: 60, allowance1Hours: 4, allowance2Hours: 0 },
@@ -199,6 +207,8 @@ export function splitShift(date: string, shift: ShiftPreset): Omit<HolidayWorkEn
 export function validatePolicy(policy: PayrollPolicy): string | null {
   if (!Number.isFinite(policy.hourlyDivisor) || policy.hourlyDivisor <= 0) return "Hourly divisor must be greater than zero.";
   if (!Number.isFinite(policy.nightPremium) || policy.nightPremium < 0.25) return "22:00–05:00 night premium must be at least 0.25.";
+  if (![policy.regularOTMultiplier ?? 1.25, policy.lateNightOTMultiplier ?? 1.5].every(rate => Number.isFinite(rate) && rate >= 1 && rate <= 5)) return "Overtime multipliers must be between 1 and 5.";
+  if (![policy.shiftAllowance1Rate ?? 0.25, policy.shiftAllowance2Rate ?? 0.30].every(rate => Number.isFinite(rate) && rate >= 0 && rate <= 5)) return "Shift allowance rates must be between 0 and 5.";
   if (!policy.shifts.length || !policy.holidayRates.length) return "Keep at least one shift and one holiday rate.";
   if (new Set(policy.shifts.map(s => s.id)).size !== policy.shifts.length || new Set(policy.holidayRates.map(r => r.id)).size !== policy.holidayRates.length) return "Duplicate policy IDs.";
   if ([policy.defaultHolidayRateId, ...policy.shifts.map(shift => shift.holidayRateId)].some(id => id && !policy.holidayRates.some(rate => rate.id === id))) return "Choose an available default holiday rate.";
@@ -211,7 +221,7 @@ export function validatePolicy(policy: PayrollPolicy): string | null {
       if (!hours) return "Each shift needs paid working hours.";
       if (![shift.allowance1Hours, shift.allowance2Hours].every(n => Number.isFinite(n) && n >= 0 && n <= hours)) return "Shift allowance hours must be between zero and paid hours.";
       if (shift.allowance1Hours + shift.allowance2Hours > hours) return "Combined shift allowance hours cannot exceed paid hours.";
-      if (shift.allowance1Hours * 0.25 + shift.allowance2Hours * 0.30 + 0.0001 < night * policy.nightPremium) return "Regular shift allowances must cover the 22:00–05:00 premium. Check allowance hours.";
+      if (shift.allowance1Hours * (policy.shiftAllowance1Rate ?? 0.25) + shift.allowance2Hours * (policy.shiftAllowance2Rate ?? 0.30) + 0.0001 < night * policy.nightPremium) return "Regular shift allowances must cover the 22:00–05:00 premium. Check allowance hours.";
     } catch (error) { return (error as Error).message; }
   }
   for (const rate of policy.holidayRates) {

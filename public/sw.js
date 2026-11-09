@@ -1,6 +1,6 @@
 
 // Basic Service Worker for PWA requirement
-const CACHE_NAME = 'globalpay-shell-v1.0.22';
+const CACHE_NAME = 'globalpay-shell-v1.0.23';
 const urlsToCache = [
   '/',
   '/manifest.json',

@@ -2,7 +2,6 @@
 import { useLanguage } from "@/context/LanguageContext";
 
 import { useEffect, useState } from "react";
-import { useCompanyPayrollSettings } from "@/hooks/useCompanyPayrollSettings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createLocalId } from "@/lib/local-id";
@@ -26,7 +25,8 @@ export function FlexibleWorkEditor({ policy, entries, month, onChange, holidays 
   const [customShift, setCustomShift] = useState<ShiftPreset | null>(null);
   const [error, setError] = useState("");
   const [rateOverride, setRateOverride] = useState("");
-  const { policy: savedPolicy, isLoading, isLoaded, error: loadError } = useCompanyPayrollSettings();
+  const [quickDayHours, setQuickDayHours] = useState(0);
+  const [quickNightHours, setQuickNightHours] = useState(0);
   const current = policy || DEFAULT_PAYROLL_POLICY;
   const selectedShift = customShift || current.shifts.find(s => s.id === shiftId) || current.shifts[0];
   const suggestedRateId = rateOverride || suggestHolidayRate(current, selectedShift, entries);
@@ -41,10 +41,6 @@ export function FlexibleWorkEditor({ policy, entries, month, onChange, holidays 
     if (!preview.length) shiftProblem = "နားချိန်နုတ်ပြီး အလုပ်ချိန် ကျန်ရပါမည်။";
   } catch (e) { shiftProblem = (e as Error).message; }
 
-  useEffect(() => {
-    if (policy || isLoading || !isLoaded || loadError) return;
-    onChange(structuredClone(savedPolicy), entries);
-  }, [savedPolicy, isLoading, isLoaded, loadError, policy, onChange, entries]);
   useEffect(() => { if (month) setDate(`${month}-01`); }, [month]);
 
   const updateEntry = (id: string, patch: Partial<HolidayWorkEntry>) => onChange(current, entries.map(entry => entry.id === id ? { ...entry, ...patch } : entry));
@@ -60,6 +56,25 @@ export function FlexibleWorkEditor({ policy, entries, month, onChange, holidays 
       setError("");
     } catch (e) { setError((e as Error).message); }
   };
+  const addQuickWork = () => {
+    const rateId = suggestedRateId;
+    if (!month || !date.startsWith(`${month}-`)) { setError("Choose a start date in the payroll month."); return; }
+    if (!rateId) { setError("Choose a rate for every holiday date, including the next day of night shifts."); return; }
+    if (quickDayHours < 0 || quickDayHours > 24 || quickNightHours < 0 || quickNightHours > 7 || quickDayHours + quickNightHours > 24 || quickDayHours + quickNightHours === 0) {
+      setError("Enter daytime hours (0–24) and night hours (0–7). Total hours must not exceed 24."); return;
+    }
+    const groupId = newId();
+    const rows: HolidayWorkEntry[] = [];
+    if (quickDayHours > 0) rows.push({ id: newId(), groupId, date, shiftName: t("Holiday daytime OT"), hours: quickDayHours, nightHours: 0, rateId });
+    if (quickNightHours > 0) rows.push({ id: newId(), groupId, date, shiftName: t("Holiday nighttime OT"), hours: quickNightHours, nightHours: quickNightHours, rateId });
+    const nextEntries = [...entries, ...rows];
+    const problem = validateHolidayEntries(nextEntries, current, month);
+    if (problem) { setError(problem); return; }
+    onChange(current, nextEntries);
+    setQuickDayHours(0);
+    setQuickNightHours(0);
+    setError("");
+  };
   const problem = validateHolidayEntries(entries, current, month);
   const policyProblem = validatePolicy(current);
   const workGroups = groupHolidayEntries(entries);
@@ -71,6 +86,17 @@ export function FlexibleWorkEditor({ policy, entries, month, onChange, holidays 
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
       <label className="space-y-1 text-xs">{t("Work date")}<Input aria-label={t("Work date")} type="date" value={date} onChange={e => setDate(e.target.value)} /></label>
       <label className="space-y-1 text-xs">{t("Shift")}<select aria-label={t("Shift")} className={selectClass} value={customShift ? "__custom__" : selectedShift?.id || ""} onChange={e => { if (e.target.value === "__custom__") return; setShiftId(e.target.value); setCustomShift(null); setRateOverride(""); setError(""); }}>{current.shifts.map(s => <option key={s.id} value={s.id}>{t(s.name)} {s.start}–{s.end}</option>)}{customShift && <option value="__custom__">{t(customShift.name)} {customShift.start}–{customShift.end} {t("(customized)")}</option>}</select></label>
+    </div>
+    <div className="rounded-lg border bg-muted/20 p-3 space-y-3">
+      <div><p className="font-semibold text-sm">{t("Quick holiday overtime")}</p><p className="text-xs text-muted-foreground">{t("For a company-calendar holiday, enter the day and night overtime hours directly.")}</p></div>
+      <div className="grid grid-cols-2 gap-3">
+        <label className="space-y-1 text-xs">{t("Holiday daytime OT")}<Input aria-label={t("Holiday daytime OT")} type="number" min="0" max="24" step="0.25" value={quickDayHours || ""} onChange={e => setQuickDayHours(Number(e.target.value) || 0)} /></label>
+        <label className="space-y-1 text-xs">{t("Holiday nighttime OT")}<Input aria-label={t("Holiday nighttime OT")} type="number" min="0" max="7" step="0.25" value={quickNightHours || ""} onChange={e => setQuickNightHours(Number(e.target.value) || 0)} /></label>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <label className="text-xs space-y-1">{t("Holiday base rate (excluding night premium)")}<select aria-label={t("Holiday base rate (excluding night premium)")} className={selectClass} value={suggestedRateId} onChange={e => setRateOverride(e.target.value)}><option value="">{t("Choose a rate…")}</option>{current.holidayRates.map(rate => <option key={rate.id} value={rate.id}>{t(rate.name)} ×{rate.multiplier}</option>)}</select></label>
+        <Button type="button" variant="secondary" disabled={quickDayHours + quickNightHours <= 0} onClick={addQuickWork}>{t("Add holiday overtime")}</Button>
+      </div>
     </div>
     <div className="grid grid-cols-2 gap-3">
       <label className="space-y-1 text-xs">{t("Start time")}<Input aria-label={t("Start time")} type="time" value={selectedShift?.start || ""} onChange={e => editShift("start", e.target.value)} /></label>
@@ -88,12 +114,12 @@ export function FlexibleWorkEditor({ policy, entries, month, onChange, holidays 
     <details className="text-xs"><summary className="cursor-pointer text-muted-foreground">{t("Edit rate")}</summary><label className="block space-y-1 pt-3">{t("Holiday base rate (excluding night premium)")} <select aria-label={t("Holiday base rate (excluding night premium)")} className={selectClass} value={suggestedRateId} onChange={e => setRateOverride(e.target.value)}>
         <option value="">{t("Choose a rate…")}</option>{current.holidayRates.map(rate => <option key={rate.id} value={rate.id}>{t(rate.name)} ×{rate.multiplier}</option>)}
       </select>
-      <span className="block text-muted-foreground">{t("Uses Account company/shift defaults. If unset, ×1.50 is an example only; confirm with your company. Per-date rates can be changed after adding.")}</span>
+      <span className="block text-muted-foreground">{t("Uses the rates above for this payroll. Confirm example rates with your company. Per-date rates can be changed after adding.")}</span>
     </label>{rateOverride && <Button type="button" variant="ghost" size="sm" onClick={() => setRateOverride("")}>{t("Use automatic rate")}</Button>}</details>
-    <p className="text-xs text-muted-foreground">{t("Rates are editable company defaults. Confirm with your company.")}</p>
+    <p className="text-xs text-muted-foreground">{t("Rates can be adjusted for this payroll. Confirm them with your company.")}</p>
     <div className="flex flex-wrap items-center justify-between gap-3">
       <p className="text-sm text-muted-foreground" aria-live="polite">{shiftProblem ? t(shiftProblem) : t("Day {day} + night {night} = total {total} hours (after breaks)", previewHours)}</p>
-      <Button type="button" variant="outline" disabled={!!shiftProblem || (!policy && (isLoading || !isLoaded || !!loadError))} onClick={addWork}>{t("+ Add holiday work")}</Button>
+      <Button type="button" variant="outline" disabled={!!shiftProblem} onClick={addWork}>{t("+ Add holiday work")}</Button>
     </div>
     {holidays.filter(h => h.date.startsWith(month || "")).length > 0 && <details className="text-sm"><summary className="cursor-pointer text-muted-foreground">{t("Choose from calendar holidays")}</summary><div className="flex flex-wrap gap-2 pt-2">{holidays.filter(h => h.date.startsWith(month || "")).map(h => <Button type="button" size="sm" variant="secondary" key={h.date} onClick={() => setDate(h.date)}>{h.date} {["Company holiday", "会社休日", "ကုမ္ပဏီပိတ်ရက်"].includes(h.title || "") ? t("Company holiday") : h.title}</Button>)}</div></details>}
     {entries.length === 0 && <p className="text-sm text-muted-foreground">{t("Select a date and shift to add holiday work.")}</p>}
@@ -124,6 +150,6 @@ export function FlexibleWorkEditor({ policy, entries, month, onChange, holidays 
         </div>)}</div></details>
       </div>;
     })}
-    {(error || problem || policyProblem || loadError) && <p role="alert" className="text-sm text-destructive">{t(error || problem || policyProblem || "Company settings could not be loaded. Check your connection before continuing.")}</p>}
+    {(error || problem || policyProblem) && <p role="alert" className="text-sm text-destructive">{t(error || problem || policyProblem || "Check your payroll settings.")}</p>}
   </div>;
 }

@@ -141,8 +141,8 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
     const otDenominator = policy.hourlyDivisor > 0 ? policy.hourlyDivisor : 170.5;
     const hourlyRate = (Number(baseSalary) || 0) / otDenominator;
 
-    const calculatedOT = Math.round(hourlyRate * 1.25 * (Number(data.regularOTHours) || 0));
-    const calculatedLateNightOT = Math.round(hourlyRate * 1.50 * (Number(data.lateNightOTHours) || 0));
+    const calculatedOT = Math.round(hourlyRate * (policy.regularOTMultiplier ?? 1.25) * (Number(data.regularOTHours) || 0));
+    const calculatedLateNightOT = Math.round(hourlyRate * (policy.lateNightOTMultiplier ?? 1.5) * (Number(data.lateNightOTHours) || 0));
 
     // Backward compat: support both old (single Sat/Sun field + shiftType) and new (split morning/afternoon)
     const satMorning = Number((data as any).saturdayHolidayMorningHours ?? 0) || 0;
@@ -168,10 +168,10 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
     const calculatedHolidayWork = Math.round(hourlyRate * 1.35 * totalHolidayHours) + flexibleHoliday.work;
 
     const holidayNS1Hours = Math.round((effectiveSatAfternoon + effectiveSunAfternoon) * 0.5);
-    const calculatedHolidayNightAlw = Math.round(hourlyRate * 0.25 * holidayNS1Hours) + flexibleHoliday.night;
+    const calculatedHolidayNightAlw = Math.round(hourlyRate * policy.nightPremium * holidayNS1Hours) + flexibleHoliday.night;
     
-    const calculatedNightAlw1 = legacyShiftSummary ? data.nightShiftAllowance || 0 : Math.round(hourlyRate * 0.25 * totalNS1);
-    const calculatedNightAlw2 = legacyShiftSummary ? data.nightShiftAllowanceExtra || 0 : Math.round(hourlyRate * 0.30 * totalNS2);
+    const calculatedNightAlw1 = legacyShiftSummary ? data.nightShiftAllowance || 0 : Math.round(hourlyRate * (policy.shiftAllowance1Rate ?? 0.25) * totalNS1);
+    const calculatedNightAlw2 = legacyShiftSummary ? data.nightShiftAllowanceExtra || 0 : Math.round(hourlyRate * (policy.shiftAllowance2Rate ?? 0.30) * totalNS2);
 
     const calculatedAbsenceDed = Math.round(hourlyRate * (Number(data.absenceHours) || 0));
     const calculatedLateEarlyDed = Math.round(hourlyRate * (Number(data.lateEarlyHours) || 0));
@@ -286,10 +286,23 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
     onChange({ ...data, shifts: newShifts });
   };
 
+  const updateMonthlyWorkdays = (value: number) => {
+    const otherShiftDays = shifts.slice(1).reduce((sum, shift) => sum + Number(shift.days || 0), 0);
+    const firstShift = { ...shifts[0], days: Math.max(0, value - otherShiftDays) };
+    onChange({ ...data, shifts: [firstShift, ...shifts.slice(1)] });
+  };
+
   const updateField = (field: keyof JapanData, value: string) => {
     const numValue = value === "" ? 0 : Number(value);
     const next = { ...data, [field]: numValue, ...(field === "incomeTax" ? { incomeTaxOverride: numValue } : {}) };
     onChange(field.startsWith("saturdayHoliday") || field.startsWith("sundayHoliday") ? { ...next, ...normalizeLegacyHolidayFields(next) } : next);
+  };
+
+  const updatePolicy = (field: keyof PayrollPolicy, value: number) => {
+    onChange({ ...data, workPolicy: { ...policy, [field]: value } });
+  };
+  const updateHolidayRate = (id: string, multiplier: number) => {
+    onChange({ ...data, workPolicy: { ...policy, holidayRates: policy.holidayRates.map(rate => rate.id === id ? { ...rate, multiplier } : rate) } });
   };
 
   const totalEarnings = (Number(baseSalary) || 0) + 
@@ -320,9 +333,36 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
                           (Number(data.beddingFee) || 0);
   
   const netPay = totalEarnings - totalDeductions + (Number(data.yearEndAdj) || 0) + (Number(data.otherAdj1) || 0) + (Number(data.otherAdj2) || 0) + (Number(data.paidLeaveBuyback) || 0);
+  const maxWorkdays = selectedMonth ? new Date(Number(selectedMonth.slice(0, 4)), Number(selectedMonth.slice(5)), 0).getDate() : 31;
 
   return (
     <div className="space-y-8">
+      <details className="rounded-xl border bg-card p-4 shadow-sm">
+        <summary className="cursor-pointer font-bold">{t("Rates for this payroll")}</summary>
+        <p className="mt-2 text-xs text-muted-foreground">{t("Adjust these values for this payslip. Calculated amounts update immediately; saved payslips keep this rate snapshot.")}</p>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pt-3">
+          <label className="space-y-1 text-xs">{t("Hourly divisor (monthly hours)")}<Input aria-label={t("Hourly divisor (monthly hours)")} type="number" min="0.01" step="0.01" value={policy.hourlyDivisor} onChange={e => updatePolicy("hourlyDivisor", Number(e.target.value))} /></label>
+          <label className="space-y-1 text-xs">{t("Regular OT multiplier")}<Input aria-label={t("Regular OT multiplier")} type="number" min="1" step="0.01" value={policy.regularOTMultiplier ?? 1.25} onChange={e => updatePolicy("regularOTMultiplier", Number(e.target.value))} /></label>
+          <label className="space-y-1 text-xs">{t("Late-night OT multiplier")}<Input aria-label={t("Late-night OT multiplier")} type="number" min="1" step="0.01" value={policy.lateNightOTMultiplier ?? 1.5} onChange={e => updatePolicy("lateNightOTMultiplier", Number(e.target.value))} /></label>
+          <label className="space-y-1 text-xs">{t("Shift allowance 1 rate")}<Input aria-label={t("Shift allowance 1 rate")} type="number" min="0" step="0.01" value={policy.shiftAllowance1Rate ?? 0.25} onChange={e => updatePolicy("shiftAllowance1Rate", Number(e.target.value))} /></label>
+          <label className="space-y-1 text-xs">{t("Shift allowance 2 rate")}<Input aria-label={t("Shift allowance 2 rate")} type="number" min="0" step="0.01" value={policy.shiftAllowance2Rate ?? 0.30} onChange={e => updatePolicy("shiftAllowance2Rate", Number(e.target.value))} /></label>
+          <label className="space-y-1 text-xs">{t("Holiday night premium (+)")}<Input aria-label={t("Holiday night premium (+)")} type="number" min="0.25" step="0.01" value={policy.nightPremium} onChange={e => updatePolicy("nightPremium", Number(e.target.value))} /></label>
+        </div>
+        <div className="mt-3 space-y-3 border-t pt-3">
+          <label className="block space-y-1 text-xs">{t("Default holiday rate")}
+            <select aria-label={t("Default holiday rate")} className="h-10 w-full rounded-md border bg-background px-2 text-sm" value={policy.defaultHolidayRateId || ""} onChange={e => onChange({ ...data, workPolicy: { ...policy, defaultHolidayRateId: e.target.value } })}>
+              <option value="">{t("Choose a rate…")}</option>
+              {policy.holidayRates.map(rate => <option key={rate.id} value={rate.id}>{t(rate.name)} ×{rate.multiplier}</option>)}
+            </select>
+          </label>
+          <details className="text-xs"><summary className="cursor-pointer text-muted-foreground">{t("Edit holiday rate multipliers")}</summary>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3">
+              {policy.holidayRates.map(rate => <label key={rate.id} className="space-y-1">{t(rate.name)}<Input aria-label={`${t(rate.name)} ${t("Multiplier (total)")}`} type="number" min={rate.statutory ? "1.35" : rate.includedInBase ? "0" : "1"} step="0.01" value={rate.multiplier} onChange={e => updateHolidayRate(rate.id, Number(e.target.value))} /></label>)}
+            </div>
+          </details>
+        </div>
+      </details>
+
       {monthHolidays > 0 && (
         <div className="bg-orange-500/10 border border-orange-500/20 p-3 rounded-lg flex items-center gap-3 text-orange-700 text-xs font-bold">
           <Info size={14} /> {t("{count} company holidays detected for {month} from your calendar.", { count: monthHolidays, month: selectedMonth || "" })} </div>
@@ -333,6 +373,11 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
           <Label className="text-sm font-bold uppercase tracking-wider">{t("Shift selection")}</Label>
           <Button variant="outline" size="sm" onClick={addShift} className="gap-2 text-xs h-8">
             <Plus size={14} /> {t("Add Shift Block")} </Button>
+        </div>
+        <div className="max-w-xs space-y-1">
+          <Label className="text-xs font-semibold">{t("Work days this month")}</Label>
+          <Input aria-label={t("Work days this month")} type="number" min={shifts.slice(1).reduce((sum, shift) => sum + Number(shift.days || 0), 0)} max={maxWorkdays} step="1" value={data.scheduledDays || ""} onChange={e => updateMonthlyWorkdays(e.target.value === "" ? 0 : Number(e.target.value))} />
+          <p className="text-xs text-muted-foreground">{t("Enter the monthly total here. Use shift details below only when you have more than one shift.")}</p>
         </div>
         <div className="space-y-6">
           {!data.shifts && data.scheduledDays > 0 && <p className="text-xs text-orange-700">{t("Old records without shift times keep their original days, hours and allowances until you edit a shift or days.")}</p>}
@@ -360,10 +405,10 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
                   {!policy.shifts.some(s => s.id === getPreset(shift)?.id) && <option value={getPreset(shift)?.id}>{t(getPreset(shift)?.name || "")} {getPreset(shift)?.start}–{getPreset(shift)?.end} {t("(customized)")}</option>}
                 </select>
               </div>
-              <div className="space-y-3">
-                <Label className="text-[10px] font-bold text-muted-foreground uppercase">{t("Days Worked")}</Label>
-                <Input aria-label={t("Days Worked")} type="number" min="0" step="1" className="h-9 text-xs" placeholder="0" value={shift.days === 0 ? "" : shift.days} onChange={e => updateShift(idx, "days", e.target.value === "" ? 0 : Number(e.target.value))} />
-              </div>
+              {idx > 0 && <div className="space-y-3">
+                <Label className="text-[10px] font-bold text-muted-foreground uppercase">{t("Days Worked (this shift)")}</Label>
+                <Input aria-label={t("Days Worked (this shift)")} type="number" min="0" step="1" className="h-9 text-xs" placeholder="0" value={shift.days === 0 ? "" : shift.days} onChange={e => updateShift(idx, "days", e.target.value === "" ? 0 : Number(e.target.value))} />
+              </div>}
               <div className="md:col-span-3 grid grid-cols-2 gap-3">
                 <label className="text-xs space-y-1">{t("Start time")}<Input aria-label={t("Start time")} type="time" value={getPreset(shift)?.start || ""} onChange={e => updateShiftTime(idx, "start", e.target.value)} /></label>
                 <label className="text-xs space-y-1">{t("End time")}<Input aria-label={t("End time")} type="time" value={getPreset(shift)?.end || ""} onChange={e => updateShiftTime(idx, "end", e.target.value)} /></label>
@@ -432,8 +477,8 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
           </div>
           <div className="grid grid-cols-2 gap-3">
             {[
-              { label: "普通残業手当", en: "Regular OT (1.25)", field: "otAllowance", readOnly: true },
-              { label: "深夜残業手当", en: "Late Night (1.50)", field: "lateNightOTAllowance", readOnly: true },
+              { label: "普通残業手当", en: "Regular OT allowance", field: "otAllowance", readOnly: true },
+              { label: "深夜残業手当", en: "Late-night OT allowance", field: "lateNightOTAllowance", readOnly: true },
               { label: "夜勤手当 1", en: "Company Shift Alw 1 (0.25)", field: "nightShiftAllowance", readOnly: true },
               { label: "夜勤手当 2", en: "Company Shift Alw 2 (0.30)", field: "nightShiftAllowanceExtra", readOnly: true },
               { label: "休日勤務手当（日中＋深夜）", en: "Holiday Pay (Day + Night)", field: "holidayWorkAllowance", readOnly: true },
