@@ -42,7 +42,7 @@ Use the public `naylinhtunit/GlobalPay-Releases` repo. Latest must be a non-draf
 non-prerelease `vMAJOR.MINOR.PATCH` with GitHub-generated `sha256:` digests and sizes:
 
 - Android: `GlobalPay.apk`; preserve the existing signing certificate and increase
-  both versionName and versionCode (1.0.23 = 24). Mismatched cert/package/version or
+  both versionName and versionCode (1.0.24 = 25). Mismatched cert/package/version or
   same/lower versionCode is rejected before installation.
 - Mac ARM64: `GlobalPay-macos-arm64.zip`; Intel: `GlobalPay-macos-x64.zip` only when
   built/tested for Intel. Never substitute ARM64 for Intel. Keep `GlobalPay.dmg` for

@@ -109,12 +109,12 @@ export const PayslipDocument = React.forwardRef<HTMLDivElement, Props>(({ countr
                 <span className="font-mono self-center">{(payTimeSalary).toLocaleString()}</span>
               </div>
               {[
-                { l: "普通残業手当", e: "Reg OT (1.25)", v: data.otAllowance },
-                { l: "深夜残業手当", e: "Late Night (1.50)", v: data.lateNightOTAllowance },
-                { l: "~22", e: "Night Alw 1 (0.25)", v: data.nightShiftAllowance },
-                { l: "22~", e: "Night Alw 2 (0.30)", v: data.nightShiftAllowanceExtra },
-                { l: "休日勤務手当", e: data.workPolicy ? "Holiday (selected rates)" : "Holiday (1.35)", v: data.holidayWorkAllowance },
-                { l: "休日深夜手当", e: t("Holiday night premium ({rate})", { rate: data.workPolicy?.nightPremium ?? 0.25 }), v: data.holidayNightAllowance },
+                { l: "普通残業手当", e: "Regular OT allowance", v: data.otAllowance },
+                { l: "深夜残業手当", e: "Late-night OT allowance", v: data.lateNightOTAllowance },
+                { l: "~22", e: "Company shift allowance 1", v: data.nightShiftAllowance },
+                { l: "22~", e: "Company shift allowance 2", v: data.nightShiftAllowanceExtra },
+                { l: "休日勤務手当", e: data.holidayEntries?.length ? "Holiday daytime (selected rate)" : data.workPolicy ? "Holiday (selected rates)" : "Holiday (1.35)", v: data.holidayWorkAllowance },
+                { l: "休日深夜手当", e: data.holidayEntries?.length ? "Holiday night (base + premium)" : t("Holiday night premium ({rate})", { rate: data.workPolicy?.nightPremium ?? 0.25 }), v: data.holidayNightAllowance },
                 { l: "家族手当", e: "Family Alw", v: data.familyAllowance },
                 { l: "住宅手当", e: "Housing Alw", v: data.housingAllowance },
                 { l: "非課税通勤費", e: "Non-tax Comm.", v: data.nonTaxableCommuting },

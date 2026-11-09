@@ -6,7 +6,7 @@ import { createLocalId } from "@/lib/local-id";
 import React, { useEffect, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, Info } from "lucide-react";
+import { Plus, Trash2, Info, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
@@ -77,6 +77,7 @@ export interface JapanData {
   paidLeaveBuyback: number;
   cashPayment: number;
   kindPayment: number;
+  earningOverrides?: Partial<Record<"otAllowance" | "lateNightOTAllowance" | "nightShiftAllowance" | "nightShiftAllowanceExtra" | "holidayWorkAllowance" | "holidayNightAllowance", number>>;
 }
 
 interface Props {
@@ -141,8 +142,8 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
     const otDenominator = policy.hourlyDivisor > 0 ? policy.hourlyDivisor : 170.5;
     const hourlyRate = (Number(baseSalary) || 0) / otDenominator;
 
-    const calculatedOT = Math.round(hourlyRate * (policy.regularOTMultiplier ?? 1.25) * (Number(data.regularOTHours) || 0));
-    const calculatedLateNightOT = Math.round(hourlyRate * (policy.lateNightOTMultiplier ?? 1.5) * (Number(data.lateNightOTHours) || 0));
+    const autoOT = Math.round(hourlyRate * (policy.regularOTMultiplier ?? 1.25) * (Number(data.regularOTHours) || 0));
+    const autoLateNightOT = Math.round(hourlyRate * (policy.lateNightOTMultiplier ?? 1.5) * (Number(data.lateNightOTHours) || 0));
 
     // Backward compat: support both old (single Sat/Sun field + shiftType) and new (split morning/afternoon)
     const satMorning = Number((data as any).saturdayHolidayMorningHours ?? 0) || 0;
@@ -164,14 +165,31 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
 
     const totalHolidayHours = effectiveSatMorning + effectiveSatAfternoon + effectiveSunHours;
 
-    const flexibleHoliday = calculateHolidayPay(data.holidayEntries || [], policy, hourlyRate);
-    const calculatedHolidayWork = Math.round(hourlyRate * 1.35 * totalHolidayHours) + flexibleHoliday.work;
-
     const holidayNS1Hours = Math.round((effectiveSatAfternoon + effectiveSunAfternoon) * 0.5);
-    const calculatedHolidayNightAlw = Math.round(hourlyRate * policy.nightPremium * holidayNS1Hours) + flexibleHoliday.night;
+    const legacyHolidayDayHours = Math.max(0, totalHolidayHours - holidayNS1Hours);
+    const holidayEntries = data.holidayEntries || [];
+    const flexibleHoliday = calculateHolidayPay(holidayEntries, policy, hourlyRate);
+    const flexibleHolidayDay = calculateHolidayPay(holidayEntries.map(entry => ({ ...entry, hours: Math.max(0, entry.hours - entry.nightHours), nightHours: 0 })), policy, hourlyRate);
+    const flexibleHolidayNightBase = calculateHolidayPay(holidayEntries.map(entry => ({ ...entry, hours: entry.nightHours, nightHours: 0 })), policy, hourlyRate);
+    // Keep day and night holiday pay on separate payslip lines. Night work includes
+    // its holiday base rate plus the configured night premium.
+    const hasDatedHolidayEntries = holidayEntries.length > 0;
+    const autoHolidayWork = hasDatedHolidayEntries
+      ? Math.round(hourlyRate * 1.35 * legacyHolidayDayHours + flexibleHolidayDay.work)
+      : Math.round(hourlyRate * 1.35 * totalHolidayHours);
+    const autoHolidayNight = hasDatedHolidayEntries
+      ? Math.round(hourlyRate * (1.35 + policy.nightPremium) * holidayNS1Hours + flexibleHolidayNightBase.work + flexibleHoliday.night)
+      : Math.round(hourlyRate * policy.nightPremium * holidayNS1Hours);
     
-    const calculatedNightAlw1 = legacyShiftSummary ? data.nightShiftAllowance || 0 : Math.round(hourlyRate * (policy.shiftAllowance1Rate ?? 0.25) * totalNS1);
-    const calculatedNightAlw2 = legacyShiftSummary ? data.nightShiftAllowanceExtra || 0 : Math.round(hourlyRate * (policy.shiftAllowance2Rate ?? 0.30) * totalNS2);
+    const autoNightAlw1 = legacyShiftSummary ? data.nightShiftAllowance || 0 : Math.round(hourlyRate * (policy.shiftAllowance1Rate ?? 0.25) * totalNS1);
+    const autoNightAlw2 = legacyShiftSummary ? data.nightShiftAllowanceExtra || 0 : Math.round(hourlyRate * (policy.shiftAllowance2Rate ?? 0.30) * totalNS2);
+
+    const calculatedOT = data.earningOverrides?.otAllowance ?? autoOT;
+    const calculatedLateNightOT = data.earningOverrides?.lateNightOTAllowance ?? autoLateNightOT;
+    const calculatedNightAlw1 = data.earningOverrides?.nightShiftAllowance ?? autoNightAlw1;
+    const calculatedNightAlw2 = data.earningOverrides?.nightShiftAllowanceExtra ?? autoNightAlw2;
+    const calculatedHolidayWork = data.earningOverrides?.holidayWorkAllowance ?? autoHolidayWork;
+    const calculatedHolidayNightAlw = data.earningOverrides?.holidayNightAllowance ?? autoHolidayNight;
 
     const calculatedAbsenceDed = Math.round(hourlyRate * (Number(data.absenceHours) || 0));
     const calculatedLateEarlyDed = Math.round(hourlyRate * (Number(data.lateEarlyHours) || 0));
@@ -294,8 +312,18 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
 
   const updateField = (field: keyof JapanData, value: string) => {
     const numValue = value === "" ? 0 : Number(value);
-    const next = { ...data, [field]: numValue, ...(field === "incomeTax" ? { incomeTaxOverride: numValue } : {}) };
+    const earningFields = ["otAllowance", "lateNightOTAllowance", "nightShiftAllowance", "nightShiftAllowanceExtra", "holidayWorkAllowance", "holidayNightAllowance"] as const;
+    const next = { ...data, [field]: numValue,
+      ...(field === "incomeTax" ? { incomeTaxOverride: numValue } : {}),
+      ...(earningFields.includes(field as typeof earningFields[number]) ? { earningOverrides: { ...data.earningOverrides, [field]: numValue } } : {}),
+    };
     onChange(field.startsWith("saturdayHoliday") || field.startsWith("sundayHoliday") ? { ...next, ...normalizeLegacyHolidayFields(next) } : next);
+  };
+
+  const clearEarningOverride = (field: NonNullable<JapanData["earningOverrides"]> extends Partial<Record<infer K, number>> ? K : never) => {
+    const earningOverrides = { ...data.earningOverrides };
+    delete earningOverrides[field];
+    onChange({ ...data, earningOverrides });
   };
 
   const updatePolicy = (field: keyof PayrollPolicy, value: number) => {
@@ -337,7 +365,7 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
 
   return (
     <div className="space-y-8">
-      <details className="rounded-xl border bg-card p-4 shadow-sm">
+      <details open className="rounded-xl border bg-card p-4 shadow-sm">
         <summary className="cursor-pointer font-bold">{t("Rates for this payroll")}</summary>
         <p className="mt-2 text-xs text-muted-foreground">{t("Adjust these values for this payslip. Calculated amounts update immediately; saved payslips keep this rate snapshot.")}</p>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pt-3">
@@ -475,21 +503,25 @@ export function JapanPayrollForm({ data, onChange, baseSalary, employeeLeave, se
           <div className="flex justify-between items-center border-b pb-2 mb-4">
             <h4 className="text-sm font-bold text-primary uppercase tracking-wider">{t("Earnings")}</h4>
           </div>
+          <p className="text-xs text-muted-foreground">{t("Calculated pay lines update from hours and rates. Edit a line amount to match your company payslip; use the reset button to restore the calculation.")}</p>
           <div className="grid grid-cols-2 gap-3">
             {[
-              { label: "普通残業手当", en: "Regular OT allowance", field: "otAllowance", readOnly: true },
-              { label: "深夜残業手当", en: "Late-night OT allowance", field: "lateNightOTAllowance", readOnly: true },
-              { label: "夜勤手当 1", en: "Company Shift Alw 1 (0.25)", field: "nightShiftAllowance", readOnly: true },
-              { label: "夜勤手当 2", en: "Company Shift Alw 2 (0.30)", field: "nightShiftAllowanceExtra", readOnly: true },
-              { label: "休日勤務手当（日中＋深夜）", en: "Holiday Pay (Day + Night)", field: "holidayWorkAllowance", readOnly: true },
-              { label: "休日深夜割増", en: "Holiday Night Premium Only", field: "holidayNightAllowance", readOnly: true },
+              { label: "普通残業手当", en: "Regular OT allowance", field: "otAllowance", overrideable: true },
+              { label: "深夜残業手当", en: "Late-night OT allowance", field: "lateNightOTAllowance", overrideable: true },
+              { label: "夜勤手当 1", en: "Company shift allowance 1", field: "nightShiftAllowance", overrideable: true },
+              { label: "夜勤手当 2", en: "Company shift allowance 2", field: "nightShiftAllowanceExtra", overrideable: true },
+              { label: "休日勤務手当（日中）", en: "Holiday daytime pay", field: "holidayWorkAllowance", overrideable: true },
+              { label: "休日深夜割増", en: "Holiday night pay", field: "holidayNightAllowance", overrideable: true },
               { label: "住宅手当", en: "Housing Alw", field: "housingAllowance", readOnly: false },
               { label: "通勤費", en: "Commuting", field: "nonTaxableCommuting", readOnly: false },
               { label: "欠勤控နှုတ်", en: "Absence Ded", field: "absenceDeduction", color: "text-destructive", readOnly: true },
             ].map((item) => (
               <div key={item.field} className="space-y-1">
                 <Label className={`text-xs leading-relaxed block font-semibold ${item.color || ""}`}>{t(item.en)}</Label>
-                <Input type="number" readOnly={item.readOnly} className={`h-8 text-xs ${item.readOnly ? 'bg-muted/50' : ''}`} placeholder="0" value={(data as any)[item.field] == null || (data as any)[item.field] === 0 ? "" : (data as any)[item.field]} onChange={e => !item.readOnly && updateField(item.field as keyof JapanData, e.target.value)} />
+                <div className="flex items-center gap-1">
+                  <Input type="number" readOnly={item.readOnly} className={`h-8 text-xs ${item.readOnly ? 'bg-muted/50' : ''}`} placeholder="0" value={(data as any)[item.field] == null || (data as any)[item.field] === 0 ? "" : (data as any)[item.field]} onChange={e => !item.readOnly && updateField(item.field as keyof JapanData, e.target.value)} />
+                  {item.overrideable && (data.earningOverrides as any)?.[item.field] !== undefined && <Button type="button" size="icon" variant="ghost" className="h-8 w-8 shrink-0" aria-label={t("Restore calculated amount")} title={t("Restore calculated amount")} onClick={() => clearEarningOverride(item.field as any)}><RotateCcw size={14} /></Button>}
+                </div>
               </div>
             ))}
           </div>
